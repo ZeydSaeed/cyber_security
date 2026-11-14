@@ -22,7 +22,7 @@ export default function Welcome() {
                     <h1 className="text-2xl font-semibold">{name}</h1>
                     <p className="max-w-md text-muted-foreground">
                         {t(
-                            'Requests, approvals and records in one place, in Arabic and English.',
+                            'First-month marks of the Cyber Security department, entered by the teachers and gathered into one result per student.',
                         )}
                     </p>
 

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Access\Permission;
 use App\Access\Role;
 use App\Models\User;
-use App\Modules\Requests\Contracts\RequestsOverview;
+use App\Modules\Grades\Contracts\GradesOverview;
 use App\Platform\Access\RoleAssignment;
 use App\Platform\Audit\ActivityTimeline;
 use App\Platform\Files\StoredFile;
@@ -31,12 +31,12 @@ class DashboardController extends Controller
         'notifications' => null,
         'activity' => null,
         'documents' => null,
-        // From the Requests module, through its contract (ADR-0033).
-        'requests' => null,
+        // From the Grades module, through its contract (ADR-0034).
+        'grades' => Permission::GradesViewResults,
         'people' => Permission::RolesManage,
     ];
 
-    public function __construct(private readonly RequestsOverview $requests) {}
+    public function __construct(private readonly GradesOverview $grades) {}
 
     public function show(#[CurrentUser] User $user): Response
     {
@@ -63,7 +63,7 @@ class DashboardController extends Controller
                     ->pluck('total', 'status')
                     ->map(fn (mixed $total): int => (int) $total)
                     ->all(),
-                'requests' => $this->requests->for($user->id, $user->hasPermission(Permission::RequestsDecide)),
+                'grades' => $this->grades->progress(),
                 'people' => [
                     'total' => User::query()->count(),
                     'without_second_factor' => User::query()->whereNull('two_factor_confirmed_at')->count(),

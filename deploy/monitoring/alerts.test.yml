@@ -9,39 +9,10 @@ rule_files:
 evaluation_interval: 1m
 
 tests:
-    # A request waits over three days; the alert waits an hour more.
-    - interval: 1m
-      input_series:
-          - series: 'module_requests_oldest_waiting_age_seconds{job="app"}'
-            values: '259300+60x120'
-      alert_rule_test:
-          - eval_time: 30m
-            alertname: RequestsWaitingLong
-            exp_alerts: []
-          - eval_time: 70m
-            alertname: RequestsWaitingLong
-            exp_alerts:
-                - exp_labels:
-                      severity: warning
-                      job: app
-                  exp_annotations:
-                      summary: A submitted request has waited over three days for a decision.
-                      runbook: docs/runbooks/requests.md#requestswaitinglong
-
-    # Nothing waits: the series is 0, never absent, and nothing fires.
-    - interval: 1m
-      input_series:
-          - series: 'module_requests_oldest_waiting_age_seconds{job="app"}'
-            values: '0x120'
-      alert_rule_test:
-          - eval_time: 110m
-            alertname: RequestsWaitingLong
-            exp_alerts: []
-
     # A module's metrics source fails for five minutes.
     - interval: 1m
       input_series:
-          - series: 'platform_metrics_source_up{job="app",source="requests"}'
+          - series: 'platform_metrics_source_up{job="app",source="grades"}'
             values: '1 1 0x10'
       alert_rule_test:
           - eval_time: 4m
@@ -53,9 +24,9 @@ tests:
                 - exp_labels:
                       severity: warning
                       job: app
-                      source: requests
+                      source: grades
                   exp_annotations:
-                      summary: The requests module's metrics fail; its own alerts cannot fire.
+                      summary: The grades module's metrics fail; its own alerts cannot fire.
                       runbook: docs/runbooks/application.md#metricssourcefailing
 
     # No worker takes jobs: the oldest job ages past ten minutes.

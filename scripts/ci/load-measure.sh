@@ -33,11 +33,10 @@ mkdir -p "$OUT" && chmod 777 "$OUT"
 # under APP_ENV=local (real environment variables win over .env).
 seed() {
     (cd "$CURRENT" && sudo -u "$APP" env APP_ENV=local PERF_DATABASE="$APP" PERF_USERS=300 \
-        PERF_AUDIT_EVENTS=20000 PERF_REQUESTS=10000 "$PHP_CLI" artisan "$@" --no-interaction)
+        PERF_AUDIT_EVENTS=20000 "$PHP_CLI" artisan "$@" --no-interaction)
 }
 seed config:clear > /dev/null
 seed db:seed --class=PerformanceSeeder --force
-seed db:seed --class=RequestsPerformanceSeeder --force
 (cd "$CURRENT" && sudo -u "$APP" "$PHP_CLI" artisan config:cache > /dev/null)
 sudo install -m 0644 "/srv/$APP/shared/storage/app/private/perf/users.csv" "$OUT/users.csv"
 
@@ -75,19 +74,18 @@ failures=0
 
 # Every page once, so views and caches are warm.
 sudo truncate -s 0 /var/log/nginx/access.log /var/log/nginx/error.log
-k6 requests --vus 1 --iterations 1 -e STAFF_VUS=1
+k6 baseline --vus 1 --iterations 1 -e VISITOR_VUS=1 -e STAFF_VUS=1
 [ "$failures" -eq 0 ] || exit 1
 server_view warm-up
 k6 baseline -e VISITOR_VUS=30 -e STAFF_VUS=20 -e HOLD=2m
 server_view baseline
-k6 requests -e STAFF_VUS=20 -e APPROVER_VUS=5 -e HOLD=2m
-server_view requests
+# The teachers' mark entry gets its own script with the Grades pages (ADR-0034, G2).
 
 # The figures, as annotations readable on the run's page.
 python3 - "$OUT" "$LABEL" <<'PY'
 import json, sys
 out, label = sys.argv[1], sys.argv[2]
-for script in ("baseline", "requests"):
+for script in ("baseline",):
     try:
         m = json.load(open(f"{out}/{script}.json"))["metrics"]
     except (OSError, ValueError):

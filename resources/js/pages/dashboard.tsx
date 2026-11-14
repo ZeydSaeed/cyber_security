@@ -10,7 +10,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import DashboardController from '@/actions/App/Http/Controllers/DashboardController';
-import RequestController from '@/actions/App/Modules/Requests/Http/RequestController';
 import ActivityTimeline from '@/components/activity-timeline';
 import ColumnSettings from '@/components/data-table/column-settings';
 import EmptyState from '@/components/empty-state';
@@ -33,9 +32,14 @@ type Widgets = Partial<{
     }[];
     activity: TimelineEntry[];
     documents: Record<string, number>;
-    requests: {
-        mine: Record<string, number>;
-        to_decide: number | null;
+    grades: {
+        period: string;
+        open: boolean;
+        entered: number;
+        expected: number;
+        students: number;
+        subjects: number;
+        teachers: number;
     };
     people: {
         total: number;
@@ -115,7 +119,7 @@ export default function Dashboard({
         notifications: t('Notifications'),
         activity: t('Your activity'),
         documents: t('Your documents'),
-        requests: t('Requests'),
+        grades: t('First-month marks'),
         people: t('People'),
     };
 
@@ -190,8 +194,8 @@ export default function Dashboard({
                     </Widget>
                 );
             }
-            case 'requests': {
-                const requests = widgets.requests;
+            case 'grades': {
+                const grades = widgets.grades;
 
                 return (
                     <Widget
@@ -199,26 +203,24 @@ export default function Dashboard({
                         id={key}
                         title={titles[key]}
                         icon={ClipboardList}
-                        link={{
-                            href: RequestController.index.url(),
-                            label: t('Requests'),
-                        }}
                     >
+                        <p className="mb-3 text-sm text-muted-foreground">
+                            {grades?.open
+                                ? t('Mark entry is open.')
+                                : t('Mark entry is closed.')}
+                        </p>
                         <dl className="grid grid-cols-3 gap-2">
-                            {requests?.to_decide !== null &&
-                                requests?.to_decide !== undefined && (
-                                    <Figure
-                                        value={requests.to_decide}
-                                        label={t('Waiting for my decision')}
-                                    />
-                                )}
                             <Figure
-                                value={requests?.mine.submitted ?? 0}
-                                label={t('Mine waiting')}
+                                value={grades?.entered ?? 0}
+                                label={t('Marks entered')}
                             />
                             <Figure
-                                value={requests?.mine.draft ?? 0}
-                                label={t('My drafts')}
+                                value={grades?.expected ?? 0}
+                                label={t('Marks expected')}
+                            />
+                            <Figure
+                                value={grades?.students ?? 0}
+                                label={t('Students')}
                             />
                         </dl>
                     </Widget>

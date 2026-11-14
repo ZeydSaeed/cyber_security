@@ -289,9 +289,8 @@ return [
         'database' => env('PERF_DATABASE', 'cyber_security'),
         'users' => (int) env('PERF_USERS', 1000),
         'audit_events' => (int) env('PERF_AUDIT_EVENTS', 50000),
-        'requests' => (int) env('PERF_REQUESTS', 10000),
-        // Requests DrillSeeder makes for a restore drill (operations.yml).
-        'drill_requests' => (int) env('DRILL_REQUESTS', 300),
+        // Students DrillSeeder imports for a restore drill (operations.yml).
+        'drill_students' => (int) env('DRILL_STUDENTS', 300),
     ],
 
 ];

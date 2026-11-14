@@ -139,7 +139,7 @@ jobs:
           run php artisan queue:work --queue=files,outbox,notifications,default --stop-when-empty
           run php artisan platform:audit-verify
           psql "postgresql://postgres:ci-only-not-a-secret@127.0.0.1:5432/cyber_security" -Atc \
-            "select 'requests ' || count(*) from approval_requests union all select 'files ' || count(*) from stored_files union all select 'audit ' || count(*) from audit_events union all select 'notifications ' || count(*) from notifications"
+            "select 'students ' || count(*) from grade_students union all select 'marks ' || count(*) from grade_marks union all select 'files ' || count(*) from stored_files union all select 'audit ' || count(*) from audit_events union all select 'notifications ' || count(*) from notifications"
 
       - name: Backup (encrypted)
         run: php artisan platform:backup manual
@@ -207,7 +207,7 @@ jobs:
           php artisan migrate --force
           nohup php artisan serve --host=127.0.0.1 --port=8000 > serve.log 2>&1 &
           for _ in $(seq 1 30); do curl -sf http://127.0.0.1:8000/up >/dev/null && break; sleep 1; done
-          curl -sf http://127.0.0.1:8000/metrics | grep -E '^(platform_up|platform_metrics_source_up|module_requests_)'
+          curl -sf http://127.0.0.1:8000/metrics | grep -E '^(platform_up|platform_metrics_source_up|module_grades_)'
 
       - name: Prometheus loads the rules and scrapes the application
         run: |

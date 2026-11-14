@@ -11,15 +11,21 @@
 
 use App\Access\Role;
 use App\Models\User;
-use App\Modules\Requests\Application\Actions\DecideRequest;
-use App\Modules\Requests\Application\Actions\SubmitRequest;
-use App\Modules\Requests\Domain\Decision;
-use App\Modules\Requests\Models\ApprovalRequest;
+use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
+use App\Modules\Grades\Application\Actions\ImportStudents;
+use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Domain\Mark;
+use App\Modules\Grades\Domain\Period;
+use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\Teacher;
 use App\Platform\Access\AssignRole;
 use App\Platform\Access\RevokeRole;
 use App\Platform\Outbox\OutboxRelay;
 use App\Platform\Preferences\WorkspacePreferences;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Tests\Support\Outbox\CountingOutboxJob;
@@ -81,22 +87,21 @@ try {
 
             return ['ok' => true];
         })(),
-        // args: approver id, request id, approve|reject
-        'decide-request' => (function () use ($app, $args): array {
-            $app->make(DecideRequest::class)->handle(
-                User::findOrFail((int) $args[0]),
-                ApprovalRequest::query()->findOrFail((int) $args[1]),
-                Decision::from($args[2]),
-                $args[2] === 'reject' ? 'Not now.' : null,
-            );
+        // args: teacher id, subject id, section, JSON {student uuid: mark}
+        'save-marks' => saveMarks($app, $args),
+        // args: save, teacher id, subject id, section, JSON marks | close, user id
+        'save-or-close' => $args[0] === 'save'
+            ? saveMarks($app, array_slice($args, 1))
+            : (function () use ($app, $args): array {
+                $app->make(ChangeEntryWindow::class)->handle(User::findOrFail((int) $args[1]), Period::Month1, WindowStatus::Closed);
 
-            return ['ok' => true];
-        })(),
-        // args: requester id, request id
-        'submit-request' => (function () use ($app, $args): array {
-            $app->make(SubmitRequest::class)->handle(User::findOrFail((int) $args[0]), ApprovalRequest::query()->findOrFail((int) $args[1]));
+                return ['ok' => true];
+            })(),
+        // args: user id, CSV path
+        'import-students' => (function () use ($app, $args): array {
+            $plan = $app->make(ImportStudents::class)->apply(User::findOrFail((int) $args[0]), $args[1], 'csv', 'race.csv');
 
-            return ['ok' => true];
+            return ['ok' => true, 'created' => count($plan->creates)];
         })(),
         default => throw new InvalidArgumentException("Unknown scenario {$scenario}"),
     };
@@ -105,3 +110,21 @@ try {
 }
 
 echo json_encode($result), PHP_EOL;
+
+/**
+ * @param  list<string>  $args  teacher id, subject id, section, JSON {student uuid: mark}
+ * @return array{ok: true, changed: int}
+ */
+function saveMarks(Application $app, array $args): array
+{
+    $marks = array_map(fn (string $mark): ?Mark => Mark::fromInput($mark), (array) json_decode($args[3], true));
+    $result = $app->make(SaveMarks::class)->handle(
+        Teacher::query()->findOrFail((int) $args[0]),
+        Subject::query()->findOrFail((int) $args[1]),
+        Section::from($args[2]),
+        Period::Month1,
+        $marks,
+    );
+
+    return ['ok' => true, 'changed' => $result['changed']];
+}

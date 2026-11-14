@@ -7,8 +7,7 @@ import { pageReady } from './lib/ready';
 | server-side table (#2), columns (#3), saved views (#4), bulk actions with
 | feedback (#23), details panel (#16), history (#9), breadcrumbs (#26).
 | The browser seeder provides the signed-in administrator and 40 people
-| (Person 01-40; every 5th an auditor), Setup Test and Approver Test (the
-| Requests module), 43 in all.
+| (Person 01-40; every 5th an auditor) and Setup Test, 42 in all.
 */
 
 const baseURL = `http://127.0.0.1:${process.env.BROWSER_TEST_PORT ?? 8123}`;

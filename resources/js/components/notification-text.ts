@@ -1,4 +1,3 @@
-import RequestController from '@/actions/App/Modules/Requests/Http/RequestController';
 import { roleLabel } from '@/components/activity-timeline';
 import type { useTranslations } from '@/hooks/use-translations';
 
@@ -23,29 +22,22 @@ export function notificationText(t: Translate, data: NotificationData): string {
                 by: data.by ?? '',
                 role: roleLabel(t, data.role ?? ''),
             });
-        case 'request_submitted':
-            return t(':by submitted “:title” for a decision.', {
-                by: data.by ?? '',
-                title: data.title ?? '',
-            });
-        case 'request_approved':
-            return t(':by approved your request “:title”.', {
-                by: data.by ?? '',
-                title: data.title ?? '',
-            });
-        case 'request_rejected':
-            return t(':by rejected your request “:title”.', {
-                by: data.by ?? '',
-                title: data.title ?? '',
-            });
+        case 'grades_section_completed':
+            return t(
+                ':teacher finished the marks of “:subject”, stage :stage, section :section.',
+                {
+                    teacher: data.teacher ?? '',
+                    subject: data.subject ?? '',
+                    stage: data.stage ?? '',
+                    section: data.section ?? '',
+                },
+            );
         default:
             return t('Something changed in your account.');
     }
 }
 
-/** Where a notification leads, if anywhere (the request it is about). */
-export function notificationHref(data: NotificationData): string | null {
-    return data.request && data.kind?.startsWith('request_')
-        ? RequestController.show.url(data.request)
-        : null;
+/** Where a notification leads, if anywhere (none link anywhere yet). */
+export function notificationHref(_data: NotificationData): string | null {
+    return null;
 }

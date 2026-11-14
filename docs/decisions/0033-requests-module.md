@@ -1,7 +1,7 @@
 # ADR-0033: The Requests module, the golden path
 
-- Status: Accepted (9.1 domain, data, actions; 9.2 interface and
-  integration; 9.3 observability and measurements)
+- Status: Accepted in the template; removed from this application by
+  ADR-0034 (its code is in this repository's first commit)
 - Date: 2026-11-14
 
 ## Context

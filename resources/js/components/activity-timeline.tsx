@@ -12,8 +12,6 @@ export function roleLabel(t: Translate, role: string): string {
             return t('Administrator');
         case 'auditor':
             return t('Auditor');
-        case 'approver':
-            return t('Approver');
         default:
             return role;
     }
@@ -59,16 +57,30 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('File uploaded');
         case 'file.rejected':
             return t('File rejected');
-        case 'request.created':
-            return t('Request created');
-        case 'request.updated':
-            return t('Request changed');
-        case 'request.submitted':
-            return t('Request submitted');
-        case 'request.approved':
-            return t('Request approved');
-        case 'request.rejected':
-            return t('Request rejected');
+        case 'grades.teacher_created':
+            return t('Teacher added');
+        case 'grades.teacher_renamed':
+            return t('Teacher renamed');
+        case 'grades.teacher_code_changed':
+            return t('Teacher code changed');
+        case 'grades.teacher_activated':
+            return t('Teacher allowed to sign in');
+        case 'grades.teacher_deactivated':
+            return t('Teacher stopped from signing in');
+        case 'grades.subject_created':
+            return t('Subject added');
+        case 'grades.subject_renamed':
+            return t('Subject renamed');
+        case 'grades.subject_assigned':
+            return t('Subject teacher changed');
+        case 'grades.window_opened':
+            return t('Mark entry opened');
+        case 'grades.window_closed':
+            return t('Mark entry closed');
+        case 'grades.marks_saved':
+            return t('Marks saved');
+        case 'grades.students_imported':
+            return t('Students imported');
         case 'user.invited':
             return role
                 ? t('Invited as :role', { role })

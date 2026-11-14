@@ -2,10 +2,13 @@
 
 use App\Access\Role;
 use App\Models\User;
-use App\Modules\Requests\Application\Actions\DecideRequest;
-use App\Modules\Requests\Application\Actions\SubmitRequest;
-use App\Modules\Requests\Domain\RequestStatus;
-use App\Modules\Requests\Models\ApprovalRequest;
+use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Domain\Period;
+use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradeMark;
+use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\Student;
+use App\Modules\Grades\Models\Subject;
 use App\Platform\Access\RoleAssignment;
 use App\Platform\Audit\AuditEvent;
 use App\Platform\Audit\VerifyAuditChain;
@@ -120,49 +123,95 @@ it('keeps both of two workspace choices saved at the same moment', function () {
     }
 });
 
-it('lets exactly one of two approvers decide a request when both act at once', function () {
-    foreach (range(1, 5) as $round) {
-        $approvers = [newApprover(), newApprover()];
-        $request = ApprovalRequest::factory()->submitted()->create();
+/**
+ * A subject with five students in section A and an open first month.
+ *
+ * @return array{0: Subject, 1: list<string>}
+ */
+function sectionWithOpenWindow(): array
+{
+    $subject = Subject::factory()->create();
+    $students = Student::factory()->count(5)->create()->pluck('uuid')->all();
+    GradePeriod::for(Period::Month1)->forceFill(['status' => WindowStatus::Open, 'opened_at' => now(), 'closed_at' => null])->save();
 
-        // One approves, the other rejects, at the same moment.
-        $results = Parallel::run('decide-request', [
-            [$approvers[0]->id, $request->id, 'approve'],
-            [$approvers[1]->id, $request->id, 'reject'],
+    return [$subject, $students];
+}
+
+it('saves a section once when a teacher sends the same marks four times at once', function () {
+    [$subject, $students] = sectionWithOpenWindow();
+    $marks = (string) json_encode(array_fill_keys($students, '75'));
+
+    // Four, not six: the owner role's CONNECTION LIMIT 10 (see below).
+    $results = Parallel::run('save-marks', array_fill(0, 4, [$subject->teacher_id, $subject->id, 'A', $marks]));
+
+    expect(array_values(array_filter($results, fn (array $result): bool => ! $result['ok'])))->toBe([])
+        ->and(array_sum(array_column($results, 'changed')))->toBe(5)
+        ->and(GradeMark::query()->where('subject_id', $subject->id)->count())->toBe(5)
+        ->and(AuditEvent::query()->where('action', 'grades.marks_saved')->count())->toBe(1)
+        ->and(OutboxMessage::query()->where('topic', SaveMarks::TOPIC)->count())->toBe(1)
+        ->and(app(VerifyAuditChain::class)->run()['broken_at'])->toBeNull();
+});
+
+it('keeps both of two saves of different students at the same moment', function () {
+    foreach (range(1, 3) as $round) {
+        [$subject, $students] = sectionWithOpenWindow();
+
+        $results = Parallel::run('save-marks', [
+            [$subject->teacher_id, $subject->id, 'A', (string) json_encode([$students[0] => '60', $students[1] => '61'])],
+            [$subject->teacher_id, $subject->id, 'A', (string) json_encode([$students[2] => '62', $students[3] => 'absent'])],
         ]);
-        $succeeded = array_values(array_filter($results, fn (array $result): bool => $result['ok']));
-        $refused = array_values(array_filter($results, fn (array $result): bool => ! $result['ok']));
 
-        expect($succeeded)->toHaveCount(1, "round {$round}")
-            ->and($refused[0]['error'])->toBe(DomainRuleViolation::class)
-            ->and($refused[0]['message'])->toBe('This request has already been decided.')
-            ->and($request->fresh()?->status)->toBeIn([RequestStatus::Approved, RequestStatus::Rejected])
-            ->and(AuditEvent::query()->where('subject_id', (string) $request->id)->whereIn('action', ['request.approved', 'request.rejected'])->count())->toBe(1, "round {$round}")
-            ->and(OutboxMessage::query()->where('topic', DecideRequest::TOPIC)->where('payload->request', $request->uuid)->count())->toBe(1, "round {$round}");
+        expect(array_column($results, 'ok'))->toBe([true, true], "round {$round}")
+            ->and(GradeMark::query()->where('subject_id', $subject->id)->count())->toBe(4, "round {$round}");
+    }
+});
+
+it('either saves before the window closes or refuses, never after', function () {
+    $admin = newAdministrator();
+
+    foreach (range(1, 5) as $round) {
+        [$subject, $students] = sectionWithOpenWindow();
+
+        $results = Parallel::run('save-or-close', [
+            ['save', $subject->teacher_id, $subject->id, 'A', (string) json_encode(array_fill_keys($students, '90'))],
+            ['close', $admin->id],
+        ]);
+        $save = $results[0];
+        $marks = GradeMark::query()->where('subject_id', $subject->id)->count();
+        $period = GradePeriod::for(Period::Month1);
+
+        expect($results[1]['ok'])->toBeTrue("round {$round}")
+            ->and($period->status)->toBe(WindowStatus::Closed);
+
+        if ($save['ok']) {
+            // Committed while open: every mark, written no later than the close.
+            $savedAt = (string) GradeMark::query()->where('subject_id', $subject->id)->max('updated_at');
+            expect($marks)->toBe(5, "round {$round}")
+                ->and(strtotime($savedAt))->toBeLessThanOrEqual($period->closed_at?->getTimestamp() ?? 0);
+        } else {
+            expect($save['message'])->toBe('Mark entry is closed for this period.')
+                ->and($marks)->toBe(0, "round {$round}");
+        }
+    }
+});
+
+it('imports each student once when two imports of one file race', function () {
+    $admin = newAdministrator();
+    $file = sys_get_temp_dir().DIRECTORY_SEPARATOR.'students-'.bin2hex(random_bytes(6)).'.csv';
+    $lines = ['name,stage,section'];
+    foreach (range(1, 40) as $n) {
+        $lines[] = "Student number {$n},".($n % 2 + 1).','.($n % 3 === 0 ? 'B' : 'A');
+    }
+    file_put_contents($file, implode("\n", $lines));
+
+    try {
+        $results = Parallel::run('import-students', [[$admin->id, $file], [$admin->id, $file]]);
+    } finally {
+        @unlink($file);
     }
 
-    expect(app(VerifyAuditChain::class)->run()['broken_at'])->toBeNull();
+    expect(array_column($results, 'ok'))->toBe([true, true])
+        ->and(Student::query()->count())->toBe(40)
+        ->and(array_sum(array_column($results, 'created')))->toBe(40)
+        ->and(AuditEvent::query()->where('action', 'grades.students_imported')->count())->toBe(1);
 });
-
-it('submits a request once when four submissions race', function () {
-    $request = ApprovalRequest::factory()->create();
-
-    // Four, not six: with this process and the previous test's workers still
-    // closing, six could pass the owner role's CONNECTION LIMIT 10 (seen
-    // once: "too many connections for role"), which is the limit working.
-    $results = Parallel::run('submit-request', array_fill(0, 4, [$request->requester_id, $request->id]));
-
-    // Every attempt succeeds (the late ones change nothing); a failure shows its error.
-    expect(array_values(array_filter($results, fn (array $result): bool => ! $result['ok'])))->toBe([])
-        ->and($request->fresh()?->status)->toBe(RequestStatus::Submitted)
-        ->and(AuditEvent::query()->where('subject_id', (string) $request->id)->where('action', 'request.submitted')->count())->toBe(1)
-        ->and(OutboxMessage::query()->where('topic', SubmitRequest::TOPIC)->count())->toBe(1);
-});
-
-function newApprover(): User
-{
-    $user = User::factory()->create();
-    RoleAssignment::query()->forceCreate(['user_id' => $user->id, 'role' => Role::Approver->value]);
-
-    return $user;
-}

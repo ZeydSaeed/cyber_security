@@ -4,8 +4,13 @@ namespace Database\Seeders;
 
 use App\Access\Role;
 use App\Models\User;
-use App\Modules\Requests\Domain\RequestStatus;
-use App\Modules\Requests\Models\ApprovalRequest;
+use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Domain\NameKey;
+use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Models\Student;
+use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\Teacher;
 use App\Notifications\RoleChanged;
 use App\Platform\Access\RoleAssignment;
 use Illuminate\Database\Seeder;
@@ -15,16 +20,16 @@ use RuntimeException;
 
 /**
  * One signed-up user with a confirmed authenticator app for the browser
- * tests (tests/browser, ADR-0024), and an approver for the Requests module
- * (ADR-0033). Runs only on the browser tests' own
+ * tests (tests/browser, ADR-0024), and a small Grades department (a
+ * teacher, subjects and students, ADR-0034). Runs only on the browser tests' own
  * SQLite file, never on a real database. The password and authenticator
  * secret are generated per run and written for Playwright to
  * storage/app/private/browser/user.json.
  */
 class BrowserTestSeeder extends Seeder
 {
-    /** A request waiting for a decision, at a fixed address. */
-    public const WAITING_REQUEST = '01960000-0000-7000-8000-000000000001';
+    /** The browser tests' teacher signs in with this code (Grades, ADR-0034). */
+    public const TEACHER_CODE = 'browser-teacher-2026';
 
     public function run(Google2FA $google2fa): void
     {
@@ -64,29 +69,21 @@ class BrowserTestSeeder extends Seeder
             }
         }
 
-        // An approver who signs in during the request tests, and a request
-        // waiting for a decision at a fixed address (pages.spec.ts).
-        $approverSecret = $google2fa->generateSecretKey(32);
-        $approver = User::factory()->create([
-            'name' => 'Approver Test',
-            'email' => 'approver@example.test',
-            'password' => $password,
-            'two_factor_secret' => encrypt($approverSecret),
-            'two_factor_recovery_codes' => encrypt((string) json_encode(['approver-recovery-code'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
-        RoleAssignment::query()->forceCreate(['user_id' => $approver->id, 'role' => Role::Approver->value]);
-
-        $waiting = new ApprovalRequest;
-        $waiting->forceFill([
-            'uuid' => self::WAITING_REQUEST,
-            'requester_id' => User::query()->where('email', 'person-02@example.test')->value('id'),
-            'title' => 'Ergonomic chair',
-            'details' => "For the reception desk.\nThe current one is broken.",
-            'amount' => '349.90',
-            'status' => RequestStatus::Submitted,
-            'submitted_at' => now()->subDay(),
-        ])->save();
+        // Grades (ADR-0034): a teacher with a known code, two subjects of the
+        // first stage, and six students in each of its sections.
+        $teacher = new Teacher;
+        $teacher->forceFill(['name' => 'Teacher Test', 'code_digest' => app(TeacherCodes::class)->digest(self::TEACHER_CODE)])->save();
+        foreach (['Network Security', 'Cryptography'] as $order => $name) {
+            $subject = new Subject;
+            $subject->forceFill(['stage' => Stage::First, 'name' => $name, 'teacher_id' => $teacher->id, 'sort_order' => $order + 1])->save();
+        }
+        foreach (Section::cases() as $section) {
+            foreach (range(1, 6) as $n) {
+                $student = new Student;
+                $name = "Student {$section->value}{$n}";
+                $student->forceFill(['full_name' => $name, 'name_key' => NameKey::of($name), 'stage' => Stage::First, 'section' => $section])->save();
+            }
+        }
 
         File::ensureDirectoryExists(storage_path('app/private/browser'));
         File::put(storage_path('app/private/browser/user.json'), (string) json_encode([
@@ -95,9 +92,7 @@ class BrowserTestSeeder extends Seeder
             'secret' => $secret,
             // Signed up without a second factor yet: is sent to set one up.
             'setup_email' => 'setup@example.test',
-            'approver_email' => 'approver@example.test',
-            'approver_secret' => $approverSecret,
-            'waiting_request' => self::WAITING_REQUEST,
+            'teacher_code' => self::TEACHER_CODE,
         ]));
 
         User::factory()->create([

@@ -64,17 +64,20 @@ describe('notifications', function () {
 });
 
 describe('dashboard', function () {
-    it('offers the people widget only to those who manage roles', function () {
+    it('offers the grades and people widgets only to those who may see them', function () {
         $this->actingAs(personWithRole())
             ->get('/dashboard')
             ->assertInertia(fn (Assert $page) => $page
-                ->where('layout.available', ['notifications', 'activity', 'documents', 'requests'])
+                ->where('layout.available', ['notifications', 'activity', 'documents'])
+                ->missing('widgets.grades')
                 ->missing('widgets.people'));
 
         $this->actingAs(personWithRole(Role::Administrator))
             ->get('/dashboard')
             ->assertInertia(fn (Assert $page) => $page
-                ->where('layout.available', ['notifications', 'activity', 'documents', 'requests', 'people'])
+                ->where('layout.available', ['notifications', 'activity', 'documents', 'grades', 'people'])
+                ->where('widgets.grades.open', false)
+                ->where('widgets.grades.expected', 0)
                 ->where('widgets.people.administrators', 1));
     });
 
@@ -90,7 +93,7 @@ describe('dashboard', function () {
             ->get('/dashboard')
             ->assertInertia(fn (Assert $page) => $page
                 // "people" is not theirs to see; new widgets go to the end.
-                ->where('layout.order', ['documents', 'activity', 'notifications', 'requests'])
+                ->where('layout.order', ['documents', 'activity', 'notifications'])
                 ->where('layout.hidden', ['activity'])
                 ->missing('widgets.activity')
                 ->has('widgets.documents'));
@@ -124,8 +127,6 @@ describe('reports', function () {
                 ->where('roles', [
                     ['role' => 'administrator', 'count' => 1],
                     ['role' => 'auditor', 'count' => 1],
-                    // Every role is listed, held or not (Requests module, ADR-0033).
-                    ['role' => 'approver', 'count' => 0],
                     ['role' => 'none', 'count' => 1],
                 ]));
     });

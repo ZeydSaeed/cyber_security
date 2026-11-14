@@ -1,6 +1,9 @@
 <?php
 
-use App\Modules\Requests\Models\ApprovalRequest;
+use App\Modules\Grades\Models\GradeMark;
+use App\Modules\Grades\Models\Student;
+use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditEvent;
 use App\Platform\Files\StoredFile;
 use App\Platform\Outbox\OutboxMessage;
@@ -15,19 +18,22 @@ use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
-it('makes requests in every state, with files, audit records and outbox messages', function () {
+it('makes a department with marks, files, audit records and outbox messages', function () {
     Storage::fake((string) config('platform.files.disk'));
-    config(['platform.performance.drill_requests' => 12]);
+    config(['platform.performance.drill_students' => 16]);
 
     $this->seed(DrillSeeder::class);
 
-    $statuses = ApprovalRequest::query()->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status')->all();
-
-    expect(ApprovalRequest::query()->count())->toBe(12)
-        ->and(array_keys($statuses))->toEqualCanonicalizing(['draft', 'submitted', 'approved', 'rejected'])
+    // 16 students, 8 per stage, 4 per section; 7 of 8 subjects marked.
+    expect(Teacher::query()->count())->toBe(8)
+        ->and(Subject::query()->count())->toBe(16)
+        ->and(Student::query()->count())->toBe(16)
+        ->and(GradeMark::query()->count())->toBe(16 * 7)
+        ->and(GradeMark::query()->where('is_absent', true)->count())->toBeGreaterThan(0)
         ->and(StoredFile::query()->count())->toBe(4)
-        ->and(AuditEvent::query()->where('action', 'like', 'request.%')->count())->toBeGreaterThan(12)
-        ->and(OutboxMessage::query()->count())->toBeGreaterThan(0);
+        ->and(AuditEvent::query()->where('action', 'grades.marks_saved')->count())->toBe(28)
+        ->and(AuditEvent::query()->where('action', 'like', 'grades.window_%')->count())->toBe(2)
+        ->and(OutboxMessage::query()->where('topic', 'grades.section_completed')->count())->toBe(28);
 });
 
 it('never runs in production or staging', function (string $environment) {

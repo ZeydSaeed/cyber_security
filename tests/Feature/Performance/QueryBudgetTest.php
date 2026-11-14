@@ -55,9 +55,9 @@ it('keeps each page within its query budget', function (string $page, bool $sign
     // Phase 7 batch 2) and the unread notification count (ADR-0029, batch
     // 4b), both on indexes.
     // The dashboard adds its layout and the visible widgets: three unread
-    // notifications, activity (about and by the person), document counts,
-    // and the person's requests by status (Requests module, ADR-0033). An
-    // approver's dashboard runs one more: the requests waiting for them.
+    // notifications, activity (about and by the person) and document
+    // counts. (The grades widget is for administrators; its queries are
+    // counted in GradesOverviewTest.)
     'dashboard' => ['dashboard', true, 8],
     'profile settings' => ['profile.edit', true, 2],
     // And the passkey list.

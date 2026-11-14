@@ -1,13 +1,16 @@
 # Building a module
 
-A step-by-step guide for adding a business area, using `Requests`
-(ADR-0033) as the worked example. Every step names the file in that module
-to copy from. Read `README.md` in this folder first for the layers and the
+A step-by-step guide for adding a business area, using `Grades`
+(ADR-0034) as the worked example. Every step names the file in that module
+to copy from. The template's own example, `Requests` (ADR-0033), was removed
+from this application; its HTTP layer, pages and page tests (steps 6 and 9)
+are in this repository's first commit (`app/Modules/Requests`) until the
+Grades pages exist (G2, G3). Read `README.md` in this folder first for the layers and the
 dependency rules; deptrac and `tests/Architecture` enforce them.
 
 ## 0. Decide what the module owns
 
-- One business area, named as a plural noun (`Requests`, `Invoices`).
+- One business area, named as a plural noun (`Grades`, `Invoices`).
 - Its states and the moves between them (a state machine), who may do
   what, what must be audited, and who must be told.
 - What other code may read from it. That becomes `Contracts`; nothing
@@ -15,7 +18,7 @@ dependency rules; deptrac and `tests/Architecture` enforce them.
 
 ## 1. The provider: everything the module adds, in one place
 
-`app/Modules/Requests/RequestsServiceProvider.php`, registered in
+`app/Modules/Grades/GradesServiceProvider.php`, registered in
 `bootstrap/providers.php`. Removing the module means removing that line
 and the folder.
 
@@ -33,12 +36,12 @@ and the folder.
 
 - An enum per state machine with `canBecome()`, so a move that is not
   allowed cannot be written by mistake. A unit test lists every allowed
-  move (`tests/Unit/Requests/RequestStatusTest.php`).
+  move (`tests/Unit/Grades/GradesDomainTest.php`).
 - No Eloquent and no facades in `Domain`.
 
 ## 3. Data: the table and its constraints
 
-`Database/migrations/..._create_approval_requests_table.php`.
+`Database/migrations/..._create_grades_tables.php`.
 
 - A bigint id inside and a UUIDv7 `uuid` for URLs (`HasUuids` with
   `uniqueIds()`; the route key is the UUID). The id never reaches a page.
@@ -49,7 +52,7 @@ and the folder.
 - Repeat the state machine as PostgreSQL `CHECK` constraints, and name
   NULL in each rule (a CHECK passes when its expression is NULL). Test
   them by writing bad rows past the actions
-  (`tests/Feature/Requests/RequestConstraintsTest.php`).
+  (`tests/Feature/Grades/GradesConstraintsTest.php`).
 - A `lock_version` column if people edit the same row from forms.
 - A factory with states for each status; its users have a second factor
   (`User::factory()->withTwoFactor()`), or the pages redirect to the 2FA
@@ -74,7 +77,7 @@ Outbox handlers are jobs (`Application/Jobs`, extending `OutboxJob`) that
 send notifications (`Application/Notifications`). Reads other code needs
 go in `Application/Queries`, behind an interface in `Contracts`.
 
-Test every rule (`tests/Feature/Requests/RequestLifecycleTest.php`) and a
+Test every rule (`tests/Feature/Grades/MarkEntryTest.php`) and a
 real race of two people acting at once (`tests/Concurrency`, PostgreSQL;
 four processes at most, the test role's connection limit is 10).
 
@@ -110,13 +113,13 @@ four processes at most, the test role's connection limit is 10).
 ## 7. Integration with the rest of the application
 
 The core application knows the module only through its `Contracts` (the
-dashboard widget reads `RequestsOverview`) and its generated route
+dashboard widget reads `GradesOverview`) and its generated route
 helpers (navigation, notification links). Never import a module's models
 or actions from `app/Http` or another module.
 
 ## 8. Observability
 
-- A `MetricsSource` (`Application/Metrics/RequestsMetrics.php`): metrics
+- A `MetricsSource` (`Application/Metrics/GradesMetrics.php`): metrics
   named `module_<name>_*`, each an indexed count, always exported (0 when
   empty, so an alert on it can fire). A source that fails marks itself
   down (`platform_metrics_source_up`) without breaking `/metrics`.

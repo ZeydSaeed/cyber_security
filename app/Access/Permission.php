@@ -12,7 +12,8 @@ enum Permission: string
     case RolesManage = 'roles.manage';
     case AuditView = 'audit.view';
 
-    // Requests module (ADR-0033): see everyone's requests; decide on them.
-    case RequestsViewAll = 'requests.view_all';
-    case RequestsDecide = 'requests.decide';
+    // Grades module (ADR-0034): teachers, subjects, students, the entry
+    // window and corrections; reading the results.
+    case GradesManage = 'grades.manage';
+    case GradesViewResults = 'grades.view_results';
 }

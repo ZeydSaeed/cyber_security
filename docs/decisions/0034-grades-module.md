@@ -1,6 +1,6 @@
 # ADR-0034: The Grades module (first-month marks and results)
 
-- Status: Accepted (owner's answers, 2026-11-14); G1 next
+- Status: Accepted (owner's answers, 2026-11-14); G1 done, G2 next
 - Date: 2026-11-14
 
 ## Context
@@ -127,12 +127,35 @@ Option 3, as a business module `app/Modules/Grades` built like
 
 **Delivery in phases**, each ending with the Arabic report:
 
-| Phase | Scope                                   | Acceptance                                                                                                                                                                                                                                                                                                          |
-| ----- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G1    | Remove `Requests`; domain, data, import | `Requests` gone, and every platform test that used it (concurrency, metrics, drill seeder, query budget, dashboard, browser pages, load) rewritten on Grades, none dropped; constraint tests write bad rows and fail; import preview/apply tested incl. repeat; unit tests for `ResultCalculator` and `EntryWindow` |
-| G2    | Teacher guard and mark entry            | Login/limits/lockout tests; a teacher cannot read or write another subject (403/404); closed window refuses; concurrency test of two saves; usable at 360 px                                                                                                                                                        |
-| G3    | Owner pages, results, print, export     | Results (incl. absent) match hand-computed fixtures; print in Arabic RTL; translations complete; dashboard widget through a `Contracts` query                                                                                                                                                                       |
-| G4    | Verification                            | `composer test`, `test:pgsql`, build, signed-in ZAP on `/teacher`, Arabic screenshots desktop/phone                                                                                                                                                                                                                 |
+| Phase | Scope                                   | Acceptance                                                                                                                                                                                                                                                                            |
+| ----- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1    | Remove `Requests`; domain, data, import | `Requests` gone; every platform test that used it rewritten on Grades (page-level tests follow with the pages, see the implementation notes); constraint tests write bad rows and fail; import preview/apply tested incl. repeat; unit tests for `ResultCalculator` and `EntryWindow` |
+| G2    | Teacher guard and mark entry            | Login/limits/lockout tests; a teacher cannot read or write another subject (403/404); closed window refuses; concurrency test of two saves; usable at 360 px                                                                                                                          |
+| G3    | Owner pages, results, print, export     | Results (incl. absent) match hand-computed fixtures; print in Arabic RTL; translations complete; dashboard widget through a `Contracts` query                                                                                                                                         |
+| G4    | Verification                            | `composer test`, `test:pgsql`, build, signed-in ZAP on `/teacher`, Arabic screenshots desktop/phone                                                                                                                                                                                   |
+
+## Implementation notes (G1)
+
+- **Teachers in the audit trail.** `audit_events.actor_id` means a user
+  (the activity timeline reads names from `users`), so a teacher's change
+  is recorded with no actor id and the teacher's UUID and name in its
+  metadata. The audit chain itself is unchanged.
+- **Concurrency.** `SaveMarks` locks the subject for update and the period
+  for share; `ChangeEntryWindow` locks the period for update. A save
+  either commits before a close or is refused after it (tested with real
+  parallel processes). Student imports take a table lock, so two at once
+  never create a student twice.
+- **Settings** are in `config/grades.php` (in `config/`, so `env()` still
+  works with a cached configuration): pass mark, subjects per stage, the
+  code key, the largest import.
+- **Platform tests that used Requests**, rewritten on Grades in G1:
+  concurrency (`RaceConditionsTest`, `worker.php`), metrics
+  (`ModuleMetricsTest`), the restore-drill data (`DrillSeeder`), the
+  dashboard widget and its tests, the permission matrix, the alert rule
+  tests and the browser seed data. Tests of the Requests _pages_ (its
+  HTTP tests, browser scenario, large-table budget and load script) have
+  no Grades counterpart until the Grades pages exist; they are written in
+  G2 (teacher pages, load scenario) and G3 (owner pages, large table).
 
 ## Consequences
 

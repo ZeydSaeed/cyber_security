@@ -4,10 +4,17 @@ namespace Database\Seeders;
 
 use App\Access\Role;
 use App\Models\User;
-use App\Modules\Requests\Application\Actions\CreateRequest;
-use App\Modules\Requests\Application\Actions\DecideRequest;
-use App\Modules\Requests\Application\Actions\SubmitRequest;
-use App\Modules\Requests\Domain\Decision;
+use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
+use App\Modules\Grades\Application\Actions\ImportStudents;
+use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Actions\SaveSubject;
+use App\Modules\Grades\Application\Actions\SaveTeacher;
+use App\Modules\Grades\Domain\Mark;
+use App\Modules\Grades\Domain\Period;
+use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\Student;
 use App\Platform\Access\RoleAssignment;
 use App\Platform\Files\FileStore;
 use Illuminate\Database\Seeder;
@@ -15,59 +22,83 @@ use Illuminate\Http\UploadedFile;
 use RuntimeException;
 
 /**
- * Data for a restore drill on a disposable machine (operations.yml): people,
- * requests made through the module's own actions (so audit records, outbox
- * messages and notifications exist, as in real use) and attached files.
+ * Data for a restore drill on a disposable machine (operations.yml): a
+ * department made through the Grades module's own actions (ADR-0034), so
+ * audit records, outbox messages and notifications exist as in real use:
+ * eight teachers and sixteen subjects, students imported from a file, and
+ * marks for most sections. Attached files come from people's documents.
  * Refuses to run in production or staging.
  *
- *   DRILL_REQUESTS=300 php artisan db:seed --class=DrillSeeder
- *   (platform.performance.drill_requests)
+ *   DRILL_STUDENTS=300 php artisan db:seed --class=DrillSeeder
+ *   (platform.performance.drill_students)
  */
 class DrillSeeder extends Seeder
 {
-    public function run(CreateRequest $create, SubmitRequest $submit, DecideRequest $decide, FileStore $files): void
-    {
+    public function run(
+        SaveTeacher $teachers,
+        SaveSubject $subjects,
+        ImportStudents $import,
+        ChangeEntryWindow $window,
+        SaveMarks $marks,
+        FileStore $files,
+    ): void {
         if (app()->environment('production', 'staging')) {
             throw new RuntimeException('DrillSeeder never runs in production or staging.');
         }
 
-        $count = (int) config('platform.performance.drill_requests');
-        $requesters = User::factory()->withTwoFactor()->count(40)->create()->values()->all();
-        $approvers = User::factory()->withTwoFactor()->count(5)->create()->values()->all();
+        $owner = User::factory()->withTwoFactor()->create(['name' => 'Drill Owner']);
+        RoleAssignment::query()->forceCreate(['user_id' => $owner->id, 'role' => Role::Administrator->value]);
 
-        foreach ($approvers as $approver) {
-            RoleAssignment::query()->forceCreate(['user_id' => $approver->id, 'role' => Role::Approver->value]);
+        $staff = [];
+        foreach (range(1, 8) as $n) {
+            $staff[] = $teachers->create($owner, "Drill Teacher {$n}", "drill-code-{$n}");
         }
 
-        $pdf = "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n";
+        $subjectList = [];
+        foreach (Stage::cases() as $stage) {
+            foreach (range(1, 8) as $n) {
+                $subjectList[] = $subjects->create($owner, $stage, "Subject {$stage->value}.{$n}", $staff[($n - 1) % 8]);
+            }
+        }
 
+        $count = (int) config('platform.performance.drill_students');
+        // A private, unpredictable name in the application's own storage.
+        $csv = storage_path('app/private/drill-students-'.bin2hex(random_bytes(8)).'.csv');
+        $lines = ['name,stage,section,number'];
         for ($i = 1; $i <= $count; $i++) {
-            $requester = $requesters[$i % count($requesters)];
-            $request = $create->handle($requester, [
-                'title' => "Drill request {$i}",
-                'details' => "Written by the restore drill seeder.\nLine two.",
-                'amount' => $i % 4 === 0 ? null : (string) ($i * 2.5),
-            ]);
+            $lines[] = "Drill Student {$i},".($i % 2 + 1).','.($i % 4 < 2 ? 'A' : 'B').",D{$i}";
+        }
+        file_put_contents($csv, implode("\n", $lines));
 
-            if ($i % 3 === 0) {
-                $files->store(UploadedFile::fake()->createWithContent("quote-{$i}.pdf", $pdf), null, $request, $requester);
+        try {
+            $import->apply($owner, $csv, 'csv', 'drill.csv');
+        } finally {
+            @unlink($csv);
+        }
+
+        $window->handle($owner, Period::Month1, WindowStatus::Open);
+
+        // Every subject's sections, except the last subject of each stage
+        // (left for the "missing marks" view); one absence in every ten.
+        foreach ($subjectList as $index => $subject) {
+            if ($index % 8 === 7) {
+                continue;
             }
 
-            if ($i % 4 === 0) {
-                continue; // stays a draft
+            foreach (Section::cases() as $section) {
+                $values = [];
+                foreach (Student::query()->where('stage', $subject->stage->value)->where('section', $section->value)->pluck('id', 'uuid') as $uuid => $id) {
+                    $values[$uuid] = $id % 10 === 0 ? Mark::absent() : Mark::of(($id * 7 + $index * 3) % 101);
+                }
+                $marks->handle($staff[$index % 8], $subject, $section, Period::Month1, $values);
             }
+        }
 
-            $request = $submit->handle($requester, $request);
+        $window->handle($owner, Period::Month1, WindowStatus::Closed);
 
-            if ($i % 2 === 0) {
-                $approve = $i % 6 !== 0;
-                $decide->handle(
-                    $approvers[$i % count($approvers)],
-                    $request,
-                    $approve ? Decision::Approve : Decision::Reject,
-                    $approve ? null : 'Not in this quarter.',
-                );
-            }
+        $pdf = "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n";
+        foreach (range(1, 4) as $n) {
+            $files->store(UploadedFile::fake()->createWithContent("letter-{$n}.pdf", $pdf), null, $owner, $owner);
         }
     }
 }

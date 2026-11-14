@@ -113,16 +113,8 @@ groups:
                 runbook: docs/runbooks/data.md#auditchainnotverified
 
     # One group per module, from the module's MetricsSource (module_<name>_*).
-    - name: module-requests
-      rules:
-          - alert: RequestsWaitingLong
-            expr: module_requests_oldest_waiting_age_seconds > 3 * 86400
-            for: 1h
-            labels:
-                severity: warning
-            annotations:
-                summary: A submitted request has waited over three days for a decision.
-                runbook: docs/runbooks/requests.md#requestswaitinglong
+    # Grades (ADR-0034) exports progress for the dashboard and has no alert
+    # of its own yet: a failing source is caught by MetricsSourceFailing.
 
     - name: infrastructure
       rules:
