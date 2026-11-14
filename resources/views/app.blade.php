@@ -21,11 +21,11 @@
              values as --background in resources/css/app.css. --}}
         <style>
             html {
-                background-color: oklch(0.99 0.002 247);
+                background-color: oklch(0.976 0.005 48.7);
             }
 
             html.dark {
-                background-color: oklch(0.17 0.01 255);
+                background-color: oklch(0.231 0.042 284.7);
             }
         </style>
 
