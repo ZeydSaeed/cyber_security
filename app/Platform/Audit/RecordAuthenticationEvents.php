@@ -30,8 +30,11 @@ class RecordAuthenticationEvents
 
     public function subscribe(Dispatcher $events): void
     {
-        $events->listen(Login::class, fn (Login $event) => $this->forUser('auth.login', $event->user));
-        $events->listen(Logout::class, fn (Logout $event) => $event->user === null ? null : $this->forUser('auth.logout', $event->user));
+        // Users' sign-ins only: actor ids are users, so another guard's
+        // identity (a Grades teacher, ADR-0034) must never be written as
+        // one; such a module records its own sign-ins.
+        $events->listen(Login::class, fn (Login $event) => $this->isUsersGuard($event->guard) ? $this->forUser('auth.login', $event->user) : null);
+        $events->listen(Logout::class, fn (Logout $event) => $event->user === null || ! $this->isUsersGuard($event->guard) ? null : $this->forUser('auth.logout', $event->user));
         $events->listen(PasswordReset::class, fn (PasswordReset $event) => $this->forUser('auth.password_reset', $event->user));
         $events->listen(PasswordUpdatedViaController::class, fn (PasswordUpdatedViaController $event) => $this->forUser('auth.password_changed', $event->user));
         $events->listen(Verified::class, fn (Verified $event) => $this->forUser('auth.email_verified', $event->user));
@@ -55,6 +58,11 @@ class RecordAuthenticationEvents
         if ($user instanceof Authenticatable && $user instanceof Model) {
             $this->audit->record($action, $user, actor: $user);
         }
+    }
+
+    private function isUsersGuard(string $guard): bool
+    {
+        return $guard === (string) config('auth.defaults.guard', 'web');
     }
 
     private function hashIdentifier(string $identifier): string

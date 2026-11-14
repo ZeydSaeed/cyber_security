@@ -31,9 +31,22 @@ once, runs k6 while sampling CPU and memory every 2 s, and saves `run.txt`,
 `k6.log`, `summary.json`, `resources.csv` and `top-statements.txt` under
 `docs/evidence/<phase>/<date>-<name>/` (`-Phase`, `phase-3` by default).
 
-The template's Requests scenario was removed with its module (ADR-0034).
-The teachers' mark entry gets its own scenario with the Grades pages (G2):
-many teachers saving their sections at once while the window is open.
+Teachers entering marks (ADR-0034): each k6 VU is one teacher who signs in
+with their code, opens their subjects and a section, and saves a full column
+of marks, again and again. It runs on the disposable test database, never
+the development one:
+
+```powershell
+.\scripts\perf\run-teachers.ps1 -Name teachers-16 -Vus 16 -Hold 1m
+```
+
+The script serves the application with `php -S` (which passes the test
+database settings through; `php artisan serve` forwards only a few
+variables, and a first attempt reached the development database that way)
+and checks the server's environment before any load. On Windows that server
+answers one request at a time, so read the application's own time
+(`server_app_ms`, from Server-Timing), not k6's waiting time. Evidence:
+`docs/evidence/grades-g2/`.
 
 Both scripts keep each VU's session between iterations (`noCookiesReset`)
 and fail any staff page that ends on the sign-in page: without that, k6

@@ -1,6 +1,6 @@
 # ADR-0034: The Grades module (first-month marks and results)
 
-- Status: Accepted (owner's answers, 2026-11-14); G1 done, G2 next
+- Status: Accepted (owner's answers, 2026-11-14); G1 and G2 done, G3 next
 - Date: 2026-11-14
 
 ## Context
@@ -156,6 +156,32 @@ Option 3, as a business module `app/Modules/Grades` built like
   HTTP tests, browser scenario, large-table budget and load script) have
   no Grades counterpart until the Grades pages exist; they are written in
   G2 (teacher pages, load scenario) and G3 (owner pages, large table).
+
+## Implementation notes (G2)
+
+- **The teacher guard** is registered by the module's provider (`teacher`,
+  session driver, `grade_teachers`). The users' pages use the `web` guard
+  and never accept a teacher; the teachers' routes use `TeacherSession`
+  and never the users' `auth`. A user and a teacher may be signed in on one
+  browser; signing one out leaves the other.
+- **Audit.** The platform's `auth.login`/`auth.logout` records are now for
+  the users' guard only, and `AuditLogger::record(..., withoutActor: true)`
+  records an act with no actor even when a user is signed in on the same
+  browser. Teacher sign-ins, failures, lockouts, sign-outs and saves use it.
+- **Sessions** end when the teacher is stopped, when the code changes (the
+  lock version is kept in the session) and after 30 idle minutes.
+- **Limits.** Failed codes: 5 a minute and 20 an hour per address, counting
+  failures only. Saving: 60 a minute per teacher, not per address, since a
+  school's teachers may share one.
+- **Pages** (`resources/js/modules/grades`): the code page (users' sign-in
+  layout), the subjects with each section's progress, and the section's
+  sheet (Enter moves to the next student; "absent" empties and locks the
+  field; wrong values named per student, in the browser and by the server).
+  Another teacher's subject is a 404.
+- **Tests**: `TeacherAccessTest`, `TeacherPagesTest` (incl. a fixed query
+  count per sheet), `tests/browser/teacher.spec.ts` (Arabic and English at
+  360 px, axe, no sideways scrolling), and the load scenario
+  `tests/load/teachers.js` with `scripts/perf/run-teachers.ps1`.
 
 ## Consequences
 

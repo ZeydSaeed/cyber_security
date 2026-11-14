@@ -289,6 +289,8 @@ return [
         'database' => env('PERF_DATABASE', 'cyber_security'),
         'users' => (int) env('PERF_USERS', 1000),
         'audit_events' => (int) env('PERF_AUDIT_EVENTS', 50000),
+        // Students per section for the teachers' load test (GradesPerformanceSeeder).
+        'students_per_section' => (int) env('PERF_STUDENTS', 40),
         // Students DrillSeeder imports for a restore drill (operations.yml).
         'drill_students' => (int) env('DRILL_STUDENTS', 300),
     ],

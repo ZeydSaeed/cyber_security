@@ -30,6 +30,9 @@
         </include>
     </source>
     <php>
+        <!-- The architecture tests parse every source file; the php.ini
+             default (128M) stopped being enough as the code grew (G2). -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="AUDIT_HMAC_KEY" value="testing-only-audit-key-not-a-secret-0123456789"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>

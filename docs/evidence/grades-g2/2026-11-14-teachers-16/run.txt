@@ -1,0 +1,26 @@
+﻿Local run, 2026-11-14 23:18 on the owner's Windows machine.
+Server: PHP built-in server (php -S with Laravel's router), PHP_CLI_SERVER_WORKERS=8, PHP 8.5 (Herd), PostgreSQL 18 local.
+Database: cyber_security_testing (disposable test database), migrated fresh and seeded by GradesPerformanceSeeder:
+16 teachers (one subject each, 8 per stage), 40 students per section (160 students), first month open.
+Load: tests/load/teachers.js, 16 teacher VUs, 15 s ramp, 1 min hold, 10 s ramp down.
+After the run: 1280 marks; 91 saves audited
+Not representative of a production server (Nginx + PHP-FPM); a local, relative measurement.
+
+Results (summary.json), status: Tested locally.
+- 305 requests, 0 failed; 289 checks, 0 failed; 91 saves of a full section
+  (40 students), each audited once (91 grades.marks_saved records).
+- Time inside the application (Server-Timing app): avg 110 ms, median 98 ms,
+  p95 206 ms, max 405 ms.
+- Time seen by k6: avg 2.24 s, p95 3.82 s. The difference is queueing: on
+  Windows the PHP built-in server answers one request at a time
+  (PHP_CLI_SERVER_WORKERS needs fork, which Windows lacks), so 16 teachers
+  wait for each other. This measures the local server, not the application;
+  a PHP-FPM pool serves requests in parallel.
+- Queries: a page read is 5; saving a 40-student section is about 60 (one
+  write per mark, plus locks and the audit record). Linear in the section
+  size; a batch upsert can replace it if sections grow.
+Before this run, an earlier attempt with `php artisan serve` did not pass the
+database variables to its server (artisan serve forwards only a few), so
+its requests reached the development database: 7 refused teacher sign-ins
+were audited there; nothing else was written. The run above used `php -S`
+directly and probed the environment before any load.

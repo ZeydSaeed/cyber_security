@@ -122,7 +122,15 @@ class SaveMarks
                 $author->forceFill(['last_seen_at' => now()])->saveQuietly();
             }
 
-            $this->audit->record('grades.marks_saved', $subject, $metadata, $changes, actor: $author instanceof User ? $author : null);
+            $this->audit->record(
+                'grades.marks_saved',
+                $subject,
+                $metadata,
+                $changes,
+                actor: $author instanceof User ? $author : null,
+                // A teacher is not a user: never the user signed in on the same browser.
+                withoutActor: $author instanceof Teacher,
+            );
 
             if ($complete && ! $completeBefore) {
                 $this->outbox->record(self::TOPIC, [

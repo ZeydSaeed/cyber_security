@@ -4,6 +4,8 @@ namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Database\Factories\TeacherFactory;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,8 +14,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A teacher who enters marks with a code the owner sets (ADR-0034). Not a
- * user: no password, no second factor, and reaches only mark entry. The code
- * is kept as an HMAC digest (TeacherCodes), never as written.
+ * user: no password, no second factor, and reaches only mark entry, on the
+ * `teacher` guard. The code is kept as an HMAC digest (TeacherCodes), never
+ * as written; there is no "remember me".
  *
  * @property int $id
  * @property string $uuid
@@ -26,12 +29,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable $updated_at
  */
 #[UseFactory(TeacherFactory::class)]
-class Teacher extends Model
+class Teacher extends Model implements Authenticatable
 {
+    use AuthenticatableTrait;
+
     /** @use HasFactory<TeacherFactory> */
     use HasFactory;
 
     use HasUuids;
+
+    /** The guard teachers sign in on (GradesServiceProvider). */
+    public const GUARD = 'teacher';
 
     public const MORPH = 'grade_teacher';
 
@@ -60,6 +68,24 @@ class Teacher extends Model
     public function uniqueIds(): array
     {
         return ['uuid'];
+    }
+
+    /**
+     * The session guard keeps a fingerprint of the "password" to notice a
+     * change. A teacher has none; the lock version is what changes when the
+     * code changes or the teacher is stopped (TeacherSession checks it too).
+     */
+    public function getAuthPassword(): string
+    {
+        return 'grades-teacher-v'.$this->lock_version;
+    }
+
+    /**
+     * No "remember me" for teachers: the table has no such column.
+     */
+    public function getRememberTokenName(): string
+    {
+        return '';
     }
 
     public function getRouteKeyName(): string

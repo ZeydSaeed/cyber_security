@@ -6,8 +6,11 @@ use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Domain\NameKey;
+use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
@@ -70,7 +73,9 @@ class BrowserTestSeeder extends Seeder
         }
 
         // Grades (ADR-0034): a teacher with a known code, two subjects of the
-        // first stage, and six students in each of its sections.
+        // first stage, six students in each of its sections, and the first
+        // month open for entry (teacher.spec.ts).
+        GradePeriod::for(Period::Month1)->forceFill(['status' => WindowStatus::Open, 'opened_at' => now(), 'closed_at' => null])->save();
         $teacher = new Teacher;
         $teacher->forceFill(['name' => 'Teacher Test', 'code_digest' => app(TeacherCodes::class)->digest(self::TEACHER_CODE)])->save();
         foreach (['Network Security', 'Cryptography'] as $order => $name) {

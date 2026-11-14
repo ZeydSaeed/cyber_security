@@ -81,6 +81,14 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Marks saved');
         case 'grades.students_imported':
             return t('Students imported');
+        case 'grades.teacher_login':
+            return t('Teacher signed in');
+        case 'grades.teacher_logout':
+            return t('Teacher signed out');
+        case 'grades.teacher_login_failed':
+            return t('Teacher code not recognised');
+        case 'grades.teacher_lockout':
+            return t('Teacher sign-in paused after too many attempts');
         case 'user.invited':
             return role
                 ? t('Invited as :role', { role })

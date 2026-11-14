@@ -28,6 +28,8 @@ class AuditLogger
     /**
      * @param  array<string, mixed>  $metadata
      * @param  array<string, array{from: mixed, to: mixed}>  $changes  allow-listed fields only (see changesOf)
+     * @param  bool  $withoutActor  record no actor even when a user is signed in on the same session
+     *                              (an act by someone who is not a user, such as a Grades teacher)
      */
     public function record(
         string $action,
@@ -35,8 +37,9 @@ class AuditLogger
         array $metadata = [],
         array $changes = [],
         ?Authenticatable $actor = null,
+        bool $withoutActor = false,
     ): AuditEvent {
-        $actor ??= Auth::user();
+        $actor = $withoutActor ? null : ($actor ?? Auth::user());
         $mask = MaskSensitiveData::fromConfig();
 
         $fields = [

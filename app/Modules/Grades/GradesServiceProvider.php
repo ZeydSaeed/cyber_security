@@ -14,7 +14,11 @@ use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Observability\MetricsSource;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -27,6 +31,14 @@ class GradesServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Teachers sign in on their own guard with a code (ADR-0034): the
+        // `web` guard, the users' pages and their second factor never see a
+        // teacher, and a teacher's session reaches only mark entry.
+        config([
+            'auth.guards.'.Teacher::GUARD => ['driver' => 'session', 'provider' => 'grade_teachers'],
+            'auth.providers.grade_teachers' => ['driver' => 'eloquent', 'model' => Teacher::class],
+        ]);
+
         // Outbox topics this module publishes, and who handles them.
         config(['platform.outbox.handlers' => [
             ...(array) config('platform.outbox.handlers'),
@@ -46,6 +58,12 @@ class GradesServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/migrations');
+        $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+
+        // Saving marks: 60 a minute for each teacher (the route sits behind
+        // TeacherSession, so there is always one).
+        RateLimiter::for('grades-teacher-save', fn (Request $request): Limit => Limit::perMinute(60)
+            ->by('grades-teacher:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
 
         // Stable names in audit records instead of class names.
         Relation::morphMap([
