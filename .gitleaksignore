@@ -2,4 +2,4 @@
 # checking the finding is not a real secret (docs/standards/ci.md).
 
 # RFC 6238 appendix B test vector (public secret "12345678901234567890").
-e7b955122f4b275541fea38b1473515ae7ffbe93:tests/load/selftest.js:generic-api-key:14
+ced603fa607c5b8c5a4538c4a97a0509151b31ff:tests/load/selftest.js:generic-api-key:14
