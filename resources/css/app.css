@@ -1,6 +1,6 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -16,8 +16,8 @@
     /* --font-interface: IBM Plex Sans Arabic, self-hosted (vite.config.ts). */
     --font-sans:
         var(--font-interface, ui-sans-serif), ui-sans-serif, system-ui,
-        sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        "Noto Color Emoji";
+        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -176,8 +176,8 @@
 
     /* Compact density (ADR-0028): more rows on screen in tables and lists;
        targets stay at least 24 px (WCAG 2.5.8). */
-    [data-density="compact"] [data-slot="data-table"] :is(th, td),
-    [data-density="compact"] [data-slot="documents"] > li {
+    [data-density='compact'] [data-slot='data-table'] :is(th, td),
+    [data-density='compact'] [data-slot='documents'] > li {
         padding-block: 0.375rem;
     }
 
