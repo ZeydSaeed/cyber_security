@@ -87,6 +87,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Teacher signed out');
         case 'grades.teacher_login_failed':
             return t('Teacher code not recognised');
+        case 'grades.results_exported':
+            return t('Results exported');
         case 'grades.teacher_lockout':
             return t('Teacher sign-in paused after too many attempts');
         case 'user.invited':

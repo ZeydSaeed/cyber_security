@@ -1,6 +1,6 @@
 # ADR-0034: The Grades module (first-month marks and results)
 
-- Status: Accepted (owner's answers, 2026-11-14); G1 and G2 done, G3 next
+- Status: Accepted (owner's answers, 2026-11-14); G1, G2 and G3 done, G4 next
 - Date: 2026-11-14
 
 ## Context
@@ -182,6 +182,39 @@ Option 3, as a business module `app/Modules/Grades` built like
   count per sheet), `tests/browser/teacher.spec.ts` (Arabic and English at
   360 px, axe, no sideways scrolling), and the load scenario
   `tests/load/teachers.js` with `scripts/perf/run-teachers.ps1`.
+
+## Implementation notes (G3)
+
+- **Owner's pages** under `/grades` (users' `web` guard, second factor):
+  reading needs `grades.view_results`, every change `grades.manage`, and
+  each action checks again inside its transaction. The overview shows the
+  entry window, the teachers' link, and each stage's subjects with each
+  section's progress; a stage without its expected number of subjects and
+  a subject without a teacher are flagged.
+- **Teachers and subjects**: codes are set and changed, never shown again.
+  The subject form lists stopped teachers too, marked, so saving a subject
+  never unassigns its teacher by accident.
+- **Students**: a server-side table (`StudentsTable`, ADR-0026; search by
+  name with the import's spelling rules, or by number). The import file
+  goes through `FileStore` (type from the bytes, audited); its id waits in
+  the session between the preview and "apply". The bytes are read before
+  the asynchronous scan finishes: they are only parsed as a spreadsheet
+  (streaming, row limit), never served or executed.
+- **Results** (`ResultSheets`, three queries per section whatever its
+  size): total, percentage, subjects below the pass mark, absences,
+  incomplete rows marked; checked against figures worked out by hand
+  (`GradesAdminPagesTest`). Printable section and result-card pages with
+  no application around them; an Excel file (openspout, right to left in
+  Arabic, numbers kept as numbers), each export audited.
+- **Corrections**: the owner opens a teacher's sheet (the same component)
+  at any time; the change is recorded under the owner's name.
+- **Bidirectional text**: names typed in either script sit in Arabic pages
+  as `<bdi>` inside cells aligned with the page, not as `dir="auto"` on
+  the cell, which aligned an English name to the left of an Arabic column.
+- **Tests**: `GradesAdminPagesTest` (access, set-up, import, results,
+  print, export, corrections, query count) and the browser test
+  `grades-admin.spec.ts` (every page in Arabic and English on a phone and
+  a desktop with axe; the import and a printed card).
 
 ## Consequences
 

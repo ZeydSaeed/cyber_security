@@ -25,6 +25,9 @@ const serverEnv = {
     MAIL_MAILER: 'array',
     LOG_CHANNEL: 'null',
     PLATFORM_HSTS: 'false',
+    // As in production, whatever the developer's .env says (a local .env
+    // may turn it off to sign in quickly; the second-factor tests need it).
+    PLATFORM_REQUIRE_SECOND_FACTOR: 'true',
     // Signing in writes an audit record, which needs a key (as in phpunit.xml).
     AUDIT_HMAC_KEY: 'browser-tests-only-audit-key-not-a-secret-0123',
 };

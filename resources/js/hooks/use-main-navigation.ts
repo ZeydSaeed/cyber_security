@@ -1,5 +1,12 @@
 import { usePage } from '@inertiajs/react';
-import { BarChart3, Bell, LayoutGrid, Users } from 'lucide-react';
+import {
+    BarChart3,
+    Bell,
+    ClipboardList,
+    LayoutGrid,
+    Users,
+} from 'lucide-react';
+import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { dashboard } from '@/routes';
 import { reports } from '@/routes/admin';
 import { index as usersIndex } from '@/routes/admin/users';
@@ -18,6 +25,13 @@ export function useMainNavigation(): NavItem[] {
     const items: (NavItem & { permission?: string })[] = [
         { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
         { title: 'Notifications', href: notificationsIndex(), icon: Bell },
+        // The Grades module (ADR-0034).
+        {
+            title: 'First-month marks',
+            href: GradesAdminController.overview(),
+            icon: ClipboardList,
+            permission: 'grades.view_results',
+        },
         {
             title: 'Users',
             href: usersIndex(),

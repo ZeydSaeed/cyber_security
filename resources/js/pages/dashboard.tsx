@@ -10,6 +10,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import DashboardController from '@/actions/App/Http/Controllers/DashboardController';
+// A module's generated route helper (building-a-module.md §7).
+import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ActivityTimeline from '@/components/activity-timeline';
 import ColumnSettings from '@/components/data-table/column-settings';
 import EmptyState from '@/components/empty-state';
@@ -203,6 +205,10 @@ export default function Dashboard({
                         id={key}
                         title={titles[key]}
                         icon={ClipboardList}
+                        link={{
+                            href: GradesAdminController.overview.url(),
+                            label: t('First-month marks'),
+                        }}
                     >
                         <p className="mb-3 text-sm text-muted-foreground">
                             {grades?.open

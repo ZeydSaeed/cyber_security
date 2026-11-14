@@ -9,11 +9,13 @@ use App\Modules\Grades\Application\Queries\GradesOverviewQuery;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Contracts\GradesOverview;
 use App\Modules\Grades\Domain\ResultCalculator;
+use App\Modules\Grades\Http\StudentsTable;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Observability\MetricsSource;
+use App\Platform\Tables\TableRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -59,6 +61,9 @@ class GradesServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/migrations');
         $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+
+        // The owner's student list keeps its columns and views per person.
+        $this->app->make(TableRegistry::class)->register(StudentsTable::NAME, StudentsTable::class, StudentsTable::ABILITY);
 
         // Saving marks: 60 a minute for each teacher (the route sits behind
         // TeacherSession, so there is always one).

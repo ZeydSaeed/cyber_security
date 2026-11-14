@@ -15,8 +15,9 @@ const baseURL = `http://127.0.0.1:${process.env.BROWSER_TEST_PORT ?? 8123}`;
 const pages = [
     '/dashboard',
     '/admin/users',
-    '/requests',
-    '/requests/new',
+    // The Grades module (ADR-0034).
+    '/grades',
+    '/grades/results?stage=1&section=A',
     '/settings/profile',
     '/settings/security',
     '/notifications',

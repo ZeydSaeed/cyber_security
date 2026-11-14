@@ -73,7 +73,8 @@ for (const locale of ['ar', 'en']) {
             await expect(page).toHaveURL(/direction=desc/);
 
             await page.locator('[data-test="next-page"]').click();
-            await expect(rows(page)).toHaveCount(18);
+            // 42 people: 25 on the first page, 17 on the second.
+            await expect(rows(page)).toHaveCount(17);
             await page.locator('[data-test="previous-page"]').click();
             await expect(rows(page)).toHaveCount(25);
 

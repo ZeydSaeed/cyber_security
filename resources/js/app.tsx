@@ -35,6 +35,8 @@ void createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'welcome':
+            // Pages made to be printed: nothing of the application around them.
+            case name.startsWith('modules/grades/pages/print/'):
                 return null;
             case name.startsWith('auth/'):
             // A teacher's code page looks like the users' sign-in (ADR-0034).

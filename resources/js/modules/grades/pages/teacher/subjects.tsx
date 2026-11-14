@@ -47,8 +47,8 @@ export default function TeacherSubjects({
                             key={subject.uuid}
                             className="rounded-lg border bg-card p-4"
                         >
-                            <h3 className="font-medium" dir="auto">
-                                {subject.name}
+                            <h3 className="font-medium">
+                                <bdi>{subject.name}</bdi>
                             </h3>
                             <p className="mb-3 text-sm text-muted-foreground">
                                 {t('Stage :stage', {
