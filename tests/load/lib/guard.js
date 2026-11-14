@@ -1,0 +1,16 @@
+// Load tests run only against this machine (HTTP, or HTTPS for the
+// production-like CI server on template.test). Any other host is refused,
+// so a typo or a copied command can never load a real server.
+export function baseUrl() {
+    const url = __ENV.BASE_URL || 'http://cyber-security.test';
+    const allowed =
+        /^https?:\/\/([a-z0-9-]+\.test|localhost|127\.0\.0\.1)(:\d+)?$/;
+
+    if (!allowed.test(url)) {
+        throw new Error(
+            `Refusing BASE_URL ${url}: load tests run only against local hosts (*.test, localhost, 127.0.0.1).`,
+        );
+    }
+
+    return url;
+}

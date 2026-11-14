@@ -1,0 +1,31 @@
+# cyber_security — rules for every session
+
+An independent application (Laravel modular monolith) created on 2026-11-14
+from `D:\Projects\Engineering-Template`. It has its own database
+(`cyber_security`), roles (`cyber_owner`, `cyber_app`, `cyber_backup`) and
+repository (https://github.com/ZeydSaeed/cyber_security). The template is a
+starting point only; this project never writes back to it.
+
+## Absolute boundaries
+
+- Never read, modify, copy from, link to, or run anything inside
+  `D:\Projects\External_Link` or `D:\Projects\sis`, nor touch their servers,
+  databases, backups, keys, DNS, Cloudflare or GitHub repositories. A review
+  authorization is not an implementation authorization; each access needs a
+  separate, explicit, narrowly scoped approval from the owner.
+- Never use the template's databases (`engineering_template*`) or roles
+  (`template_*`) from this project.
+- No production deployment, no pushes, no purchases without explicit
+  approval.
+- Never fabricate measurements. Mark every claim Implemented / Tested /
+  Verified / Planned / Proposed / Blocked.
+
+## Working rules
+
+- Reports to the owner are in Arabic; code, comments and docs stay in English.
+- End every phase with the Arabic report format in
+  `docs/PHASE-0-DECISIONS.md` §6 and wait for approval before the next phase.
+- A phase is complete only when its acceptance criteria are verified.
+
+See `docs/PHASE-0-DECISIONS.md` for the template's approved decisions and
+`docs/decisions/` for the ADRs this project inherits.
