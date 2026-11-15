@@ -81,8 +81,8 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
-    /* Project roles (§6.5): black text on the teachers' and students'
-       pages, light Maroona cards (owner, 2026-11-15). */
+    /* Project roles (§6.5): the ink text on the teachers' and students'
+       pages, soft highlight cards (owner, 2026-11-15). */
     --color-ink: var(--ink);
     --color-highlight-soft: var(--highlight-soft);
     --color-highlight-soft-end: var(--highlight-soft-end);
@@ -124,7 +124,7 @@
         @apply bg-background text-foreground;
     }
 
-    /* Every table's head row: Maroona, bold Old Leaf text (owner's layout,
+    /* Every table's head row: L3 table-head, bold text (owner's layout,
        2026-11-15). Cells inherit, whatever muted colour a table set. */
     thead tr {
         background-color: var(--table-head);
@@ -136,7 +136,7 @@
         font-weight: 700;
     }
 
-    /* The Old Leaf sidebar: bold white text. */
+    /* The sidebar: bold text. */
     [data-slot='sidebar'] {
         font-weight: 600;
     }
@@ -188,10 +188,10 @@
 }
 
 /*
-| Blends of the owner's palette (2026-11-15), as in the beach image: sea
-| (Mendung Parah) to sand (Maroona, Mendung). They are gradient tokens from
-| palette.json, every stop checked against its text; the solid tokens
-| underneath are the fallback. The page blend is light-only (none in dark).
+| Blends of the owner's palette (page, table head, sidebar, toolbar,
+| heading). They are gradient tokens from palette.json, every stop checked
+| against its text; the solid tokens underneath are the fallback. The page
+| blend is light-only (none in dark).
 */
 @layer base {
     body {

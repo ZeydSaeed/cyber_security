@@ -40,7 +40,7 @@ export default function TeacherSubjects({
                     {subjects.map((subject) => (
                         <li
                             key={subject.uuid}
-                            // Light Maroona cards (owner's request, 2026-11-15).
+                            // Soft highlight cards (owner's request, 2026-11-15).
                             className="rounded-lg border border-highlight-soft-border bg-highlight-soft bg-linear-to-b from-highlight-soft to-highlight-soft-end p-4 text-ink"
                         >
                             <h3 className="font-medium">

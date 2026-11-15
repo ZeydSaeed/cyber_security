@@ -11,13 +11,13 @@ import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 // Key names are the same in every language.
 const SEARCH_KEYS = 'Ctrl K';
 
-// Old Leaf buttons with Maroona icons on the Maroona toolbar.
+// Buttons in the toolbar's text colour, with icons in the toolbar colour.
 const toolButton =
     'border-toolbar-foreground bg-toolbar-foreground text-toolbar hover:bg-toolbar-foreground/90 hover:text-toolbar dark:border-toolbar-foreground dark:bg-toolbar-foreground dark:hover:bg-toolbar-foreground/90';
 
 /**
- * The toolbar (owner's layout, 2026-11-15): low, in Maroona with bold Old
- * Leaf text; classic previous, next and home buttons; the search. Muted
+ * The toolbar (owner's layout, 2026-11-15): low, in the L3 toolbar colour
+ * with bold toolbar-foreground text; classic previous, next and home buttons; the search. Muted
  * and normal text inside it take the toolbar's own colour.
  */
 export function AppSidebarHeader({

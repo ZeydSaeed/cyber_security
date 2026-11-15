@@ -9,7 +9,7 @@ export default function Heading({
 }) {
     return (
         <header className={variant === 'small' ? '' : 'mb-8 space-y-0.5'}>
-            {/* A page's heading on a Maroona band, bold Old Leaf text
+            {/* A page's heading on a band (L3 heading), bold text
                 (owner's layout, 2026-11-15). */}
             <h2
                 className={
