@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserInvitationController;
 use App\Http\Controllers\Admin\UserRoleController;
@@ -15,8 +14,10 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Widgets each person can show, hide and order (ADR-0029).
-    Route::get('dashboard', [DashboardController::class, 'show'])->name('dashboard');
+    // The owner removed the dashboard, notifications and reports pages
+    // (2026-11-15): their addresses lead to the Grades overview (/admin).
+    // Their code stays, so they can be brought back.
+    Route::redirect('dashboard', '/admin')->name('dashboard');
     Route::put('dashboard/widgets', [DashboardController::class, 'update'])->name('dashboard.widgets');
 
     // Component gallery: development and browser tests only (ADR-0025).
@@ -25,7 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     }
 
     // A person's notifications (ADR-0029).
-    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::redirect('notifications', '/admin')->name('notifications.index');
     Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::post('notifications/{id}/read', [NotificationController::class, 'read'])
         ->whereUuid('id')
@@ -49,9 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('tables.views.destroy');
 
     // Reports: for those who may read the audit trail (ADR-0029).
-    Route::get('admin/reports', ReportController::class)
-        ->middleware('can:audit.view')
-        ->name('admin.reports');
+    Route::redirect('admin/reports', '/admin')->name('admin.reports');
 
     Route::middleware('can:roles.manage')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');

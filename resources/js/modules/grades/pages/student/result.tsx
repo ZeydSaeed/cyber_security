@@ -3,7 +3,7 @@ import { Clock, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import ResultCard from '../../components/result-card';
-import { placeLabel } from '../../place';
+import { placeLabelFull } from '../../place';
 import type { ResultRow } from '../../types';
 
 /**
@@ -36,7 +36,7 @@ export default function StudentResult({
                     </h1>
                     {card && (
                         <p className="text-sm text-muted-foreground">
-                            {placeLabel(
+                            {placeLabelFull(
                                 t,
                                 card.stage,
                                 card.section,
@@ -62,6 +62,7 @@ export default function StudentResult({
                     pass_mark={card.pass_mark}
                     subjects={card.subjects}
                     student={card.student}
+                    showName={false}
                 />
             ) : (
                 <p

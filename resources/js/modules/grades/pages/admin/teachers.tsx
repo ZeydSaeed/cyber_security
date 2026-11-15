@@ -121,9 +121,6 @@ export default function GradesTeachers({
                         id="teacher-link"
                         href={teacherLink}
                         label={t('Link for the teachers')}
-                        hint={t(
-                            'Every teacher opens this link and types their own code.',
-                        )}
                     />
                 </section>
 

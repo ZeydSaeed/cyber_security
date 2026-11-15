@@ -16,12 +16,14 @@ class DashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard()
+    /** The owner removed the dashboard (2026-11-15): it leads to /admin. */
+    public function test_the_dashboard_address_leads_to_the_grades_overview()
     {
         $user = User::factory()->withTwoFactor()->create();
         $this->actingAs($user);
 
-        $response = $this->get(route('dashboard'));
-        $response->assertOk();
+        $this->get(route('dashboard'))->assertRedirect('/admin');
+        $this->get('/notifications')->assertRedirect('/admin');
+        $this->get('/admin/reports')->assertRedirect('/admin');
     }
 }

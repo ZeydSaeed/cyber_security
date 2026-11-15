@@ -2,7 +2,6 @@ import { Head, Link } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMarksController';
 import EmptyState from '@/components/empty-state';
-import Heading from '@/components/heading';
 import { useTranslations } from '@/hooks/use-translations';
 import WindowNotice from '../../components/window-notice';
 import { sectionLabel } from '../../place';
@@ -24,11 +23,6 @@ export default function TeacherSubjects({
     return (
         <>
             <Head title={t('Your subjects')} />
-            <Heading
-                title={t('Your subjects')}
-                description={t('First-month marks')}
-            />
-
             <WindowNotice open={open} />
 
             {subjects.length === 0 ? (
@@ -46,7 +40,8 @@ export default function TeacherSubjects({
                     {subjects.map((subject) => (
                         <li
                             key={subject.uuid}
-                            className="rounded-lg border bg-card p-4"
+                            // Light Maroona cards (owner's request, 2026-11-15).
+                            className="rounded-lg border border-soft-maroona-border bg-soft-maroona bg-linear-to-b from-soft-maroona to-soft-maroona-end p-4 text-ink"
                         >
                             <h3 className="font-medium">
                                 <bdi>{subject.name}</bdi>

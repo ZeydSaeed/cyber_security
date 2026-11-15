@@ -30,7 +30,6 @@ type Stage = {
 export default function GradesOverview({
     window,
     expected_subjects,
-    teachers,
     stages,
     teacherLink,
     studentLink,
@@ -43,7 +42,6 @@ export default function GradesOverview({
         closed_at: string | null;
     };
     expected_subjects: number;
-    teachers: number;
     stages: Stage[];
     teacherLink: string;
     studentLink: string;
@@ -57,12 +55,7 @@ export default function GradesOverview({
         <>
             <Head title={t('First-month marks')} />
             <div className="flex flex-col gap-6 p-4">
-                <Heading
-                    title={t('First-month marks')}
-                    description={t(
-                        'Set up the department, follow the teachers, and read the results.',
-                    )}
-                />
+                <Heading title={t('First-month marks')} />
 
                 <nav
                     aria-label={t('First-month marks')}
@@ -115,18 +108,11 @@ export default function GradesOverview({
                                     aria-hidden
                                 />
                             )}
-                            <div>
-                                <p className="font-medium">
-                                    {window.open
-                                        ? t('Mark entry is open.')
-                                        : t('Mark entry is closed.')}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {t(':count teachers can sign in.', {
-                                        count: String(teachers),
-                                    })}
-                                </p>
-                            </div>
+                            <p className="font-medium">
+                                {window.open
+                                    ? t('Mark entry is open.')
+                                    : t('Mark entry is closed.')}
+                            </p>
                         </div>
                         {canManage &&
                             (window.open ? (
@@ -186,15 +172,13 @@ export default function GradesOverview({
                                               'Results are not published to the students.',
                                           )}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {window.open
-                                        ? t(
-                                              'Close mark entry before publishing.',
-                                          )
-                                        : t(
-                                              'Each student sees only their own result.',
-                                          )}
-                                </p>
+                                {window.open && (
+                                    <p className="text-sm text-muted-foreground">
+                                        {t(
+                                            'Close mark entry before publishing.',
+                                        )}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         {canManage &&
@@ -236,17 +220,11 @@ export default function GradesOverview({
                             id="teacher-link"
                             href={teacherLink}
                             label={t('Link for the teachers')}
-                            hint={t(
-                                'Every teacher opens this link and types their own code.',
-                            )}
                         />
                         <CopyLink
                             id="student-link"
                             href={studentLink}
                             label={t('Link for the students')}
-                            hint={t(
-                                'Every student opens this link and types the code printed for them.',
-                            )}
                         />
                     </section>
                 )}

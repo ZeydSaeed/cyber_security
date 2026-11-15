@@ -28,3 +28,21 @@ export function sectionLabel(
 ): string {
     return divided ? t('Section :section', { section }) : t('All students');
 }
+
+/**
+ * The long form for a student's own page (owner's request, 2026-11-15):
+ * "Stage: First · Section: A", or only "Stage: First" when undivided.
+ */
+export function placeLabelFull(
+    t: Translate,
+    stage: number,
+    section: string,
+    divided: boolean,
+): string {
+    const name = stage === 1 ? t('First') : t('Second');
+    const stageText = t('Stage: :name', { name });
+
+    return divided
+        ? `${stageText} · ${t('Section: :section', { section })}`
+        : stageText;
+}

@@ -1,16 +1,7 @@
 import { usePage } from '@inertiajs/react';
-import {
-    BarChart3,
-    Bell,
-    ClipboardList,
-    LayoutGrid,
-    Users,
-} from 'lucide-react';
+import { ClipboardList, Users } from 'lucide-react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
-import { dashboard } from '@/routes';
-import { reports } from '@/routes/admin';
 import { index as usersIndex } from '@/routes/admin/users';
-import { index as notificationsIndex } from '@/routes/notifications';
 import type { NavItem } from '@/types';
 
 /**
@@ -22,10 +13,9 @@ import type { NavItem } from '@/types';
 export function useMainNavigation(): NavItem[] {
     const { permissions } = usePage().props.auth;
 
+    // The owner removed the dashboard, notifications and reports
+    // (2026-11-15); the Grades overview is the home page.
     const items: (NavItem & { permission?: string })[] = [
-        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-        { title: 'Notifications', href: notificationsIndex(), icon: Bell },
-        // The Grades module (ADR-0034).
         {
             title: 'First-month marks',
             href: GradesAdminController.overview(),
@@ -37,12 +27,6 @@ export function useMainNavigation(): NavItem[] {
             href: usersIndex(),
             icon: Users,
             permission: 'roles.manage',
-        },
-        {
-            title: 'Reports',
-            href: reports(),
-            icon: BarChart3,
-            permission: 'audit.view',
         },
     ];
 

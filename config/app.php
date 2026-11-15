@@ -15,6 +15,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // The academic line shown under the name on the main pages and the
+    // sign-in pages (owner's request, 2026-11-15).
+    'tagline' => env('APP_TAGLINE', 'Department of Cyber Security · Excellence in Information Assurance and Digital Defence'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

@@ -112,112 +112,172 @@ export default function MarkSheet({
                 />
             ) : (
                 <form onSubmit={save} noValidate data-test="marks-form">
-                    <ol className="flex flex-col divide-y rounded-lg border bg-card">
-                        {students.map((student, index) => {
-                            const value = values[student.uuid] ?? '';
-                            const absent = value === ABSENT;
-                            const error =
-                                form.errors[
-                                    `marks.${student.uuid}` as keyof typeof form.errors
-                                ];
-                            const invalid =
-                                !absent &&
-                                value.trim() !== '' &&
-                                !isMark(value);
-                            const fieldId = `mark-${student.uuid}`;
-                            const absentId = `absent-${student.uuid}`;
-                            const errorId = `error-${student.uuid}`;
-
-                            return (
-                                <li
-                                    key={student.uuid}
-                                    className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2"
-                                    data-test="student-row"
-                                >
-                                    <span className="w-6 text-sm text-muted-foreground tabular-nums">
-                                        {index + 1}
-                                    </span>
-                                    <label
-                                        htmlFor={fieldId}
-                                        className="min-w-0 flex-1 text-sm"
+                    {/* A table with inner and outer borders (owner's
+                        request, 2026-11-15): number, student, mark, absent. */}
+                    <div className="overflow-x-auto rounded-lg border-2 border-grid-line bg-card">
+                        <table className="w-full border-collapse text-sm">
+                            <caption className="sr-only">
+                                {subject.name}
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th
+                                        scope="col"
+                                        className="w-10 border border-grid-line p-2 text-center"
                                     >
-                                        <bdi>{student.name}</bdi>
-                                    </label>
-                                    <Input
-                                        ref={(element) => {
-                                            inputs.current[index] = element;
-                                        }}
-                                        id={fieldId}
-                                        value={absent ? '' : value}
-                                        onChange={(event) =>
-                                            set(
-                                                student.uuid,
-                                                event.target.value,
-                                            )
-                                        }
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Enter') {
-                                                event.preventDefault();
-                                                inputs.current[
-                                                    index + 1
-                                                ]?.focus();
-                                            }
-                                        }}
-                                        disabled={!editable || absent}
-                                        inputMode="numeric"
-                                        maxLength={3}
-                                        dir="ltr"
-                                        enterKeyHint="next"
-                                        autoComplete="off"
-                                        placeholder={absent ? t('Absent') : ''}
-                                        aria-invalid={
-                                            invalid || error ? true : undefined
-                                        }
-                                        aria-describedby={
-                                            invalid || error
-                                                ? errorId
-                                                : undefined
-                                        }
-                                        className="w-20 text-center tabular-nums"
-                                        data-test="mark-input"
-                                    />
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id={absentId}
-                                            checked={absent}
-                                            disabled={!editable}
-                                            onCheckedChange={(checked) =>
-                                                set(
-                                                    student.uuid,
-                                                    checked === true
-                                                        ? ABSENT
-                                                        : '',
-                                                )
-                                            }
-                                            data-test="absent-box"
-                                        />
-                                        <label
-                                            htmlFor={absentId}
-                                            className="text-sm"
+                                        #
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="border border-grid-line p-2 text-start"
+                                    >
+                                        {t('Name')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="w-24 border border-grid-line p-2 text-center"
+                                    >
+                                        {t('Mark out of 100')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="w-24 border border-grid-line p-2 text-center"
+                                    >
+                                        {t('Absent')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {students.map((student, index) => {
+                                    const value = values[student.uuid] ?? '';
+                                    const absent = value === ABSENT;
+                                    const error =
+                                        form.errors[
+                                            `marks.${student.uuid}` as keyof typeof form.errors
+                                        ];
+                                    const invalid =
+                                        !absent &&
+                                        value.trim() !== '' &&
+                                        !isMark(value);
+                                    const fieldId = `mark-${student.uuid}`;
+                                    const absentId = `absent-${student.uuid}`;
+                                    const errorId = `error-${student.uuid}`;
+                                    const cell = 'border border-grid-line p-2';
+
+                                    return (
+                                        <tr
+                                            key={student.uuid}
+                                            data-test="student-row"
                                         >
-                                            {t('Absent')}
-                                        </label>
-                                    </div>
-                                    {(invalid || error) && (
-                                        <p
-                                            id={errorId}
-                                            className="w-full text-sm text-destructive"
-                                        >
-                                            {error ??
-                                                t(
-                                                    'Enter a whole number from 0 to 100, or mark the student absent.',
+                                            <td
+                                                className={`${cell} text-center tabular-nums`}
+                                            >
+                                                {index + 1}
+                                            </td>
+                                            <td className={cell}>
+                                                <label
+                                                    htmlFor={fieldId}
+                                                    className="font-semibold"
+                                                >
+                                                    <bdi>{student.name}</bdi>
+                                                </label>
+                                                {(invalid || error) && (
+                                                    <p
+                                                        id={errorId}
+                                                        className="mt-1 text-sm text-destructive"
+                                                    >
+                                                        {error ??
+                                                            t(
+                                                                'Enter a whole number from 0 to 100, or mark the student absent.',
+                                                            )}
+                                                    </p>
                                                 )}
-                                        </p>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ol>
+                                            </td>
+                                            <td
+                                                className={`${cell} text-center`}
+                                            >
+                                                <Input
+                                                    ref={(element) => {
+                                                        inputs.current[index] =
+                                                            element;
+                                                    }}
+                                                    id={fieldId}
+                                                    value={absent ? '' : value}
+                                                    onChange={(event) =>
+                                                        set(
+                                                            student.uuid,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    onKeyDown={(event) => {
+                                                        if (
+                                                            event.key ===
+                                                            'Enter'
+                                                        ) {
+                                                            event.preventDefault();
+                                                            inputs.current[
+                                                                index + 1
+                                                            ]?.focus();
+                                                        }
+                                                    }}
+                                                    disabled={
+                                                        !editable || absent
+                                                    }
+                                                    inputMode="numeric"
+                                                    maxLength={3}
+                                                    dir="ltr"
+                                                    enterKeyHint="next"
+                                                    autoComplete="off"
+                                                    placeholder={
+                                                        absent
+                                                            ? t('Absent')
+                                                            : ''
+                                                    }
+                                                    aria-invalid={
+                                                        invalid || error
+                                                            ? true
+                                                            : undefined
+                                                    }
+                                                    aria-describedby={
+                                                        invalid || error
+                                                            ? errorId
+                                                            : undefined
+                                                    }
+                                                    className="mx-auto w-20 bg-background text-center font-semibold tabular-nums"
+                                                    data-test="mark-input"
+                                                />
+                                            </td>
+                                            <td
+                                                className={`${cell} text-center`}
+                                            >
+                                                <Checkbox
+                                                    id={absentId}
+                                                    checked={absent}
+                                                    disabled={!editable}
+                                                    onCheckedChange={(
+                                                        checked,
+                                                    ) =>
+                                                        set(
+                                                            student.uuid,
+                                                            checked === true
+                                                                ? ABSENT
+                                                                : '',
+                                                        )
+                                                    }
+                                                    aria-label={t(
+                                                        'Absent: :name',
+                                                        { name: student.name },
+                                                    )}
+                                                    className="bg-background"
+                                                    data-test="absent-box"
+                                                />
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {editable && (
                         <div className="sticky bottom-0 mt-4 flex items-center gap-3 border-t bg-background/95 py-3 backdrop-blur">

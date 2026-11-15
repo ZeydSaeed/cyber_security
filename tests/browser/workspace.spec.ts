@@ -64,7 +64,7 @@ for (const locale of ['ar', 'en']) {
         test('Ctrl+K finds a page and goes there with the keyboard', async ({
             page,
         }) => {
-            await open(page, locale, '/dashboard');
+            await open(page, locale, '/admin');
 
             await page.keyboard.press('Control+k');
             await expect(palette(page)).toBeVisible();
@@ -88,7 +88,7 @@ for (const locale of ['ar', 'en']) {
         test('finds a person on the server and opens them', async ({
             page,
         }) => {
-            await open(page, locale, '/dashboard');
+            await open(page, locale, '/admin');
             await page.locator('[data-test="open-search"]').click();
             await page.locator('[data-test="command-input"]').fill('Person 05');
 
@@ -105,7 +105,7 @@ for (const locale of ['ar', 'en']) {
         });
 
         test('Esc closes the search and gives focus back', async ({ page }) => {
-            await open(page, locale, '/dashboard');
+            await open(page, locale, '/admin');
             const button = page.locator('[data-test="open-search"]');
             await button.click();
             await expect(palette(page)).toBeVisible();
@@ -141,7 +141,8 @@ for (const locale of ['ar', 'en']) {
 
             await page.keyboard.press('g');
             await page.keyboard.press('d');
-            await expect(page).toHaveURL(/\/dashboard$/);
+            // "g d" goes to the old dashboard address, which leads to /admin.
+            await expect(page).toHaveURL(/\/admin$/);
 
             // Off: "?" does nothing; Ctrl+K still opens search.
             await open(page, locale, '/settings/appearance');

@@ -10,10 +10,13 @@ export default function ResultCard({
     pass_mark,
     subjects,
     student,
+    showName = true,
 }: {
     pass_mark: number;
     subjects: { uuid: string; name: string }[];
     student: ResultRow;
+    /** The student's own page shows the name at the top already. */
+    showName?: boolean;
 }) {
     const { t } = useTranslations();
 
@@ -44,15 +47,20 @@ export default function ResultCard({
 
     return (
         <>
-            <dl className="mb-6 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                <div>
-                    <dt className="text-sm text-muted-foreground">
-                        {t('Name')}
-                    </dt>
-                    <dd className="text-lg font-semibold" data-test="card-name">
-                        <bdi>{student.name}</bdi>
-                    </dd>
-                </div>
+            <dl className="mb-6 grid gap-x-6 gap-y-2 empty:hidden sm:grid-cols-2">
+                {showName && (
+                    <div>
+                        <dt className="text-sm text-muted-foreground">
+                            {t('Name')}
+                        </dt>
+                        <dd
+                            className="text-lg font-semibold"
+                            data-test="card-name"
+                        >
+                            <bdi>{student.name}</bdi>
+                        </dd>
+                    </div>
+                )}
                 {student.number && (
                     <div>
                         <dt className="text-sm text-muted-foreground">
@@ -72,27 +80,27 @@ export default function ResultCard({
                 aria-label={t('Result card')}
             >
                 <table
-                    className="w-full border-collapse text-sm"
+                    className="w-full border-collapse border-2 border-grid-line text-sm"
                     data-test="card-table"
                 >
                     <caption className="sr-only">{t('Result card')}</caption>
                     <thead>
-                        <tr className="border-b">
+                        <tr>
                             <th
                                 scope="col"
-                                className="p-2 text-start font-medium"
+                                className="border border-grid-line p-2 text-start font-medium"
                             >
                                 {t('Subject')}
                             </th>
                             <th
                                 scope="col"
-                                className="p-2 text-center font-medium"
+                                className="border border-grid-line p-2 text-center font-medium"
                             >
                                 {t('Mark out of 100')}
                             </th>
                             <th
                                 scope="col"
-                                className="p-2 text-start font-medium"
+                                className="border border-grid-line p-2 text-center font-medium"
                             >
                                 {t('Status')}
                             </th>
@@ -103,37 +111,42 @@ export default function ResultCard({
                             const mark = student.marks[i] ?? null;
 
                             return (
-                                <tr key={subject.uuid} className="border-b">
+                                <tr key={subject.uuid}>
                                     <th
                                         scope="row"
-                                        className="p-2 text-start font-normal"
+                                        className="border border-grid-line p-2 text-start font-normal"
                                     >
                                         <bdi>{subject.name}</bdi>
                                     </th>
-                                    <td className="p-2 text-center tabular-nums">
+                                    <td className="border border-grid-line p-2 text-center tabular-nums">
                                         {mark === null
                                             ? '—'
                                             : mark === 'absent'
                                               ? t('Absent')
                                               : mark}
                                     </td>
-                                    <td className="p-2">{status(mark)}</td>
+                                    <td className="border border-grid-line p-2 text-center">
+                                        {status(mark)}
+                                    </td>
                                 </tr>
                             );
                         })}
                     </tbody>
                     <tfoot>
                         <tr className="font-semibold">
-                            <th scope="row" className="p-2 text-start">
+                            <th
+                                scope="row"
+                                className="border border-grid-line p-2 text-start"
+                            >
                                 {t('Total')}
                             </th>
                             <td
-                                className="p-2 text-center tabular-nums"
+                                className="border border-grid-line p-2 text-center tabular-nums"
                                 data-test="card-total"
                             >
                                 {student.total} / {student.maximum}
                             </td>
-                            <td className="p-2">
+                            <td className="border border-grid-line p-2 text-center">
                                 {student.complete
                                     ? `${student.percentage.toFixed(2)}%`
                                     : t('Incomplete (:missing missing)', {

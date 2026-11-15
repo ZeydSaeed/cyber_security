@@ -12,7 +12,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { useMainNavigation } from '@/hooks/use-main-navigation';
 import type { NavItem } from '@/types';
 
@@ -26,8 +26,15 @@ export function AppSidebar() {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                        <SidebarMenuButton
+                            size="lg"
+                            className="h-auto py-2"
+                            asChild
+                        >
+                            <Link
+                                href={GradesAdminController.overview()}
+                                prefetch
+                            >
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

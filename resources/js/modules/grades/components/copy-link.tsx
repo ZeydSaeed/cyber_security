@@ -14,7 +14,7 @@ export default function CopyLink({
     id: string;
     href: string;
     label: string;
-    hint: string;
+    hint?: string;
 }) {
     const { t } = useTranslations();
     const [copied, setCopied] = useState(false);
@@ -51,7 +51,7 @@ export default function CopyLink({
                     {copied ? t('Copied') : t('Copy')}
                 </Button>
             </div>
-            <p className="text-sm text-muted-foreground">{hint}</p>
+            {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
         </div>
     );
 }

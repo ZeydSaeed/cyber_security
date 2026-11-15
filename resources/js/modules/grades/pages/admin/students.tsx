@@ -88,10 +88,7 @@ export default function GradesStudents({
         <>
             <Head title={t('Students')} />
             <div className="flex flex-col gap-6 p-4">
-                <Heading
-                    title={t('Students')}
-                    description={t('The students of both stages, as imported.')}
-                />
+                <Heading title={t('Students')} />
 
                 <p className="text-sm">
                     <Link
@@ -146,14 +143,9 @@ export default function GradesStudents({
                         className="max-w-2xl rounded-lg border bg-card p-4"
                         data-test="student-codes"
                     >
-                        <h2 className="mb-1 font-semibold">
+                        <h2 className="mb-3 font-semibold">
                             {t('Student codes')}
                         </h2>
-                        <p className="mb-4 text-sm text-muted-foreground">
-                            {t(
-                                'Each student sees their own result with a code the application makes. Print a group’s codes and hand them out; a lost code can be replaced from the list below.',
-                            )}
-                        </p>
                         {withoutCode > 0 && (
                             <div className="mb-4 flex flex-wrap items-center gap-3">
                                 <span className="text-sm">

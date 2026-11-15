@@ -1,15 +1,15 @@
 import { Link, usePage } from '@inertiajs/react';
 import { LogOut } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
-import LocaleSwitcher from '@/components/locale-switcher';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import type { PortalProps } from '../types';
 
 /**
  * The teachers' and students' pages (ADR-0034): no sidebar and nothing of
- * the users' application, only who is signed in, the language and signing
- * out. Built for a phone first.
+ * the users' application, only who is signed in and signing out (no
+ * language button, owner's request of 2026-11-15). Built for a phone
+ * first; black bold text on a light page.
  */
 export default function PortalLayout({
     children,
@@ -25,12 +25,11 @@ export default function PortalLayout({
                 <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-4">
                     <AppLogoIcon className="size-8 shrink-0" />
                     <p
-                        className="min-w-0 flex-1 truncate text-sm font-medium"
+                        className="min-w-0 flex-1 truncate text-base font-bold"
                         data-test="portal-name"
                     >
                         <bdi>{portal?.name}</bdi>
                     </p>
-                    <LocaleSwitcher />
                     {portal && (
                         <Button variant="ghost" size="sm" asChild>
                             <Link
@@ -48,7 +47,7 @@ export default function PortalLayout({
                     )}
                 </div>
             </header>
-            <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+            <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 font-semibold text-ink dark:text-foreground">
                 {children}
             </main>
         </div>

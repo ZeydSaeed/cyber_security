@@ -52,7 +52,7 @@ it('keeps a policy a response set for itself', function () {
 
 it('marks pages for signed-in users as not cacheable', function () {
     $this->actingAs(User::factory()->withTwoFactor()->create())
-        ->get(route('dashboard'))
+        ->get(route('profile.edit'))
         ->assertOk()
         ->assertHeader('Cache-Control', 'no-store, private');
 });

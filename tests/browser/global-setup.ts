@@ -45,7 +45,8 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     }
     await page.locator('input[name="code"]').fill(totp(user.secret));
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.waitForURL('**/dashboard');
+    // After signing in: the Grades overview (owner's decision, 2026-11-15).
+    await page.waitForURL('**/admin');
 
     // The security settings ask for the password again; confirmed once, it
     // holds for the session (auth.password_timeout).

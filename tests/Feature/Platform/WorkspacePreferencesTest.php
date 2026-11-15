@@ -33,7 +33,7 @@ describe('preferences', function () {
         $this->actingAs($user)
             ->withUnencryptedCookie('locale', 'en')
             ->withUnencryptedCookie('appearance', 'light')
-            ->get('/dashboard')
+            ->get('/settings/profile')
             ->assertSee('<html lang="ar" dir="rtl" data-density="compact" class="dark"', false)
             ->assertInertia(fn (Assert $page) => $page
                 ->where('preferences.density', 'compact')

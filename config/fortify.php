@@ -73,7 +73,8 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    // After signing in: the Grades overview (owner's decision, 2026-11-15).
+    'home' => '/admin',
 
     /*
     |--------------------------------------------------------------------------

@@ -54,11 +54,7 @@ it('keeps each page within its query budget', function (string $page, bool $sign
     // Every signed-in page: the person's roles (auth.permissions, ADR-0026,
     // Phase 7 batch 2) and the unread notification count (ADR-0029, batch
     // 4b), both on indexes.
-    // The dashboard adds its layout and the visible widgets: three unread
-    // notifications, activity (about and by the person) and document
-    // counts. (The grades widget is for administrators; its queries are
-    // counted in GradesOverviewTest.)
-    'dashboard' => ['dashboard', true, 8],
+    // (The dashboard was removed by the owner, 2026-11-15.)
     'profile settings' => ['profile.edit', true, 2],
     // And the passkey list.
     'security settings' => ['security.edit', true, 3],

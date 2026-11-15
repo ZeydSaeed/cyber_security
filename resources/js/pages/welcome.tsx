@@ -6,7 +6,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { dashboard, login } from '@/routes';
 
 export default function Welcome() {
-    const { auth, name } = usePage().props;
+    const { auth, name, tagline } = usePage().props;
     const { t } = useTranslations();
 
     return (
@@ -19,7 +19,16 @@ export default function Welcome() {
 
                 <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-16 text-center">
                     <AppLogoIcon className="size-12 fill-current text-primary" />
-                    <h1 className="text-2xl font-semibold">{name}</h1>
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold">{name}</h1>
+                        <p
+                            className="text-sm text-muted-foreground"
+                            lang="en"
+                            dir="ltr"
+                        >
+                            {tagline}
+                        </p>
+                    </div>
                     <p className="max-w-md text-muted-foreground">
                         {t(
                             'First-month marks of the Cyber Security department, entered by the teachers and gathered into one result per student.',
