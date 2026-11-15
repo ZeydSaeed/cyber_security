@@ -3,13 +3,41 @@
 namespace App\Modules\Grades\Domain;
 
 /**
- * The department's two years of study (ADR-0034). Each has its own eight
- * subjects and two sections.
+ * The department's two years of study (ADR-0034). Each has its own
+ * subjects; only the second is divided into sections.
  */
 enum Stage: int
 {
     case First = 1;
     case Second = 2;
+
+    /**
+     * The sections of the stage (owner's decision, 2026-11-15): the first
+     * stage is one group, kept as section A and never shown as a section;
+     * the second has sections A and B.
+     *
+     * @return non-empty-list<Section>
+     */
+    public function sections(): array
+    {
+        return match ($this) {
+            self::First => [Section::A],
+            self::Second => [Section::A, Section::B],
+        };
+    }
+
+    public function hasSection(Section $section): bool
+    {
+        return in_array($section, $this->sections(), true);
+    }
+
+    /**
+     * Whether the stage is divided into sections at all (worth showing).
+     */
+    public function isDivided(): bool
+    {
+        return count($this->sections()) > 1;
+    }
 
     /**
      * @return list<int>

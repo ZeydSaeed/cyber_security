@@ -19,7 +19,7 @@ use App\Modules\Grades\Models\Teacher;
 final class TeacherSheets
 {
     /**
-     * @return array{open: bool, subjects: list<array{uuid: string, name: string, stage: int, sections: list<array{section: string, students: int, entered: int}>}>}
+     * @return array{open: bool, subjects: list<array{uuid: string, name: string, stage: int, divided: bool, sections: list<array{section: string, students: int, entered: int}>}>}
      */
     public function subjects(Teacher $teacher, Period $period = Period::Month1): array
     {
@@ -53,11 +53,12 @@ final class TeacherSheets
                 'uuid' => $subject->uuid,
                 'name' => $subject->name,
                 'stage' => $subject->stage->value,
+                'divided' => $subject->stage->isDivided(),
                 'sections' => array_map(fn (Section $section): array => [
                     'section' => $section->value,
                     'students' => (int) ($students[$subject->stage->value.'|'.$section->value] ?? 0),
                     'entered' => (int) ($entered[$subject->id.'|'.$section->value] ?? 0),
-                ], Section::cases()),
+                ], $subject->stage->sections()),
             ])->all()),
         ];
     }
@@ -85,7 +86,7 @@ final class TeacherSheets
 
         return [
             'open' => $this->isOpen($period),
-            'subject' => ['uuid' => $subject->uuid, 'name' => $subject->name, 'stage' => $subject->stage->value],
+            'subject' => ['uuid' => $subject->uuid, 'name' => $subject->name, 'stage' => $subject->stage->value, 'divided' => $subject->stage->isDivided()],
             'section' => $section->value,
             'students' => array_values($students->map(fn (Student $student): array => [
                 'uuid' => $student->uuid,

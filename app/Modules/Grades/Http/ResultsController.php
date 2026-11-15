@@ -34,7 +34,28 @@ class ResultsController
     {
         [$stage, $section] = $this->place($request);
 
-        return Inertia::render('modules/grades/pages/admin/results', $this->sheets->section($stage, $section));
+        return Inertia::render('modules/grades/pages/admin/results', [
+            ...$this->sheets->section($stage, $section),
+            'places' => self::places(),
+        ]);
+    }
+
+    /**
+     * Every stage and section there is: the first stage once, the second
+     * stage's two sections.
+     *
+     * @return list<array{stage: int, section: string, divided: bool}>
+     */
+    public static function places(): array
+    {
+        $places = [];
+        foreach (Stage::cases() as $stage) {
+            foreach ($stage->sections() as $section) {
+                $places[] = ['stage' => $stage->value, 'section' => $section->value, 'divided' => $stage->isDivided()];
+            }
+        }
+
+        return $places;
     }
 
     public function printSection(Request $request): Response
@@ -77,11 +98,15 @@ class ResultsController
 
     public function sheet(Subject $subject, string $section, TeacherSheets $sheets): Response
     {
+        abort_unless($subject->stage->hasSection(Section::from($section)), 404);
+
         return Inertia::render('modules/grades/pages/admin/sheet', $sheets->section($subject, Section::from($section)));
     }
 
     public function saveSheet(SaveMarksRequest $request, Subject $subject, string $section, SaveMarks $save, #[CurrentUser] User $user): RedirectResponse
     {
+        abort_unless($subject->stage->hasSection(Section::from($section)), 404);
+
         $result = $save->handle($user, $subject, Section::from($section), Period::Month1, $request->marks());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $result['changed'] === 0 ? __('Nothing changed.') : __('Saved.')]);
@@ -96,9 +121,9 @@ class ResultsController
      */
     private function place(Request $request): array
     {
-        return [
-            Stage::tryFrom($request->integer('stage')) ?? Stage::First,
-            Section::tryFrom((string) $request->string('section')) ?? Section::A,
-        ];
+        $stage = Stage::tryFrom($request->integer('stage')) ?? Stage::First;
+        $section = Section::tryFrom((string) $request->string('section'));
+
+        return [$stage, $section !== null && $stage->hasSection($section) ? $section : $stage->sections()[0]];
     }
 }

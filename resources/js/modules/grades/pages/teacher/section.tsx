@@ -3,6 +3,7 @@ import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMar
 import { useTranslations } from '@/hooks/use-translations';
 import MarkSheet from '../../components/mark-sheet';
 import WindowNotice from '../../components/window-notice';
+import { placeLabel } from '../../place';
 import type { SheetStudent } from '../../types';
 
 /**
@@ -16,7 +17,7 @@ export default function TeacherSection({
     students,
 }: {
     open: boolean;
-    subject: { uuid: string; name: string; stage: number };
+    subject: { uuid: string; name: string; stage: number; divided: boolean };
     section: string;
     students: SheetStudent[];
 }) {
@@ -25,7 +26,7 @@ export default function TeacherSection({
     return (
         <>
             <Head
-                title={`${subject.name} · ${t('Section :section', { section })}`}
+                title={`${subject.name} · ${placeLabel(t, subject.stage, section, subject.divided)}`}
             />
             <MarkSheet
                 subject={subject}

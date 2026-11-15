@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
@@ -120,6 +121,16 @@ it('keeps a name unique within its stage when students have no number', function
     // With a number, the same name is allowed (two real people).
     Student::factory()->create(['name_key' => $this->student->name_key, 'student_number' => '42']);
     expect(Student::query()->count())->toBe(2);
+});
+
+it('keeps the first stage in one group, codes in pairs, and publication to closed periods', function () {
+    expect(fn () => inSavepoint(fn () => Student::factory()->in(Stage::First, Section::B)->create()))
+        ->toThrow(QueryException::class, 'grade_students_stage_sections_check')
+        ->and(fn () => inSavepoint(fn () => DB::table('grade_students')->where('id', $this->student->id)->update(['code_digest' => str_repeat('a', 64)])))
+        ->toThrow(QueryException::class, 'grade_students_code_pair_check')
+        // The period from beforeEach is open.
+        ->and(fn () => inSavepoint(fn () => DB::table('grade_periods')->update(['results_published_at' => now()])))
+        ->toThrow(QueryException::class, 'grade_periods_published_closed_check');
 });
 
 it('will not delete a teacher who has subjects', function () {

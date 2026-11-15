@@ -54,6 +54,10 @@ class SaveMarks
 
             $this->authorise($author, $subject, $window->isOpen());
 
+            if (! $subject->stage->hasSection($section)) {
+                throw new DomainRuleViolation(__('This stage has no such section.'), 'marks');
+            }
+
             $students = Student::query()
                 ->where('stage', $subject->stage->value)
                 ->where('section', $section->value)

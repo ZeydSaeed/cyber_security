@@ -4,8 +4,13 @@ namespace App\Modules\Grades\Http;
 
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ImportStudents;
+use App\Modules\Grades\Application\Actions\IssueStudentCodes;
 use App\Modules\Grades\Application\Import\StudentImportPlan;
+use App\Modules\Grades\Application\StudentCodes;
+use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Models\Student;
+use App\Platform\Audit\AuditLogger;
 use App\Platform\Files\FileStore;
 use App\Platform\Files\StoredFile;
 use App\Platform\Tables\TableColumns;
@@ -36,6 +41,8 @@ class StudentsAdminController
             'students' => [
                 'rows' => array_values($students->getCollection()->map(fn (Student $student): array => [
                     'id' => $student->id,
+                    'uuid' => $student->uuid,
+                    'has_code' => $student->code_digest !== null,
                     'name' => $student->full_name,
                     'number' => $student->student_number,
                     'stage' => $student->stage->value,
@@ -50,6 +57,54 @@ class StudentsAdminController
             'state' => $state->toArray(),
             'columns' => TableColumns::for($viewer->id, $table),
             'canImport' => $viewer->can('grades.manage'),
+            'withoutCode' => Student::query()->whereNull('code_digest')->count(),
+            'places' => ResultsController::places(),
+        ]);
+    }
+
+    public function issueCodes(IssueStudentCodes $issue, #[CurrentUser] User $user): RedirectResponse
+    {
+        $count = $issue->missing($user);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $count === 0
+            ? __('Every student already has a code.')
+            : __(':count students received a code.', ['count' => $count])]);
+
+        return back();
+    }
+
+    public function replaceCode(Student $student, IssueStudentCodes $issue, #[CurrentUser] User $user): RedirectResponse
+    {
+        $issue->replace($user, $student);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('New code for :name. The old one no longer works.', ['name' => $student->full_name])]);
+
+        return back();
+    }
+
+    /**
+     * A section's codes, to print and hand out. Showing codes is recorded.
+     */
+    public function codes(Request $request, StudentCodes $codes, AuditLogger $audit, #[CurrentUser] User $user): Response
+    {
+        $stage = Stage::tryFrom($request->integer('stage')) ?? Stage::First;
+        $section = Section::tryFrom((string) $request->string('section'));
+        $section = $section !== null && $stage->hasSection($section) ? $section : $stage->sections()[0];
+
+        $students = Student::query()
+            ->where('stage', $stage->value)->where('section', $section->value)
+            ->orderBy('full_name')->get();
+
+        $audit->record('grades.student_codes_viewed', null, ['stage' => $stage->value, 'section' => $section->value], actor: $user);
+
+        return Inertia::render('modules/grades/pages/print/codes', [
+            'stage' => $stage->value,
+            'section' => $section->value,
+            'divided' => $stage->isDivided(),
+            'studentLink' => route('grades.student.login'),
+            'students' => array_values($students->map(fn (Student $student): array => [
+                'name' => $student->full_name,
+                'number' => $student->student_number,
+                'code' => $student->code_encrypted === null ? null : $codes->decrypt($student->code_encrypted),
+            ])->all()),
         ]);
     }
 

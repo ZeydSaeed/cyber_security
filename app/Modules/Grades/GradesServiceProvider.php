@@ -6,6 +6,7 @@ use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\Jobs\NotifySectionCompleted;
 use App\Modules\Grades\Application\Metrics\GradesMetrics;
 use App\Modules\Grades\Application\Queries\GradesOverviewQuery;
+use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Contracts\GradesOverview;
 use App\Modules\Grades\Domain\ResultCalculator;
@@ -39,7 +40,11 @@ class GradesServiceProvider extends ServiceProvider
         config([
             'auth.guards.'.Teacher::GUARD => ['driver' => 'session', 'provider' => 'grade_teachers'],
             'auth.providers.grade_teachers' => ['driver' => 'eloquent', 'model' => Teacher::class],
+            // Students see their own published result with a code, the same way.
+            'auth.guards.'.Student::GUARD => ['driver' => 'session', 'provider' => 'grade_students'],
+            'auth.providers.grade_students' => ['driver' => 'eloquent', 'model' => Student::class],
         ]);
+        $this->app->singleton(StudentCodes::class);
 
         // Outbox topics this module publishes, and who handles them.
         config(['platform.outbox.handlers' => [

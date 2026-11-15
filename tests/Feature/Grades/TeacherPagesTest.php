@@ -33,7 +33,8 @@ beforeEach(function () {
     $this->subject = Subject::factory()->create(['teacher_id' => $this->teacher->id, 'name' => 'Cryptography']);
     $this->students = collect(['Zainab Ali Saleh', 'Ahmed Omar Taha', 'Mariam Hadi Nasser'])
         ->map(fn (string $name) => Student::factory()->named($name)->create());
-    Student::factory()->in(Stage::First, Section::B)->count(2)->create();
+    // Another stage's students never count for this first-stage subject.
+    Student::factory()->in(Stage::Second, Section::B)->count(2)->create();
     GradesFixtures::openWindow();
 
     $this->post('/teacher', ['code' => 'teacher-code-1']);
@@ -53,13 +54,15 @@ it('lists only the teacher\'s subjects, with each section\'s progress', function
 
     $this->get('/teacher/subjects')->assertInertia(fn (Assert $page) => $page
         ->component('modules/grades/pages/teacher/subjects')
-        ->where('teacher.name', $this->teacher->name)
+        ->where('portal.name', $this->teacher->name)
+        ->where('portal.logout', route('grades.teacher.logout'))
         ->where('open', true)
         ->has('subjects', 1)
         ->where('subjects.0.name', 'Cryptography')
+        // The first stage is one group: no section B.
+        ->where('subjects.0.divided', false)
         ->where('subjects.0.sections', [
             ['section' => 'A', 'students' => 3, 'entered' => 1],
-            ['section' => 'B', 'students' => 2, 'entered' => 0],
         ])
         // Nothing of the users' application.
         ->where('auth.user', null)
@@ -118,12 +121,16 @@ it('names each wrong value beside its student, and saves nothing', function () {
     expect(GradeMark::query()->count())->toBe(0);
 });
 
-it('refuses students of another section', function () {
-    $other = Student::query()->where('section', 'B')->firstOrFail();
+it('refuses students of another stage, and a section the stage does not have', function () {
+    $other = Student::query()->where('stage', 2)->firstOrFail();
 
     $this->from(sectionUrl($this->subject))
         ->put(sectionUrl($this->subject), ['marks' => [$other->uuid => '50']])
         ->assertSessionHasErrors(['marks' => 'Some students are not in this section.']);
+
+    // The first stage has no section B.
+    $this->get(sectionUrl($this->subject, 'B'))->assertNotFound();
+    $this->put(sectionUrl($this->subject, 'B'), ['marks' => [$other->uuid => '50']])->assertNotFound();
 });
 
 it('hides another teacher\'s subject and rejects malformed addresses', function () {

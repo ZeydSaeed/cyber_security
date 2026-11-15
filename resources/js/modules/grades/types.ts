@@ -5,6 +5,7 @@ export type TeacherSubject = {
     uuid: string;
     name: string;
     stage: number;
+    divided: boolean;
     sections: { section: string; students: number; entered: number }[];
 };
 
@@ -15,7 +16,15 @@ export type SheetStudent = {
     mark: MarkValue;
 };
 
-export type TeacherProps = { teacher: { name: string } };
+/** Who is signed in on a teacher's or student's page, and how to leave. */
+export type PortalProps = { portal?: { name: string; logout: string } };
+
+/** A stage and its sections, as the server describes them (Stage::sections). */
+export type StageLayout = {
+    stage: number;
+    sections: string[];
+    divided: boolean;
+};
 
 /** One student's line in a results sheet (ResultSheets). */
 export type ResultRow = {
@@ -36,6 +45,7 @@ export type ResultRow = {
 export type ResultSheet = {
     stage: number;
     section: string;
+    divided: boolean;
     pass_mark: number;
     subjects: { uuid: string; name: string }[];
     students: ResultRow[];

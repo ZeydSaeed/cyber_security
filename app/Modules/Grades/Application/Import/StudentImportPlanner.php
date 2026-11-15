@@ -50,7 +50,12 @@ final class StudentImportPlanner
         foreach ($rows as ['row' => $row, 'cells' => $cells]) {
             $name = NameKey::clean($cells[$columns['name']] ?? '');
             $stage = Stage::fromText($cells[$columns['stage']] ?? '');
-            $section = Section::fromText($cells[$columns['section']] ?? '');
+            $sectionText = $columns['section'] === null ? '' : trim($cells[$columns['section']] ?? '');
+            $section = Section::fromText($sectionText);
+            // A stage without sections (the first) takes an empty section as its one group.
+            if ($stage !== null && ! $stage->isDivided() && $sectionText === '') {
+                $section = $stage->sections()[0];
+            }
             $number = $columns['number'] === null ? '' : trim($cells[$columns['number']] ?? '');
             $number = $number === '' ? null : $number;
             $key = NameKey::of($name);
@@ -59,7 +64,8 @@ final class StudentImportPlanner
                 mb_strlen($name) < 3 || mb_strlen($key) < 3 => __('The name is missing or too short.'),
                 mb_strlen($name) > 160 => __('The name is longer than :max characters.', ['max' => 160]),
                 $stage === null => __('The stage must be 1 or 2.'),
-                $section === null => __('The section must be A or B.'),
+                ! $stage->isDivided() && ($section === null || ! $stage->hasSection($section)) => __('The first stage has no sections; leave the section empty.'),
+                $section === null || ! $stage->hasSection($section) => __('The section must be A or B.'),
                 $number !== null && mb_strlen($number) > 40 => __('The student number is longer than :max characters.', ['max' => 40]),
                 default => null,
             };
@@ -144,7 +150,7 @@ final class StudentImportPlanner
      * The column of each field, and the rows without the header.
      *
      * @param  list<array{row: int, cells: list<string>}>  $rows
-     * @return array{0: array{name: int, stage: int, section: int, number: int|null}, 1: list<array{row: int, cells: list<string>}>}
+     * @return array{0: array{name: int, stage: int, section: int|null, number: int|null}, 1: list<array{row: int, cells: list<string>}>}
      */
     private function columns(array $rows): array
     {
@@ -161,11 +167,12 @@ final class StudentImportPlanner
             }
         }
 
-        if (! isset($found['name'], $found['stage'], $found['section'])) {
+        // Name and stage are needed; the section column may be left out (first stage only).
+        if (! isset($found['name'], $found['stage'])) {
             return [$positional, $rows];
         }
 
-        return [['number' => null, ...$found], array_slice($rows, 1)];
+        return [['section' => null, 'number' => null, ...$found], array_slice($rows, 1)];
     }
 
     /**

@@ -4,24 +4,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslations } from '@/hooks/use-translations';
 
-/** The one link the owner sends to every teacher, ready to copy. */
-export default function CopyLink({ href }: { href: string }) {
+/** A link the owner sends (to the teachers or the students), ready to copy. */
+export default function CopyLink({
+    id,
+    href,
+    label,
+    hint,
+}: {
+    id: string;
+    href: string;
+    label: string;
+    hint: string;
+}) {
     const { t } = useTranslations();
     const [copied, setCopied] = useState(false);
 
     return (
         <div className="flex flex-col gap-2">
-            <label htmlFor="teacher-link" className="text-sm font-medium">
-                {t('Link for the teachers')}
+            <label htmlFor={id} className="text-sm font-medium">
+                {label}
             </label>
             <div className="flex gap-2">
                 <Input
-                    id="teacher-link"
+                    id={id}
                     readOnly
                     value={href}
                     dir="ltr"
                     onFocus={(event) => event.currentTarget.select()}
-                    data-test="teacher-link"
+                    data-test={id}
                 />
                 <Button
                     type="button"
@@ -41,9 +51,7 @@ export default function CopyLink({ href }: { href: string }) {
                     {copied ? t('Copied') : t('Copy')}
                 </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-                {t('Every teacher opens this link and types their own code.')}
-            </p>
+            <p className="text-sm text-muted-foreground">{hint}</p>
         </div>
     );
 }

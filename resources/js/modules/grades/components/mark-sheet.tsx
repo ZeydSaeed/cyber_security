@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
+import { placeLabel } from '../place';
 import type { MarkValue, SheetStudent } from '../types';
 
 const ABSENT = 'absent';
@@ -38,7 +39,7 @@ export default function MarkSheet({
     back,
     notice,
 }: {
-    subject: { uuid: string; name: string; stage: number };
+    subject: { uuid: string; name: string; stage: number; divided: boolean };
     section: string;
     students: SheetStudent[];
     editable: boolean;
@@ -83,8 +84,7 @@ export default function MarkSheet({
                     <bdi>{subject.name}</bdi>
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                    {t('Stage :stage', { stage: String(subject.stage) })} ·{' '}
-                    {t('Section :section', { section })} ·{' '}
+                    {placeLabel(t, subject.stage, section, subject.divided)} ·{' '}
                     <span data-test="entered-count">
                         {t(':entered of :students entered', {
                             entered: String(entered),

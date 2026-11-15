@@ -1,6 +1,6 @@
 # ADR-0034: The Grades module (first-month marks and results)
 
-- Status: Accepted (owner's answers, 2026-11-14); G1, G2 and G3 done, G4 next
+- Status: Accepted (owner's answers, 2026-11-14 and 2026-11-15); G1, G2, G3 and G3b done, G4 next
 - Date: 2026-11-14
 
 ## Context
@@ -215,6 +215,31 @@ Option 3, as a business module `app/Modules/Grades` built like
   print, export, corrections, query count) and the browser test
   `grades-admin.spec.ts` (every page in Arabic and English on a phone and
   a desktop with axe; the import and a printed card).
+
+## Owner's decisions of 2026-11-15 (G3b)
+
+1. **Sections per stage**: the first stage has no sections; the second has
+   A and B (`Stage::sections()`). The first stage's students are stored as
+   section A, never shown as a section; the database refuses anything else
+   (`grade_students_stage_sections_check`). An import may leave the
+   section empty, or leave the column out, for the first stage.
+2. **Three links that differ by one word**: `/admin` (the owner; moved
+   from `/grades`), `/teacher`, `/student`. Three guards that never mix.
+3. **Students see their own result** with a code the application makes:
+   eight characters from an alphabet without look-alikes (XXXX-XXXX,
+   about 8.5 * 10^11 codes), kept as an HMAC digest (lookup, unique) and
+   encrypted with the application key (so the owner can print a group's
+   slips again; each printing is audited). New students get a code at
+   import; a lost code is replaced and the old one stops at once (it also
+   ends the student's open session). Same sign-in limits as teachers.
+4. **Publication**: students see nothing of the marks until the owner
+   publishes; publishing needs entry closed, and opening entry again needs
+   the results hidden (`grade_periods_published_closed_check`).
+5. **Demo data** (`GradesDemoSeeder`, local only, once): five teachers,
+   five subjects per stage, 12 + 10 + 10 students with codes, marks (some
+   absent, a few empty), published; codes written to
+   `storage/app/private/demo/credentials.txt` (not in git). Added next to
+   the owner's own trial data, at the owner's choice.
 
 ## Consequences
 

@@ -24,6 +24,7 @@ class ImportStudents
         private readonly SpreadsheetRows $spreadsheet,
         private readonly StudentImportPlanner $planner,
         private readonly AuditLogger $audit,
+        private readonly IssueStudentCodes $codes,
     ) {}
 
     public function preview(User $actor, string $path, string $extension): StudentImportPlan
@@ -59,6 +60,8 @@ class ImportStudents
                     'section' => $create['section'],
                     'student_number' => $create['student_number'],
                 ])->save();
+                // Every new student gets the code to see their result.
+                $this->codes->give($student);
             }
 
             foreach ($plan->updates as $update) {

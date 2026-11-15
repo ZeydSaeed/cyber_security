@@ -3,6 +3,7 @@ import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdmin
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
 import { useTranslations } from '@/hooks/use-translations';
 import MarkSheet from '../../components/mark-sheet';
+import { placeLabel } from '../../place';
 import type { SheetStudent } from '../../types';
 
 /**
@@ -16,7 +17,7 @@ export default function GradesSheet({
     students,
 }: {
     open: boolean;
-    subject: { uuid: string; name: string; stage: number };
+    subject: { uuid: string; name: string; stage: number; divided: boolean };
     section: string;
     students: SheetStudent[];
 }) {
@@ -25,7 +26,7 @@ export default function GradesSheet({
     return (
         <>
             <Head
-                title={`${subject.name} · ${t('Section :section', { section })}`}
+                title={`${subject.name} · ${placeLabel(t, subject.stage, section, subject.divided)}`}
             />
             <div className="max-w-3xl p-4">
                 <MarkSheet

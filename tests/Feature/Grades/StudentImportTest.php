@@ -83,8 +83,9 @@ it('rejects bad rows with their reason and row number, and imports the rest', fu
         ['Good Student One', '1', 'A', ''],
         ['Al', '1', 'A', ''],
         ['Third Year Student', '3', 'A', ''],
-        ['Section C Student', '1', 'C', ''],
-        ['Good Student One', '1', 'B', ''],
+        ['Section C Student', '2', 'C', ''],
+        ['First Stage Section B', '1', 'B', ''],
+        ['Good Student One', '1', '', ''],
         ['Numbered Student', '2', 'A', 'N-7'],
         ['Other Name Same Number', '2', 'B', 'N-7'],
     ]);
@@ -96,8 +97,9 @@ it('rejects bad rows with their reason and row number, and imports the rest', fu
             ['row' => 3, 'reason' => 'The name is missing or too short.'],
             ['row' => 4, 'reason' => 'The stage must be 1 or 2.'],
             ['row' => 5, 'reason' => 'The section must be A or B.'],
-            ['row' => 6, 'reason' => 'Repeats row 2 of the file.'],
-            ['row' => 8, 'reason' => 'Repeats row 7 of the file.'],
+            ['row' => 6, 'reason' => 'The first stage has no sections; leave the section empty.'],
+            ['row' => 7, 'reason' => 'Repeats row 2 of the file.'],
+            ['row' => 9, 'reason' => 'Repeats row 8 of the file.'],
         ]);
 });
 
@@ -113,10 +115,10 @@ it('changes nothing when the same file is applied twice', function () {
 });
 
 it('matches a name typed differently, and updates the section, the spelling and the number', function () {
-    Student::factory()->named("\u{0627}\u{062D}\u{0645}\u{062F} \u{0639}\u{0644}\u{064A} \u{062D}\u{0633}\u{0646}")->create();
+    Student::factory()->named("\u{0627}\u{062D}\u{0645}\u{062F} \u{0639}\u{0644}\u{064A} \u{062D}\u{0633}\u{0646}")->in(Stage::Second, Section::A)->create();
     $file = importFile($this, [
         ['name', 'stage', 'section', 'number'],
-        ["\u{0623}\u{062D}\u{0645}\u{062F}  \u{0639}\u{0644}\u{064A} \u{062D}\u{0633}\u{0646}", '1', 'B', '501'],
+        ["\u{0623}\u{062D}\u{0645}\u{062F}  \u{0639}\u{0644}\u{064A} \u{062D}\u{0633}\u{0646}", '2', 'B', '501'],
     ]);
 
     $plan = app(ImportStudents::class)->apply($this->owner, $file, 'csv');
@@ -158,9 +160,9 @@ it('will not move a student with marks to the other stage', function () {
 });
 
 it('asks for the number when a name is not enough to tell two students apart', function () {
-    Student::factory()->named('Same Name Twice')->create(['student_number' => '1']);
-    Student::factory()->named('Same Name Twice')->in(Stage::First, Section::B)->create(['student_number' => '2']);
-    $file = importFile($this, [['name', 'stage', 'section'], ['Same Name Twice', '1', 'A']]);
+    Student::factory()->named('Same Name Twice')->in(Stage::Second, Section::A)->create(['student_number' => '1']);
+    Student::factory()->named('Same Name Twice')->in(Stage::Second, Section::B)->create(['student_number' => '2']);
+    $file = importFile($this, [['name', 'stage', 'section'], ['Same Name Twice', '2', 'A']]);
 
     expect(app(ImportStudents::class)->preview($this->owner, $file, 'csv')->rejected)
         ->toBe([['row' => 2, 'reason' => 'More than one student in this stage has this name; add the student number.']]);
@@ -185,3 +187,13 @@ it('is the business of those who manage grades only', function () {
 
     app(ImportStudents::class)->preview(User::factory()->withTwoFactor()->create(), $file, 'csv');
 })->throws(AuthorizationException::class);
+
+it('takes first-stage students without a section column, and gives every new student a code', function () {
+    $file = importFile($this, [['name', 'stage'], ['First Stage Only', '1'], ['Another First Stager', '1']]);
+
+    app(ImportStudents::class)->apply($this->owner, $file, 'csv');
+
+    expect(Student::query()->pluck('section')->map(fn ($s) => $s->value)->all())->toBe(['A', 'A'])
+        ->and(Student::query()->whereNull('code_digest')->count())->toBe(0)
+        ->and(Student::query()->whereNull('code_encrypted')->count())->toBe(0);
+});

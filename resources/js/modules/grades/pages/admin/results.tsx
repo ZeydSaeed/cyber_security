@@ -7,24 +7,24 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import ResultsTable from '../../components/results-table';
+import { placeLabel } from '../../place';
 import type { ResultSheet } from '../../types';
 
-const PLACES = [
-    { stage: 1, section: 'A' },
-    { stage: 1, section: 'B' },
-    { stage: 2, section: 'A' },
-    { stage: 2, section: 'B' },
-];
+type Place = { stage: number; section: string; divided: boolean };
 
 function query(stage: number, section: string): string {
     return `?stage=${stage}&section=${section}`;
 }
 
 /**
- * Results of one section (ADR-0034), with the four sections a click away,
- * and the printable sheet, each student's result card and the Excel file.
+ * Results of one group of students (ADR-0034): the first stage, or a
+ * section of the second, the others a click away; the printable sheet,
+ * each student's result card and the Excel file.
  */
-export default function GradesResults(sheet: ResultSheet) {
+export default function GradesResults({
+    places,
+    ...sheet
+}: ResultSheet & { places: Place[] }) {
     const { t } = useTranslations();
     const here = query(sheet.stage, sheet.section);
 
@@ -53,7 +53,7 @@ export default function GradesResults(sheet: ResultSheet) {
                     aria-label={t('Sections')}
                     className="flex flex-wrap gap-2"
                 >
-                    {PLACES.map((place) => {
+                    {places.map((place) => {
                         const current =
                             place.stage === sheet.stage &&
                             place.section === sheet.section;
@@ -72,13 +72,12 @@ export default function GradesResults(sheet: ResultSheet) {
                                     }
                                     aria-current={current ? 'page' : undefined}
                                 >
-                                    {t('Stage :stage', {
-                                        stage: String(place.stage),
-                                    })}{' '}
-                                    ·{' '}
-                                    {t('Section :section', {
-                                        section: place.section,
-                                    })}
+                                    {placeLabel(
+                                        t,
+                                        place.stage,
+                                        place.section,
+                                        place.divided,
+                                    )}
                                 </Link>
                             </Button>
                         );

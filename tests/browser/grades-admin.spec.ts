@@ -50,12 +50,12 @@ async function check(page: Page, what: string, dir: string): Promise<void> {
 }
 
 const pages = [
-    '/grades',
-    '/grades/teachers',
-    '/grades/subjects',
-    '/grades/students',
-    '/grades/results?stage=1&section=A',
-    '/grades/results/print?stage=1&section=A',
+    '/admin',
+    '/admin/teachers',
+    '/admin/subjects',
+    '/admin/students',
+    '/admin/results?stage=1&section=A',
+    '/admin/results/print?stage=1&section=A',
 ];
 
 for (const { locale, dir } of [
@@ -92,7 +92,7 @@ test.describe('grades owner flow', () => {
     test('imports students after a preview, and prints a result card', async ({
         page,
     }) => {
-        await open(page, '/grades/students', 'en');
+        await open(page, '/admin/students', 'en');
 
         const csv =
             'name,stage,section\nBrowser Imported One,2,A\nBrowser Imported Two,2,B\nToo,7,A\n';
@@ -103,7 +103,7 @@ test.describe('grades owner flow', () => {
         });
         await page.getByRole('button', { name: 'Preview' }).click();
 
-        await page.waitForURL(/\/grades\/students\/import$/);
+        await page.waitForURL(/\/admin\/students\/import$/);
         await pageReady(page);
         await check(page, 'the import preview', 'ltr');
         await expect(
@@ -111,19 +111,19 @@ test.describe('grades owner flow', () => {
         ).toHaveCount(1);
 
         await page.click('[data-test="apply-import"]');
-        await page.waitForURL(/\/grades\/students(\?.*)?$/);
+        await page.waitForURL(/\/admin\/students(\?.*)?$/);
         await pageReady(page);
         await expect(page.getByText('Browser Imported One')).toBeVisible();
 
-        await open(page, '/grades/results?stage=1&section=A', 'ar');
+        await open(page, '/admin/results?stage=1&section=A', 'ar');
         const card = page.locator('[data-test="result-row"] a').first();
         const href = await card.getAttribute('href');
-        expect(href).toMatch(/\/grades\/results\/students\/[0-9a-f-]{36}$/);
+        expect(href).toMatch(/\/admin\/results\/students\/[0-9a-f-]{36}$/);
 
         await open(page, href ?? '', 'ar');
         await check(page, 'a result card', 'rtl');
         await expect(page.locator('[data-test="card-name"]')).toHaveText(
-            /Student A/,
+            /Student 1-/,
         );
         await page.emulateMedia({ media: 'print' });
         await expect(page.locator('[data-test="print"]')).toBeHidden();

@@ -2,27 +2,31 @@
 
 use App\Modules\Grades\Http\GradesAdminController;
 use App\Modules\Grades\Http\ResultsController;
+use App\Modules\Grades\Http\StudentPortalController;
 use App\Modules\Grades\Http\StudentsAdminController;
+use App\Modules\Grades\Http\StudentSession;
 use App\Modules\Grades\Http\TeacherMarksController;
 use App\Modules\Grades\Http\TeacherSession;
 use App\Modules\Grades\Http\TeacherSessionController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Routes of the Grades module (ADR-0034), loaded by its provider.
+| Routes of the Grades module (ADR-0034), loaded by its provider. Three
+| links that differ by one word (owner's decision of 2026-11-15):
 |
-| /teacher is the one link the owner sends to every teacher: a code opens
-| the teacher's own subjects on the `teacher` guard. These routes never use
-| the users' `auth` middleware, and the users' pages never accept a teacher.
-| URLs carry the subject's UUID, never its id.
+|   /admin    the owner (users on the `web` guard, second factor)
+|   /teacher  teachers, with the code the owner sets
+|   /student  students, with the code the application makes
+|
+| The three never share a guard. URLs carry UUIDs, never ids.
 */
 
 /*
-| The owner's pages (users on the `web` guard, with their second factor):
-| reading needs grades.view_results, every change grades.manage. The
-| actions check the permission again inside their transactions.
+| The owner's pages: reading needs grades.view_results, every change
+| grades.manage; the actions check the permission again inside their
+| transactions. (/admin/users and /admin/reports are the platform's.)
 */
-Route::middleware(['web', 'auth', 'verified'])->prefix('grades')->name('grades.admin.')->group(function () {
+Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.admin.')->group(function () {
     Route::middleware('can:grades.view_results')->group(function () {
         Route::get('/', [GradesAdminController::class, 'overview'])->name('overview');
         Route::get('students', [StudentsAdminController::class, 'index'])->name('students');
@@ -38,6 +42,7 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('grades')->name('grades.a
 
     Route::middleware('can:grades.manage')->group(function () {
         Route::put('window', [GradesAdminController::class, 'window'])->name('window');
+        Route::put('publish', [GradesAdminController::class, 'publish'])->name('publish');
 
         Route::get('teachers', [GradesAdminController::class, 'teachers'])->name('teachers');
         Route::post('teachers', [GradesAdminController::class, 'storeTeacher'])->middleware('throttle:30,1')->name('teachers.store');
@@ -68,6 +73,14 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('grades')->name('grades.a
         Route::get('students/import', [StudentsAdminController::class, 'preview'])->name('students.preview');
         Route::post('students/import/apply', [StudentsAdminController::class, 'apply'])->middleware('throttle:20,1')->name('students.apply');
         Route::delete('students/import', [StudentsAdminController::class, 'cancel'])->name('students.cancel');
+
+        // Students' codes: issue the missing ones, replace a lost one, print a section's.
+        Route::post('students/codes', [StudentsAdminController::class, 'issueCodes'])->middleware('throttle:20,1')->name('students.codes.issue');
+        Route::post('students/{student}/code', [StudentsAdminController::class, 'replaceCode'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('student')
+            ->name('students.code.replace');
+        Route::get('students/codes', [StudentsAdminController::class, 'codes'])->name('students.codes');
     });
 });
 
@@ -93,5 +106,18 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.save');
+    });
+});
+
+Route::middleware('web')->prefix('student')->name('grades.student.')->group(function () {
+    Route::get('/', [StudentPortalController::class, 'create'])->name('login');
+    // Failed attempts are limited per address inside the controller.
+    Route::post('/', [StudentPortalController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('login.store');
+
+    Route::middleware(StudentSession::class)->group(function () {
+        Route::post('logout', [StudentPortalController::class, 'destroy'])->name('logout');
+        Route::get('result', [StudentPortalController::class, 'result'])->name('result');
     });
 });

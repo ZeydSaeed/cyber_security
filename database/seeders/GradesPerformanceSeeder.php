@@ -56,7 +56,7 @@ class GradesPerformanceSeeder extends Seeder
                 $csv[] = "{$code},{$subject->uuid}";
             }
 
-            foreach (Section::cases() as $section) {
+            foreach ($stage->sections() as $section) {
                 foreach (range(1, $perSection) as $n) {
                     $name = "Perf Student {$stage->value}{$section->value} {$n}";
                     $student = new Student;

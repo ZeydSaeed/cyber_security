@@ -7,6 +7,7 @@ use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Platform\Audit\AuditLogger;
+use App\Platform\Exceptions\DomainRuleViolation;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,6 +30,11 @@ class ChangeEntryWindow
 
             if (! $locked->status->canBecome($target)) {
                 return $locked;
+            }
+
+            // Students never see marks that are changing again.
+            if ($target === WindowStatus::Open && $locked->isPublished()) {
+                throw new DomainRuleViolation(__('Hide the published results before opening mark entry again.'), 'status');
             }
 
             $locked->forceFill($target === WindowStatus::Open

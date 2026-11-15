@@ -25,6 +25,7 @@ final readonly class ResultSheets
      * @return array{
      *     stage: int,
      *     section: string,
+     *     divided: bool,
      *     pass_mark: int,
      *     subjects: list<array{uuid: string, name: string}>,
      *     students: list<array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}>,
@@ -39,13 +40,13 @@ final readonly class ResultSheets
             ->orderBy('full_name')
             ->get(['id', 'uuid', 'full_name', 'student_number']);
 
-        return $this->sheet($stage, $students, $period) + ['section' => $section->value];
+        return $this->sheet($stage, $students, $period) + ['section' => $section->value, 'divided' => $stage->isDivided()];
     }
 
     /**
      * One student's result card.
      *
-     * @return array{stage: int, section: string, pass_mark: int, subjects: list<array{uuid: string, name: string}>, student: array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}}
+     * @return array{stage: int, section: string, divided: bool, pass_mark: int, subjects: list<array{uuid: string, name: string}>, student: array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}}
      */
     public function student(Student $student, Period $period = Period::Month1): array
     {
@@ -54,6 +55,7 @@ final readonly class ResultSheets
         return [
             'stage' => $sheet['stage'],
             'section' => $student->section->value,
+            'divided' => $student->stage->isDivided(),
             'pass_mark' => $sheet['pass_mark'],
             'subjects' => $sheet['subjects'],
             'student' => $sheet['students'][0],

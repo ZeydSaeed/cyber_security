@@ -153,7 +153,12 @@ export default function () {
     });
     sleep(1);
 
-    const section = __ITER % 2 === 0 ? 'A' : 'B';
+    // The sections the subject's stage has (the first stage has only one).
+    const own = (subjects.json('props.subjects') || []).find(
+        (s) => s.uuid === teacher.subject,
+    );
+    const sections = own ? own.sections.map((s) => s.section) : ['A'];
+    const section = sections[__ITER % sections.length];
     const sheet = inertia(`/teacher/subjects/${teacher.subject}/${section}`);
     if (!check(sheet, { 'sheet page': (r) => r.status === 200 })) {
         return;

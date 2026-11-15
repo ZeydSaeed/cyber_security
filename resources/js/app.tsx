@@ -9,7 +9,7 @@ import '@/lib/opener';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import TeacherLayout from '@/modules/grades/layouts/teacher-layout';
+import PortalLayout from '@/modules/grades/layouts/portal-layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -39,12 +39,15 @@ void createInertiaApp({
             case name.startsWith('modules/grades/pages/print/'):
                 return null;
             case name.startsWith('auth/'):
-            // A teacher's code page looks like the users' sign-in (ADR-0034).
+            // The teachers' and students' code pages look like the users'
+            // sign-in (ADR-0034).
             case name === 'modules/grades/pages/teacher/login':
+            case name === 'modules/grades/pages/student/login':
                 return AuthLayout;
-            // Teachers are not users: none of the users' application.
+            // Teachers and students are not users: none of the users' application.
             case name.startsWith('modules/grades/pages/teacher/'):
-                return TeacherLayout;
+            case name.startsWith('modules/grades/pages/student/'):
+                return PortalLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
             default:

@@ -22,10 +22,10 @@ final class GradesBoard
 {
     /**
      * @return array{
-     *     window: array{open: bool, opened_at: string|null, closed_at: string|null},
+     *     window: array{open: bool, published: bool, opened_at: string|null, closed_at: string|null},
      *     expected_subjects: int,
      *     teachers: int,
-     *     stages: list<array{stage: int, students: array<string, int>, subjects: list<array{uuid: string, name: string, teacher: string|null, sections: array<string, int>}>}>
+     *     stages: list<array{stage: int, divided: bool, students: array<string, int>, subjects: list<array{uuid: string, name: string, teacher: string|null, sections: array<string, int>}>}>
      * }
      */
     public function show(Period $period = Period::Month1): array
@@ -51,20 +51,23 @@ final class GradesBoard
         $stages = [];
         foreach (Stage::cases() as $stage) {
             $counts = [];
-            foreach (Section::cases() as $section) {
+            foreach ($stage->sections() as $section) {
                 $counts[$section->value] = (int) ($students[$stage->value.'|'.$section->value] ?? 0);
             }
 
+            $sectionValues = array_keys($counts);
+
             $stages[] = [
                 'stage' => $stage->value,
+                'divided' => $stage->isDivided(),
                 'students' => $counts,
                 'subjects' => array_values($subjects->get($stage->value, collect())->map(fn (Subject $subject): array => [
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
                     'teacher' => $subject->teacher?->name,
                     'sections' => array_combine(
-                        Section::values(),
-                        array_map(fn (string $section): int => (int) ($entered[$subject->id.'|'.$section] ?? 0), Section::values()),
+                        $sectionValues,
+                        array_map(fn (string $section): int => (int) ($entered[$subject->id.'|'.$section] ?? 0), $sectionValues),
                     ),
                 ])->all()),
             ];
@@ -73,6 +76,7 @@ final class GradesBoard
         return [
             'window' => [
                 'open' => $window->status === WindowStatus::Open,
+                'published' => $window->isPublished(),
                 'opened_at' => $window->opened_at?->toIso8601String(),
                 'closed_at' => $window->closed_at?->toIso8601String(),
             ],

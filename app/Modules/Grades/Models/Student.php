@@ -6,6 +6,8 @@ use App\Modules\Grades\Database\Factories\StudentFactory;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,12 +24,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Stage $stage
  * @property Section $section
  * @property string|null $student_number
+ * @property string|null $code_digest
+ * @property string|null $code_encrypted
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
 #[UseFactory(StudentFactory::class)]
-class Student extends Model
+class Student extends Model implements Authenticatable
 {
+    use AuthenticatableTrait;
+
     /** @use HasFactory<StudentFactory> */
     use HasFactory;
 
@@ -36,6 +42,27 @@ class Student extends Model
     public const MORPH = 'grade_student';
 
     protected $table = 'grade_students';
+
+    /** The guard students sign in on to see their own result. */
+    public const GUARD = 'student';
+
+    /** @var list<string> */
+    protected $hidden = ['code_digest', 'code_encrypted'];
+
+    /**
+     * The session guard's fingerprint of the "password": the code's digest,
+     * so a new code ends the sessions opened with the old one.
+     */
+    public function getAuthPassword(): string
+    {
+        return 'grades-student-'.$this->code_digest;
+    }
+
+    /** No "remember me" for students: the table has no such column. */
+    public function getRememberTokenName(): string
+    {
+        return '';
+    }
 
     /**
      * @return array<string, string>

@@ -4,6 +4,7 @@ namespace App\Modules\Grades\Http;
 
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
+use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\Queries\GradesBoard;
@@ -33,6 +34,7 @@ class GradesAdminController
         return Inertia::render('modules/grades/pages/admin/overview', [
             ...$board->show(),
             'teacherLink' => route('grades.teacher.login'),
+            'studentLink' => route('grades.student.login'),
             'canManage' => $user->can('grades.manage'),
         ]);
     }
@@ -46,6 +48,19 @@ class GradesAdminController
         Inertia::flash('toast', ['type' => 'success', 'message' => $target === WindowStatus::Open
             ? __('Mark entry is open. Teachers can enter marks.')
             : __('Mark entry is closed. Teachers can no longer change marks.')]);
+
+        return back();
+    }
+
+    public function publish(Request $request, PublishResults $publish, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate(['published' => ['required', 'boolean']]);
+        $shown = $request->boolean('published');
+
+        $publish->handle($user, Period::Month1, $shown);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $shown
+            ? __('Results published. Students can see their own result with their code.')
+            : __('Results hidden from the students.')]);
 
         return back();
     }

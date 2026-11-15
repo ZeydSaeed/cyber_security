@@ -24,11 +24,11 @@ const userPages = [
     '/admin/users/invite',
     '/admin/reports',
     // The Grades module (ADR-0034).
-    '/grades',
-    '/grades/teachers',
-    '/grades/subjects',
-    '/grades/students',
-    '/grades/results?stage=1&section=A',
+    '/admin',
+    '/admin/teachers',
+    '/admin/subjects',
+    '/admin/students',
+    '/admin/results?stage=1&section=A',
 ];
 
 /** Visible elements that stick out of the screen and cannot be scrolled to. */

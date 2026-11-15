@@ -30,12 +30,13 @@ use Tests\Support\Grades\GradesFixtures;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->subject = Subject::factory()->create(['name' => 'Network Security']);
+    // The second stage: the one with sections.
+    $this->subject = Subject::factory()->stage(Stage::Second)->create(['name' => 'Network Security']);
     $this->teacher = $this->subject->teacher;
-    $this->students = Student::factory()->count(3)->create()->pluck('uuid')->all();
+    $this->students = Student::factory()->in(Stage::Second, Section::A)->count(3)->create()->pluck('uuid')->all();
     // Same stage, other section; and the other stage.
-    $this->otherSection = Student::factory()->in(Stage::First, Section::B)->create();
-    $this->otherStage = Student::factory()->in(Stage::Second, Section::A)->create();
+    $this->otherSection = Student::factory()->in(Stage::Second, Section::B)->create();
+    $this->otherStage = Student::factory()->in(Stage::First, Section::A)->create();
     GradesFixtures::openWindow();
 });
 
@@ -108,7 +109,7 @@ it('announces a completed section once, and tells those who manage grades', func
         ->and($notification->data)->toBe([
             'kind' => 'grades_section_completed',
             'subject' => 'Network Security',
-            'stage' => '1',
+            'stage' => '2',
             'section' => 'A',
             'teacher' => $this->teacher->name,
         ]);
@@ -157,3 +158,12 @@ it('refuses a person who does not manage grades', function () {
 
     saveMarks(User::factory()->withTwoFactor()->create(), $this->subject, [$a => Mark::of(50)]);
 })->throws(AuthorizationException::class);
+
+it('refuses a section the stage does not have (the first stage has none)', function () {
+    $first = Subject::factory()->create();
+    $student = Student::factory()->create();
+
+    expect(fn () => app(SaveMarks::class)->handle($first->teacher, $first, Section::B, Period::Month1, [$student->uuid => Mark::of(50)]))
+        ->toThrow(DomainRuleViolation::class, 'This stage has no such section.')
+        ->and(GradeMark::query()->count())->toBe(0);
+});

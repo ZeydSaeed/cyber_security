@@ -89,6 +89,22 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Teacher code not recognised');
         case 'grades.results_exported':
             return t('Results exported');
+        case 'grades.results_published':
+            return t('Results published to the students');
+        case 'grades.results_unpublished':
+            return t('Results hidden from the students');
+        case 'grades.student_codes_issued':
+            return t('Student codes issued');
+        case 'grades.student_code_replaced':
+            return t('Student code replaced');
+        case 'grades.student_codes_viewed':
+            return t('Student codes shown for printing');
+        case 'grades.student_login':
+            return t('Student signed in');
+        case 'grades.student_login_failed':
+            return t('Student code not recognised');
+        case 'grades.student_lockout':
+            return t('Student sign-in paused after too many attempts');
         case 'grades.teacher_lockout':
             return t('Teacher sign-in paused after too many attempts');
         case 'user.invited':

@@ -2,12 +2,13 @@ import { Head } from '@inertiajs/react';
 import { useTranslations } from '@/hooks/use-translations';
 import PrintPage from '../../components/print-page';
 import ResultsTable from '../../components/results-table';
+import { placeLabel } from '../../place';
 import type { ResultSheet } from '../../types';
 
 /** A section's results, to print (ADR-0034). */
 export default function PrintSection(sheet: ResultSheet) {
     const { t } = useTranslations();
-    const place = `${t('Stage :stage', { stage: String(sheet.stage) })} · ${t('Section :section', { section: sheet.section })}`;
+    const place = placeLabel(t, sheet.stage, sheet.section, sheet.divided);
 
     return (
         <>

@@ -28,7 +28,7 @@ class TeacherMarksController
         $teacher = $this->teacher();
 
         return Inertia::render('modules/grades/pages/teacher/subjects', [
-            'teacher' => ['name' => $teacher->name],
+            'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],
             ...$this->sheets->subjects($teacher),
         ]);
     }
@@ -36,10 +36,10 @@ class TeacherMarksController
     public function section(Subject $subject, string $section): Response
     {
         $teacher = $this->teacher();
-        $this->ensureOwn($teacher, $subject);
+        $this->ensureOwn($teacher, $subject, $section);
 
         return Inertia::render('modules/grades/pages/teacher/section', [
-            'teacher' => ['name' => $teacher->name],
+            'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],
             ...$this->sheets->section($subject, Section::from($section)),
         ]);
     }
@@ -47,7 +47,7 @@ class TeacherMarksController
     public function save(SaveMarksRequest $request, Subject $subject, string $section, SaveMarks $save): RedirectResponse
     {
         $teacher = $this->teacher();
-        $this->ensureOwn($teacher, $subject);
+        $this->ensureOwn($teacher, $subject, $section);
 
         $result = $save->handle($teacher, $subject, Section::from($section), Period::Month1, $request->marks());
 
@@ -73,9 +73,10 @@ class TeacherMarksController
         return $teacher;
     }
 
-    private function ensureOwn(Teacher $teacher, Subject $subject): void
+    private function ensureOwn(Teacher $teacher, Subject $subject, ?string $section = null): void
     {
-        if ($subject->teacher_id !== $teacher->id) {
+        // Another teacher's subject, or a section the stage does not have.
+        if ($subject->teacher_id !== $teacher->id || ($section !== null && ! $subject->stage->hasSection(Section::from($section)))) {
             throw new NotFoundHttpException;
         }
     }

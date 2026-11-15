@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Access\Role;
 use App\Models\User;
+use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Domain\NameKey;
 use App\Modules\Grades\Domain\Period;
@@ -72,21 +73,31 @@ class BrowserTestSeeder extends Seeder
             }
         }
 
-        // Grades (ADR-0034): a teacher with a known code, two subjects of the
-        // first stage, six students in each of its sections, and the first
-        // month open for entry (teacher.spec.ts).
+        // Grades (ADR-0034): a teacher with a known code, a subject in each
+        // stage, six students in the first stage (no sections) and six in
+        // each section of the second, each with a code, and the first month
+        // open for entry (teacher.spec.ts, student.spec.ts).
         GradePeriod::for(Period::Month1)->forceFill(['status' => WindowStatus::Open, 'opened_at' => now(), 'closed_at' => null])->save();
         $teacher = new Teacher;
         $teacher->forceFill(['name' => 'Teacher Test', 'code_digest' => app(TeacherCodes::class)->digest(self::TEACHER_CODE)])->save();
-        foreach (['Network Security', 'Cryptography'] as $order => $name) {
+        foreach ([Stage::First->value => 'Network Security', Stage::Second->value => 'Cryptography'] as $stage => $name) {
             $subject = new Subject;
-            $subject->forceFill(['stage' => Stage::First, 'name' => $name, 'teacher_id' => $teacher->id, 'sort_order' => $order + 1])->save();
+            $subject->forceFill(['stage' => $stage, 'name' => $name, 'teacher_id' => $teacher->id, 'sort_order' => 1])->save();
         }
-        foreach (Section::cases() as $section) {
-            foreach (range(1, 6) as $n) {
-                $student = new Student;
-                $name = "Student {$section->value}{$n}";
-                $student->forceFill(['full_name' => $name, 'name_key' => NameKey::of($name), 'stage' => Stage::First, 'section' => $section])->save();
+        $codes = app(StudentCodes::class);
+        $studentCode = null;
+        foreach (Stage::cases() as $stage) {
+            foreach ($stage->sections() as $section) {
+                foreach (range(1, 6) as $n) {
+                    $name = $stage->isDivided() ? "Student {$stage->value}{$section->value}{$n}" : "Student {$stage->value}-{$n}";
+                    $code = $codes->generate();
+                    $studentCode ??= $code;
+                    $student = new Student;
+                    $student->forceFill([
+                        'full_name' => $name, 'name_key' => NameKey::of($name), 'stage' => $stage, 'section' => $section,
+                        'code_digest' => $codes->digest($code), 'code_encrypted' => $codes->encrypt($code),
+                    ])->save();
+                }
             }
         }
 
@@ -98,6 +109,8 @@ class BrowserTestSeeder extends Seeder
             // Signed up without a second factor yet: is sent to set one up.
             'setup_email' => 'setup@example.test',
             'teacher_code' => self::TEACHER_CODE,
+            // "Student 1-1", the first stage's first student.
+            'student_code' => $studentCode,
         ]));
 
         User::factory()->create([

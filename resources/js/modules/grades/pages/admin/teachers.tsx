@@ -117,7 +117,14 @@ export default function GradesTeachers({
                 />
 
                 <section className="rounded-lg border bg-card p-4">
-                    <CopyLink href={teacherLink} />
+                    <CopyLink
+                        id="teacher-link"
+                        href={teacherLink}
+                        label={t('Link for the teachers')}
+                        hint={t(
+                            'Every teacher opens this link and types their own code.',
+                        )}
+                    />
                 </section>
 
                 <section className="rounded-lg border bg-card p-4">

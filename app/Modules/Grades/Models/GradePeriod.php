@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property WindowStatus $status
  * @property CarbonImmutable|null $opened_at
  * @property CarbonImmutable|null $closed_at
+ * @property CarbonImmutable|null $results_published_at
  * @property int $lock_version
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -36,6 +37,7 @@ class GradePeriod extends Model
             'lock_version' => 'integer',
             'opened_at' => 'immutable_datetime',
             'closed_at' => 'immutable_datetime',
+            'results_published_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
@@ -63,5 +65,11 @@ class GradePeriod extends Model
     public function isOpen(): bool
     {
         return $this->status === WindowStatus::Open;
+    }
+
+    /** Whether students may see the results (PublishResults). */
+    public function isPublished(): bool
+    {
+        return $this->results_published_at !== null;
     }
 }

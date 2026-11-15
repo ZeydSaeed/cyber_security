@@ -16,8 +16,8 @@ const pages = [
     '/dashboard',
     '/admin/users',
     // The Grades module (ADR-0034).
-    '/grades',
-    '/grades/results?stage=1&section=A',
+    '/admin',
+    '/admin/results?stage=1&section=A',
     '/settings/profile',
     '/settings/security',
     '/notifications',

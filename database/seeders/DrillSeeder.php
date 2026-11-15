@@ -66,7 +66,9 @@ class DrillSeeder extends Seeder
         $csv = storage_path('app/private/drill-students-'.bin2hex(random_bytes(8)).'.csv');
         $lines = ['name,stage,section,number'];
         for ($i = 1; $i <= $count; $i++) {
-            $lines[] = "Drill Student {$i},".($i % 2 + 1).','.($i % 4 < 2 ? 'A' : 'B').",D{$i}";
+            // The first stage has no sections: its section is left empty.
+            $stage = $i % 2 + 1;
+            $lines[] = "Drill Student {$i},{$stage},".($stage === 1 ? '' : ($i % 4 < 2 ? 'A' : 'B')).",D{$i}";
         }
         file_put_contents($csv, implode("\n", $lines));
 
@@ -85,7 +87,7 @@ class DrillSeeder extends Seeder
                 continue;
             }
 
-            foreach (Section::cases() as $section) {
+            foreach ($subject->stage->sections() as $section) {
                 $values = [];
                 foreach (Student::query()->where('stage', $subject->stage->value)->where('section', $section->value)->pluck('id', 'uuid') as $uuid => $id) {
                     $values[$uuid] = $id % 10 === 0 ? Mark::absent() : Mark::of(($id * 7 + $index * 3) % 101);

@@ -1,4 +1,5 @@
 import { useTranslations } from '@/hooks/use-translations';
+import { placeLabel } from '../place';
 import type { MarkValue, ResultSheet } from '../types';
 
 /**
@@ -51,8 +52,7 @@ export default function ResultsTable({
                 data-test="results-table"
             >
                 <caption className="sr-only">
-                    {t('Stage :stage', { stage: String(sheet.stage) })} ·{' '}
-                    {t('Section :section', { section: sheet.section })}
+                    {placeLabel(t, sheet.stage, sheet.section, sheet.divided)}
                 </caption>
                 <thead>
                     <tr className="border-b text-muted-foreground print:text-foreground">

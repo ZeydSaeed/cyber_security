@@ -200,7 +200,8 @@ it('imports each student once when two imports of one file race', function () {
     $file = sys_get_temp_dir().DIRECTORY_SEPARATOR.'students-'.bin2hex(random_bytes(6)).'.csv';
     $lines = ['name,stage,section'];
     foreach (range(1, 40) as $n) {
-        $lines[] = "Student number {$n},".($n % 2 + 1).','.($n % 3 === 0 ? 'B' : 'A');
+        $stage = $n % 2 + 1;
+        $lines[] = "Student number {$n},{$stage},".($stage === 1 ? '' : ($n % 3 === 0 ? 'B' : 'A'));
     }
     file_put_contents($file, implode("\n", $lines));
 

@@ -46,20 +46,20 @@ describe('access', function () {
         auth()->logout();
         $this->call($method, $url)->assertRedirect('/login');
     })->with([
-        ['GET', '/grades'],
-        ['GET', '/grades/results'],
-        ['GET', '/grades/students'],
-        ['GET', '/grades/teachers'],
-        ['POST', '/grades/teachers'],
-        ['PUT', '/grades/window'],
-        ['POST', '/grades/students/import'],
+        ['GET', '/admin'],
+        ['GET', '/admin/results'],
+        ['GET', '/admin/students'],
+        ['GET', '/admin/teachers'],
+        ['POST', '/admin/teachers'],
+        ['PUT', '/admin/window'],
+        ['POST', '/admin/students/import'],
     ]);
 
     it('keeps teachers out of the owner\'s pages', function () {
         Teacher::factory()->withCode('teacher-code-1')->create();
         $this->post('/teacher', ['code' => 'teacher-code-1']);
 
-        $this->get('/grades')->assertRedirect('/login');
+        $this->get('/admin')->assertRedirect('/login');
     });
 });
 
@@ -69,43 +69,49 @@ describe('set-up', function () {
         Student::factory()->count(2)->create();
         Subject::factory()->unassigned()->stage(Stage::Second)->create();
 
-        $this->actingAs($this->owner)->get('/grades')->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($this->owner)->get('/admin')->assertInertia(fn (Assert $page) => $page
             ->component('modules/grades/pages/admin/overview')
             ->where('window.open', false)
             ->where('expected_subjects', 8)
-            ->where('stages.0.students', ['A' => 2, 'B' => 0])
+            // The first stage is one group; the second has two sections.
+            ->where('stages.0.divided', false)
+            ->where('stages.0.students', ['A' => 2])
+            ->where('stages.1.divided', true)
+            ->where('stages.1.students', ['A' => 0, 'B' => 0])
             ->where('stages.0.subjects.0.name', 'Cryptography')
             ->where('stages.0.subjects.0.teacher', $subject->teacher?->name)
-            ->where('stages.0.subjects.0.sections', ['A' => 0, 'B' => 0])
+            ->where('stages.0.subjects.0.sections', ['A' => 0])
             ->where('stages.1.subjects.0.teacher', null)
             ->where('teacherLink', route('grades.teacher.login'))
+            ->where('studentLink', route('grades.student.login'))
+            ->where('window.published', false)
             ->where('canManage', true));
 
-        $this->put('/grades/window', ['status' => 'open'])->assertRedirect();
+        $this->put('/admin/window', ['status' => 'open'])->assertRedirect();
         expect(GradePeriod::for(Period::Month1)->status)->toBe(WindowStatus::Open);
 
-        $this->put('/grades/window', ['status' => 'closed']);
+        $this->put('/admin/window', ['status' => 'closed']);
         expect(GradePeriod::for(Period::Month1)->status)->toBe(WindowStatus::Closed);
-        $this->put('/grades/window', ['status' => 'ajar'])->assertSessionHasErrors('status');
+        $this->put('/admin/window', ['status' => 'ajar'])->assertSessionHasErrors('status');
     });
 
     it('adds a teacher, refuses a weak code beside its field, and changes name, code and access', function () {
-        $this->actingAs($this->owner)->from('/grades/teachers')
-            ->post('/grades/teachers', ['name' => 'Huda Karim', 'code' => 'short'])
+        $this->actingAs($this->owner)->from('/admin/teachers')
+            ->post('/admin/teachers', ['name' => 'Huda Karim', 'code' => 'short'])
             ->assertSessionHasErrors(['code' => 'The code must be between 8 and 64 characters.']);
 
-        $this->post('/grades/teachers', ['name' => 'Huda Karim', 'code' => 'quiet-lake-77'])->assertRedirect('/grades/teachers');
+        $this->post('/admin/teachers', ['name' => 'Huda Karim', 'code' => 'quiet-lake-77'])->assertRedirect('/admin/teachers');
         $teacher = Teacher::query()->sole();
 
-        $this->get('/grades/teachers')->assertInertia(fn (Assert $page) => $page
+        $this->get('/admin/teachers')->assertInertia(fn (Assert $page) => $page
             ->where('teachers.0.name', 'Huda Karim')
             ->where('teachers.0.active', true)
             ->missing('teachers.0.code_digest')
             ->missing('teachers.0.id'));
 
-        $this->put("/grades/teachers/{$teacher->uuid}", ['name' => 'Huda K. Karim']);
-        $this->put("/grades/teachers/{$teacher->uuid}", ['code' => 'bright-sky-31']);
-        $this->put("/grades/teachers/{$teacher->uuid}", ['active' => false]);
+        $this->put("/admin/teachers/{$teacher->uuid}", ['name' => 'Huda K. Karim']);
+        $this->put("/admin/teachers/{$teacher->uuid}", ['code' => 'bright-sky-31']);
+        $this->put("/admin/teachers/{$teacher->uuid}", ['active' => false]);
 
         $teacher->refresh();
         expect($teacher->name)->toBe('Huda K. Karim')
@@ -117,22 +123,22 @@ describe('set-up', function () {
         $teacher = Teacher::factory()->create(['name' => 'Omar']);
 
         $this->actingAs($this->owner)
-            ->post('/grades/subjects', ['stage' => 2, 'name' => 'Forensics', 'teacher' => $teacher->uuid])
-            ->assertRedirect('/grades/subjects');
+            ->post('/admin/subjects', ['stage' => 2, 'name' => 'Forensics', 'teacher' => $teacher->uuid])
+            ->assertRedirect('/admin/subjects');
         $subject = Subject::query()->sole();
         expect($subject->stage)->toBe(Stage::Second)->and($subject->teacher_id)->toBe($teacher->id);
 
         $teacher->forceFill(['is_active' => false])->save();
-        $this->get('/grades/subjects')->assertInertia(fn (Assert $page) => $page
+        $this->get('/admin/subjects')->assertInertia(fn (Assert $page) => $page
             ->where('stages.1.subjects.0.teacher', $teacher->uuid)
             ->where('teachers.0', ['uuid' => $teacher->uuid, 'name' => 'Omar', 'active' => false]));
 
         // The page sends both fields back; the stopped teacher stays.
-        $this->put("/grades/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => $teacher->uuid]);
+        $this->put("/admin/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => $teacher->uuid]);
         expect($subject->fresh()?->name)->toBe('Digital Forensics')
             ->and($subject->fresh()?->teacher_id)->toBe($teacher->id);
 
-        $this->put("/grades/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => '']);
+        $this->put("/admin/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => '']);
         expect($subject->fresh()?->teacher_id)->toBeNull();
     });
 });
@@ -143,10 +149,10 @@ describe('students', function () {
         Student::factory()->named('Sara Kamal Yousif')->in(Stage::Second, Section::B)->create();
 
         $this->actingAs($this->owner);
-        $this->get('/grades/students?search='.urlencode("\u{0627}\u{062D}\u{0645}\u{062F}"))
+        $this->get('/admin/students?search='.urlencode("\u{0627}\u{062D}\u{0645}\u{062F}"))
             ->assertInertia(fn (Assert $page) => $page->where('students.total', 1)->where('students.rows.0.number', '501'));
-        $this->get('/grades/students?search=501')->assertInertia(fn (Assert $page) => $page->where('students.total', 1));
-        $this->get('/grades/students?filter[stage]=2&filter[section]=B')
+        $this->get('/admin/students?search=501')->assertInertia(fn (Assert $page) => $page->where('students.total', 1));
+        $this->get('/admin/students?filter[stage]=2&filter[section]=B')
             ->assertInertia(fn (Assert $page) => $page->where('students.total', 1)->where('students.rows.0.name', 'Sara Kamal Yousif')->where('canImport', true));
     });
 
@@ -155,10 +161,10 @@ describe('students', function () {
         $csv = "name,stage,section\nAli Hassan Jaber,1,A\nMona Salim Faraj,2,B\nX,9,Z\n";
 
         $this->actingAs($this->owner)
-            ->post('/grades/students/import', ['file' => UploadedFile::fake()->createWithContent('students.csv', $csv)])
-            ->assertRedirect('/grades/students/import');
+            ->post('/admin/students/import', ['file' => UploadedFile::fake()->createWithContent('students.csv', $csv)])
+            ->assertRedirect('/admin/students/import');
 
-        $this->get('/grades/students/import')->assertInertia(fn (Assert $page) => $page
+        $this->get('/admin/students/import')->assertInertia(fn (Assert $page) => $page
             ->component('modules/grades/pages/admin/import-preview')
             ->where('file', 'students.csv')
             ->where('counts.created', 2)
@@ -166,20 +172,20 @@ describe('students', function () {
             ->where('rejected.0.row', 4));
         expect(Student::query()->count())->toBe(0);
 
-        $this->post('/grades/students/import/apply')->assertRedirect('/grades/students');
+        $this->post('/admin/students/import/apply')->assertRedirect('/admin/students');
         expect(Student::query()->count())->toBe(2)
             ->and(AuditEvent::query()->where('action', 'file.uploaded')->count())->toBe(1)
             ->and(AuditEvent::query()->where('action', 'grades.students_imported')->count())->toBe(1);
 
         // Done: the preview is gone.
-        $this->get('/grades/students/import')->assertRedirect('/grades/students');
+        $this->get('/admin/students/import')->assertRedirect('/admin/students');
     });
 
     it('refuses other file types before reading them', function () {
         Storage::fake((string) config('platform.files.disk'));
 
-        $this->actingAs($this->owner)->from('/grades/students')
-            ->post('/grades/students/import', ['file' => UploadedFile::fake()->createWithContent('students.pdf', "%PDF-1.4\n%%EOF\n")])
+        $this->actingAs($this->owner)->from('/admin/students')
+            ->post('/admin/students/import', ['file' => UploadedFile::fake()->createWithContent('students.pdf', "%PDF-1.4\n%%EOF\n")])
             ->assertSessionHasErrors(['file' => 'This type of file is not accepted.']);
     });
 });
@@ -192,7 +198,7 @@ describe('results', function () {
         $this->ali = Student::factory()->named('Ali Hassan')->create(['student_number' => '11']);
         $this->mona = Student::factory()->named('Mona Salim')->create();
         $this->zaid = Student::factory()->named('Zaid Kareem')->create();
-        Student::factory()->named('Other Section')->in(Stage::First, Section::B)->create();
+        Student::factory()->named('Other Stage')->in(Stage::Second, Section::A)->create();
 
         $save = function (Subject $subject, array $marks): void {
             app(SaveMarks::class)->handle($this->owner, $subject, Section::A, Period::Month1, $marks);
@@ -207,7 +213,7 @@ describe('results', function () {
     });
 
     it('matches the results worked out by hand', function () {
-        $this->actingAs($this->owner)->get('/grades/results?stage=1&section=A')->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($this->owner)->get('/admin/results?stage=1&section=A')->assertInertia(fn (Assert $page) => $page
             ->component('modules/grades/pages/admin/results')
             ->where('pass_mark', 50)
             ->where('subjects.0.name', 'Networks')
@@ -234,9 +240,9 @@ describe('results', function () {
 
     it('prints a section and a student\'s card', function () {
         $this->actingAs($this->owner);
-        $this->get('/grades/results/print?stage=1&section=A')
+        $this->get('/admin/results/print?stage=1&section=A')
             ->assertInertia(fn (Assert $page) => $page->component('modules/grades/pages/print/section')->has('students', 3));
-        $this->get("/grades/results/students/{$this->mona->uuid}")
+        $this->get("/admin/results/students/{$this->mona->uuid}")
             ->assertInertia(fn (Assert $page) => $page
                 ->component('modules/grades/pages/print/student')
                 ->where('section', 'A')
@@ -246,7 +252,7 @@ describe('results', function () {
     });
 
     it('exports the section as an Excel file with the same figures, and records it', function () {
-        $response = $this->actingAs($this->owner)->get('/grades/results/export?stage=1&section=A');
+        $response = $this->actingAs($this->owner)->get('/admin/results/export?stage=1&section=A');
         $response->assertOk()->assertDownload('results-stage1-A.xlsx');
 
         $file = $response->baseResponse->getFile()->getPathname();
@@ -270,11 +276,11 @@ describe('results', function () {
         [$networks] = $this->subjects->all();
 
         $this->actingAs($this->owner)
-            ->get("/grades/subjects/{$networks->uuid}/A")
+            ->get("/admin/subjects/{$networks->uuid}/A")
             ->assertInertia(fn (Assert $page) => $page->component('modules/grades/pages/admin/sheet')->where('open', false));
 
-        $this->put("/grades/subjects/{$networks->uuid}/A", ['marks' => [$this->ali->uuid => '95']])
-            ->assertRedirect("/grades/subjects/{$networks->uuid}/A");
+        $this->put("/admin/subjects/{$networks->uuid}/A", ['marks' => [$this->ali->uuid => '95']])
+            ->assertRedirect("/admin/subjects/{$networks->uuid}/A");
 
         $mark = GradeMark::query()->where('student_id', $this->ali->id)->where('subject_id', $networks->id)->sole();
         expect($mark->mark)->toBe(95)
@@ -286,7 +292,7 @@ describe('results', function () {
         $count = function (): int {
             DB::flushQueryLog();
             DB::enableQueryLog();
-            $this->actingAs($this->owner)->get('/grades/results?stage=1&section=A')->assertOk();
+            $this->actingAs($this->owner)->get('/admin/results?stage=1&section=A')->assertOk();
 
             return count(DB::getQueryLog());
         };

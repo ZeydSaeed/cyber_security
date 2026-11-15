@@ -5,6 +5,7 @@ import EmptyState from '@/components/empty-state';
 import Heading from '@/components/heading';
 import { useTranslations } from '@/hooks/use-translations';
 import WindowNotice from '../../components/window-notice';
+import { sectionLabel } from '../../place';
 import type { TeacherSubject } from '../../types';
 
 /**
@@ -75,10 +76,11 @@ export default function TeacherSubjects({
                                                 data-test={`section-${section.section}`}
                                             >
                                                 <span className="flex-1 font-medium">
-                                                    {t('Section :section', {
-                                                        section:
-                                                            section.section,
-                                                    })}
+                                                    {sectionLabel(
+                                                        t,
+                                                        section.section,
+                                                        subject.divided,
+                                                    )}
                                                 </span>
                                                 <span
                                                     className={

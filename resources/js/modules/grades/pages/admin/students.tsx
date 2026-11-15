@@ -1,4 +1,4 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { useCallback } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
@@ -14,9 +14,12 @@ import { Label } from '@/components/ui/label';
 import { useTableNavigation } from '@/hooks/use-table-navigation';
 import { useTranslations } from '@/hooks/use-translations';
 import type { ColumnPrefs, PageMeta, TableState } from '@/types/table';
+import { placeLabel } from '../../place';
 
 type StudentRow = {
     id: number;
+    uuid: string;
+    has_code: boolean;
     name: string;
     number: string | null;
     stage: number;
@@ -35,11 +38,15 @@ export default function GradesStudents({
     state,
     columns,
     canImport,
+    withoutCode,
+    places,
 }: {
     students: { rows: StudentRow[] } & PageMeta;
     state: TableState;
     columns: ColumnPrefs;
     canImport: boolean;
+    withoutCode: number;
+    places: { stage: number; section: string; divided: boolean }[];
 }) {
     const { t } = useTranslations();
     const { visit, busy } = useTableNavigation(state, TABLE_PROPS);
@@ -134,6 +141,69 @@ export default function GradesStudents({
                     </section>
                 )}
 
+                {canImport && (
+                    <section
+                        className="max-w-2xl rounded-lg border bg-card p-4"
+                        data-test="student-codes"
+                    >
+                        <h2 className="mb-1 font-semibold">
+                            {t('Student codes')}
+                        </h2>
+                        <p className="mb-4 text-sm text-muted-foreground">
+                            {t(
+                                'Each student sees their own result with a code the application makes. Print a group’s codes and hand them out; a lost code can be replaced from the list below.',
+                            )}
+                        </p>
+                        {withoutCode > 0 && (
+                            <div className="mb-4 flex flex-wrap items-center gap-3">
+                                <span className="text-sm">
+                                    {t(':count students have no code yet.', {
+                                        count: String(withoutCode),
+                                    })}
+                                </span>
+                                <Button
+                                    size="sm"
+                                    onClick={() =>
+                                        router.post(
+                                            StudentsAdminController.issueCodes.url(),
+                                            {},
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                    data-test="issue-codes"
+                                >
+                                    {t('Give them codes')}
+                                </Button>
+                            </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                            {places.map((place) => (
+                                <Button
+                                    key={`${place.stage}${place.section}`}
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                >
+                                    <a
+                                        href={`${StudentsAdminController.codes.url()}?stage=${place.stage}&section=${place.section}`}
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        {t('Print the codes: :place', {
+                                            place: placeLabel(
+                                                t,
+                                                place.stage,
+                                                place.section,
+                                                place.divided,
+                                            ),
+                                        })}
+                                    </a>
+                                </Button>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
                 <TableToolbar
                     search={state.search}
                     filters={[
@@ -186,6 +256,29 @@ export default function GradesStudents({
                                     ? 'desc'
                                     : 'asc',
                         })
+                    }
+                    rowAction={
+                        canImport
+                            ? (student) => (
+                                  <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                          router.post(
+                                              StudentsAdminController.replaceCode.url(
+                                                  student.uuid,
+                                              ),
+                                              {},
+                                              { preserveScroll: true },
+                                          )
+                                      }
+                                  >
+                                      {student.has_code
+                                          ? t('New code')
+                                          : t('Give a code')}
+                                  </Button>
+                              )
+                            : undefined
                     }
                 />
 
