@@ -69,7 +69,8 @@ if '/two-factor-challenge' not in post('/login', {'email': email, 'password': 'P
     sys.exit('sign-in: the password step failed')
 if time.time() % 30 > 25:
     time.sleep(31 - time.time() % 30)
-if not post('/two-factor-challenge', {'code': totp(secret)}).url.endswith('/dashboard'):
+# Signing in lands on /admin (the owner removed the dashboard, 2026-11-15).
+if not post('/two-factor-challenge', {'code': totp(secret)}).url.endswith('/admin'):
     sys.exit('sign-in: the authenticator step failed')
 if not opener.open(base + '/admin/users').url.endswith('/admin/users'):
     sys.exit('sign-in: the session does not reach an administrator page')
@@ -90,7 +91,7 @@ echo "Signed in; the session reaches /admin/users."
 sudo truncate -s 0 /var/log/nginx/access.log
 status=0
 docker run --rm --network host --add-host "$HOST:127.0.0.1" -v "$OUT:/zap/wrk:rw" "$ZAP_IMAGE" \
-    zap-full-scan.py -t "https://$HOST/dashboard" -m 3 -j -J report.json -r report.html -I \
+    zap-full-scan.py -t "https://$HOST/admin" -m 3 -j -J report.json -r report.html -I \
     -z "-config replacer.full_list(0).description=session \
         -config replacer.full_list(0).enabled=true \
         -config replacer.full_list(0).matchtype=REQ_HEADER \
