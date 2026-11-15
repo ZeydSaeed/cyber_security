@@ -531,16 +531,16 @@ a role is missing: add it (§11), don't recolour the component.
 
 ## 17. Implementation status (cyber_security)
 
-| Part                                                          | Status                             |
-| ------------------------------------------------------------- | ---------------------------------- |
-| This copy of the standard, CLAUDE.md reference, Cursor rule   | Implemented (G4)                   |
-| Generator, palette.json, pairs.json, exceptions, report       | Implemented (G4)                   |
-| L1, L2 (light, dark, project roles), L3, gradients            | Implemented (G4)                   |
-| Generated pre-paint background                                | Implemented (G4)                   |
-| Migration of raw colours, blends and `destructive-foreground` | Implemented (G4)                   |
-| Checks 1–9, browser check (`tests/browser/colors.spec.ts`)    | Implemented (G4); acceptance in G5 |
-| Check 10 pixel baselines                                      | Planned                            |
-| Further themes beyond light and dark                          | Proposed                           |
+| Part                                                          | Status                                                                                          |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| This copy of the standard, CLAUDE.md reference, Cursor rule   | Implemented (G4)                                                                                |
+| Generator, palette.json, pairs.json, exceptions, report       | Implemented (G4)                                                                                |
+| L1, L2 (light, dark, project roles), L3, gradients            | Implemented (G4)                                                                                |
+| Generated pre-paint background                                | Implemented (G4)                                                                                |
+| Migration of raw colours, blends and `destructive-foreground` | Implemented (G4)                                                                                |
+| Checks 1–9, browser check (`tests/browser/colors.spec.ts`)    | Implemented, Tested; acceptance verified (G5), `docs/evidence/color-system/cyber-acceptance.md` |
+| Check 10 pixel baselines                                      | Planned                                                                                         |
+| Further themes beyond light and dark                          | Proposed                                                                                        |
 
 ## 18. Migration notes for 1.0.0 (done in the template and in cyber_security)
 
