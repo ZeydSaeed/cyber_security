@@ -47,7 +47,7 @@ export default function PortalLayout({
                     )}
                 </div>
             </header>
-            <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 font-semibold text-ink dark:text-foreground">
+            <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 font-semibold text-ink">
                 {children}
             </main>
         </div>

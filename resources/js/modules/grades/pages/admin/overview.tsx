@@ -99,7 +99,7 @@ export default function GradesOverview({
                         <div className="flex items-center gap-3">
                             {window.open ? (
                                 <LockOpen
-                                    className="size-5 text-success"
+                                    className="size-5 text-success-text"
                                     aria-hidden
                                 />
                             ) : (
@@ -153,7 +153,7 @@ export default function GradesOverview({
                         <div className="flex items-center gap-3">
                             {window.published ? (
                                 <Eye
-                                    className="size-5 text-success"
+                                    className="size-5 text-success-text"
                                     aria-hidden
                                 />
                             ) : (
@@ -390,7 +390,7 @@ export default function GradesOverview({
                                                                             0 &&
                                                                         done ===
                                                                             total
-                                                                            ? 'text-success underline-offset-4 hover:underline'
+                                                                            ? 'text-success-text underline-offset-4 hover:underline'
                                                                             : 'underline-offset-4 hover:underline'
                                                                     }
                                                                 >

@@ -2,15 +2,24 @@
 
 @import 'tw-animate-css';
 
+/* Colour layers: see the comment above @theme. */
+@import './design-system/palette.css';
+@import './design-system/themes.css';
+@import './design-system/components.css';
+
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @custom-variant dark (&:is(.dark *));
 
 /*
-| Design tokens (ADR-0024). Components use the semantic names only, never raw
-| colours. Every text/background pair below is checked for WCAG AA contrast
-| by tests/Feature/Platform/DesignTokensTest.php, in both themes.
+| Colour design system (docs/standards/COLOR-DESIGN-SYSTEM.md, ADR-0024).
+| L1 palette and L2 roles are generated from resources/design-system/
+| palette.json (`npm run palette`); L3 component tokens are in
+| components.css. Components use the utilities below only, never raw
+| colours: ColorSystemTest and DesignTokensTest enforce it, and every
+| declared pair (resources/design-system/pairs.json) is checked for WCAG AA
+| contrast in both themes.
 */
 @theme {
     /* --font-interface: IBM Plex Sans Arabic, self-hosted (vite.config.ts). */
@@ -23,181 +32,87 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
+    /* No Tailwind palette (bg-blue-600, text-white, ...): only the tokens. */
+    --color-*: initial;
+
+    /* L2 roles. */
     --color-background: var(--background);
     --color-foreground: var(--foreground);
-
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
-
     --color-popover: var(--popover);
     --color-popover-foreground: var(--popover-foreground);
-
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
-
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
-
-    /* destructive: a background under white text; destructive-foreground:
-       destructive text on the page background. */
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-active: var(--primary-active);
+    --color-primary-subtle: var(--primary-subtle);
+    --color-primary-subtle-foreground: var(--primary-subtle-foreground);
+    --color-brand-surface: var(--brand-surface);
+    --color-brand-surface-foreground: var(--brand-surface-foreground);
+    --color-brand-surface-border: var(--brand-surface-border);
+    --color-highlight: var(--highlight);
+    --color-highlight-foreground: var(--highlight-foreground);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
+    --color-ring: var(--ring);
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
-
+    --color-destructive-text: var(--destructive-text);
     --color-success: var(--success);
     --color-success-foreground: var(--success-foreground);
+    --color-success-text: var(--success-text);
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
+    --color-warning-text: var(--warning-text);
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
-
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-
+    --color-info-text: var(--info-text);
+    --color-overlay: var(--overlay);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    /* Project roles (§6.5): black text on the teachers' and students'
+       pages, light Maroona cards (owner, 2026-11-15). */
+    --color-ink: var(--ink);
+    --color-highlight-soft: var(--highlight-soft);
+    --color-highlight-soft-end: var(--highlight-soft-end);
+    --color-highlight-soft-border: var(--highlight-soft-border);
+
+    /* L3 component tokens. */
+    --color-button-primary: var(--button-primary);
+    --color-button-primary-foreground: var(--button-primary-foreground);
+    --color-button-primary-hover: var(--button-primary-hover);
+    --color-button-primary-active: var(--button-primary-active);
+    --color-input: var(--input);
+    --color-link-underline: var(--link-underline);
+    --color-table-head: var(--table-head);
+    --color-table-head-foreground: var(--table-head-foreground);
+    --color-table-row-selected: var(--table-row-selected);
+    --color-grid-line: var(--grid-line);
+    --color-toolbar: var(--toolbar);
+    --color-toolbar-foreground: var(--toolbar-foreground);
+    --color-heading: var(--heading);
+    --color-heading-foreground: var(--heading-foreground);
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
     --color-sidebar-accent: var(--sidebar-accent);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
-
-    /* Owner's layout (2026-11-15): the top toolbar, table heads and page
-       headings in Maroona with Old Leaf text. */
-    --color-toolbar: var(--toolbar);
-    --color-toolbar-foreground: var(--toolbar-foreground);
-    --color-table-head: var(--table-head);
-    --color-table-head-foreground: var(--table-head-foreground);
-    --color-heading: var(--heading);
-    --color-heading-foreground: var(--heading-foreground);
-    --color-ink: var(--ink);
-    --color-soft-maroona: var(--soft-maroona);
-    --color-soft-maroona-end: var(--soft-maroona-end);
-    --color-soft-maroona-border: var(--soft-maroona-border);
-    --color-grid-line: var(--grid-line);
 }
 
 :root {
-    --background: oklch(0.975 0.009 232.4);
-    --foreground: oklch(0.293 0.062 237);
-    --card: oklch(0.808 0.073 228.7);
-    --card-foreground: oklch(0.293 0.062 237);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.293 0.062 237);
-    --primary: oklch(0.293 0.062 237);
-    --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.872 0.049 227);
-    --secondary-foreground: oklch(0.293 0.062 237);
-    --muted: oklch(0.872 0.049 227);
-    --muted-foreground: oklch(0.345 0.056 233.6);
-    --accent: oklch(0.872 0.049 227);
-    --accent-foreground: oklch(0.293 0.062 237);
-    --destructive: oklch(0.421 0.152 29.5);
-    --destructive-foreground: oklch(0.421 0.152 29.5);
-    --success: oklch(0.393 0.09 152.5);
-    --success-foreground: oklch(1 0 0);
-    --warning: oklch(0.825 0.171 79.9);
-    --warning-foreground: oklch(0.293 0.062 237);
-    --info: oklch(0.504 0.084 220.9);
-    --info-foreground: oklch(1 0 0);
-    --border: oklch(0.7 0.089 229.6);
-    /* Form-field borders: 3:1 against the page (WCAG 1.4.11). */
-    --input: oklch(0.481 0.073 232);
-    --ring: oklch(0.293 0.062 237);
-    --chart-1: oklch(0.293 0.062 237);
-    --chart-2: oklch(0.648 0.11 219);
-    --chart-3: oklch(0.825 0.171 79.9);
-    --chart-4: oklch(0.734 0.179 56.1);
-    --chart-5: oklch(1 0 0);
     --radius: 0.625rem;
-    --sidebar: oklch(0.293 0.062 237);
-    --sidebar-foreground: oklch(1 0 0);
-    --sidebar-primary: oklch(0.825 0.171 79.9);
-    --sidebar-primary-foreground: oklch(0.293 0.062 237);
-    --sidebar-accent: oklch(0.825 0.171 79.9);
-    --sidebar-accent-foreground: oklch(0.293 0.062 237);
-    --sidebar-border: oklch(0.391 0.076 235.1);
-    --sidebar-ring: oklch(0.825 0.171 79.9);
-    /* Owner's layout (2026-11-15): top toolbar, table heads, headings. */
-    --toolbar: oklch(0.825 0.171 79.9);
-    --toolbar-foreground: oklch(0.293 0.062 237);
-    --table-head: oklch(0.825 0.171 79.9);
-    --table-head-foreground: oklch(0.293 0.062 237);
-    --heading: oklch(0.825 0.171 79.9);
-    --heading-foreground: oklch(0.293 0.062 237);
-    /* Owner's request (2026-11-15): black bold text on the teachers' and
-       students' pages, light Maroona cards, table lines in Old Leaf. */
-    --ink: oklch(0 0 0);
-    --soft-maroona: oklch(0.965 0.046 90.9);
-    --soft-maroona-end: oklch(0.933 0.084 89.6);
-    --soft-maroona-border: oklch(0.897 0.131 89.7);
-    --grid-line: oklch(0.293 0.062 237 / 0.35);
-}
-
-.dark {
-    --background: oklch(0.206 0.042 235.8);
-    --foreground: oklch(0.949 0.019 227.3);
-    --card: oklch(0.293 0.062 237);
-    --card-foreground: oklch(0.949 0.019 227.3);
-    --popover: oklch(0.293 0.062 237);
-    --popover-foreground: oklch(0.949 0.019 227.3);
-    --primary: oklch(0.808 0.073 228.7);
-    --primary-foreground: oklch(0.206 0.042 235.8);
-    --secondary: oklch(0.341 0.067 235.8);
-    --secondary-foreground: oklch(0.949 0.019 227.3);
-    --muted: oklch(0.341 0.067 235.8);
-    --muted-foreground: oklch(0.809 0.039 229.5);
-    --accent: oklch(0.391 0.076 235.1);
-    --accent-foreground: oklch(0.949 0.019 227.3);
-    --destructive: oklch(0.5 0.182 29.5);
-    --destructive-foreground: oklch(0.796 0.102 27);
-    --success: oklch(0.781 0.123 156.5);
-    --success-foreground: oklch(0.206 0.042 235.8);
-    --warning: oklch(0.825 0.171 79.9);
-    --warning-foreground: oklch(0.206 0.042 235.8);
-    --info: oklch(0.808 0.073 228.7);
-    --info-foreground: oklch(0.206 0.042 235.8);
-    --border: oklch(0.391 0.076 235.1);
-    --input: oklch(0.643 0.049 231.5);
-    --ring: oklch(0.825 0.171 79.9);
-    --chart-1: oklch(0.808 0.073 228.7);
-    --chart-2: oklch(0.648 0.11 219);
-    --chart-3: oklch(0.825 0.171 79.9);
-    --chart-4: oklch(0.734 0.179 56.1);
-    --chart-5: oklch(0.949 0.019 227.3);
-    --sidebar: oklch(0.293 0.062 237);
-    --sidebar-foreground: oklch(1 0 0);
-    --sidebar-primary: oklch(0.825 0.171 79.9);
-    --sidebar-primary-foreground: oklch(0.293 0.062 237);
-    --sidebar-accent: oklch(0.825 0.171 79.9);
-    --sidebar-accent-foreground: oklch(0.293 0.062 237);
-    --sidebar-border: oklch(0.391 0.076 235.1);
-    --sidebar-ring: oklch(0.825 0.171 79.9);
-    /* Owner's layout (2026-11-15): top toolbar, table heads, headings. */
-    --toolbar: oklch(0.825 0.171 79.9);
-    --toolbar-foreground: oklch(0.293 0.062 237);
-    --table-head: oklch(0.825 0.171 79.9);
-    --table-head-foreground: oklch(0.293 0.062 237);
-    --heading: oklch(0.825 0.171 79.9);
-    --heading-foreground: oklch(0.293 0.062 237);
-    --ink: var(--foreground);
-    --soft-maroona: oklch(0.965 0.046 90.9);
-    --soft-maroona-end: oklch(0.933 0.084 89.6);
-    --soft-maroona-border: oklch(0.897 0.131 89.7);
-    --grid-line: oklch(0.85 0.03 230 / 0.35);
 }
 
 @layer base {
@@ -274,34 +189,21 @@
 
 /*
 | Blends of the owner's palette (2026-11-15), as in the beach image: sea
-| (Mendung Parah) to sand (Maroona, Mendung). Every stop keeps its text at
-| 4.5:1 or more; the solid tokens underneath are the fallback.
+| (Mendung Parah) to sand (Maroona, Mendung). They are gradient tokens from
+| palette.json, every stop checked against its text; the solid tokens
+| underneath are the fallback. The page blend is light-only (none in dark).
 */
 @layer base {
-    :root:not(.dark) body {
-        background-image: linear-gradient(
-            160deg,
-            #eaf5fb 0%,
-            #f4fafd 45%,
-            #fff7e3 80%,
-            #fff1e2 100%
-        );
+    body {
+        background-image: var(--gradient-page);
         background-attachment: fixed;
     }
 
     thead tr {
-        background-image: linear-gradient(90deg, #ffb703, #ffc94d);
+        background-image: var(--gradient-table-head);
     }
 
     [data-sidebar='sidebar'] {
-        background-image: linear-gradient(180deg, #023047, #04405c);
+        background-image: var(--gradient-sidebar);
     }
-}
-
-@utility bg-toolbar-blend {
-    background-image: linear-gradient(90deg, #ffb703, #fb8500);
-}
-
-@utility bg-heading-blend {
-    background-image: linear-gradient(90deg, #ffb703, #fb8500);
 }

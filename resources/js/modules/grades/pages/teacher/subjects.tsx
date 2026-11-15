@@ -41,7 +41,7 @@ export default function TeacherSubjects({
                         <li
                             key={subject.uuid}
                             // Light Maroona cards (owner's request, 2026-11-15).
-                            className="rounded-lg border border-soft-maroona-border bg-soft-maroona bg-linear-to-b from-soft-maroona to-soft-maroona-end p-4 text-ink"
+                            className="rounded-lg border border-highlight-soft-border bg-highlight-soft bg-linear-to-b from-highlight-soft to-highlight-soft-end p-4 text-ink"
                         >
                             <h3 className="font-medium">
                                 <bdi>{subject.name}</bdi>
@@ -80,7 +80,7 @@ export default function TeacherSubjects({
                                                 <span
                                                     className={
                                                         done
-                                                            ? 'text-sm text-success'
+                                                            ? 'text-sm text-success-text'
                                                             : 'text-sm text-muted-foreground'
                                                     }
                                                 >

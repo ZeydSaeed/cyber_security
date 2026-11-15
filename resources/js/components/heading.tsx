@@ -15,7 +15,7 @@ export default function Heading({
                 className={
                     variant === 'small'
                         ? 'mb-0.5 text-base font-medium'
-                        : 'inline-block rounded-md bg-heading bg-heading-blend px-3 py-1 text-xl font-bold tracking-tight text-heading-foreground'
+                        : 'inline-block rounded-md bg-heading bg-gradient-heading px-3 py-1 text-xl font-bold tracking-tight text-heading-foreground'
                 }
             >
                 {title}

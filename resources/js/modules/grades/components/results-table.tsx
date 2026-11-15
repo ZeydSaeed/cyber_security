@@ -23,14 +23,14 @@ export default function ResultsTable({
         }
         if (mark === 'absent') {
             return (
-                <span className="font-medium text-destructive">
+                <span className="font-medium text-destructive-text">
                     {t('Absent')}
                 </span>
             );
         }
 
         return mark < sheet.pass_mark ? (
-            <span className="font-semibold text-destructive">
+            <span className="font-semibold text-destructive-text">
                 {mark}
                 <span className="sr-only"> ({t('below the pass mark')})</span>
             </span>

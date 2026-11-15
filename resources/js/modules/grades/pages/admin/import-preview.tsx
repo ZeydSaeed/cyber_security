@@ -125,7 +125,7 @@ export default function ImportPreview({
                     <section aria-labelledby="rejected">
                         <h2
                             id="rejected"
-                            className="mb-2 font-semibold text-destructive"
+                            className="mb-2 font-semibold text-destructive-text"
                         >
                             {t('Rows not imported')}
                         </h2>

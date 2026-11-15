@@ -1,0 +1,43 @@
+/*
+| L3 component tokens (docs/standards/COLOR-DESIGN-SYSTEM.md §7). They name a
+| colour decision of one component and reference L2 roles only, so they hold
+| no theme values: the theme changes the roles underneath.
+|
+| cyber_security's layout (owner, 2026-11-15): an Old Leaf sidebar
+| (brand-surface) with the current item in Maroona; the top toolbar, table
+| heads and page headings in Maroona with Old Leaf text (highlight).
+*/
+:root {
+    /* Buttons (components/ui/button.tsx). */
+    --button-primary: var(--primary);
+    --button-primary-foreground: var(--primary-foreground);
+    --button-primary-hover: var(--primary-hover);
+    --button-primary-active: var(--primary-active);
+
+    /* Form fields: 3:1 boundaries (WCAG 1.4.11). */
+    --input: var(--border-strong);
+
+    /* Links in running text: underline, so colour is not the only cue. */
+    --link-underline: var(--border-strong);
+
+    /* Tables: Maroona heads; grid lines of marks sheets and result cards. */
+    --table-head: var(--highlight);
+    --table-head-foreground: var(--highlight-foreground);
+    --table-row-selected: color-mix(in oklch, var(--accent) 60%, transparent);
+    --grid-line: color-mix(in oklch, var(--foreground) 35%, transparent);
+
+    /* Top toolbar and page headings. */
+    --toolbar: var(--highlight);
+    --toolbar-foreground: var(--highlight-foreground);
+    --heading: var(--highlight);
+    --heading-foreground: var(--highlight-foreground);
+
+    /* Sidebar (components/ui/sidebar.tsx): Old Leaf, Maroona current item
+       (sidebar-accent; sidebar-primary is unused here and not declared). */
+    --sidebar: var(--brand-surface);
+    --sidebar-foreground: var(--brand-surface-foreground);
+    --sidebar-accent: var(--highlight);
+    --sidebar-accent-foreground: var(--highlight-foreground);
+    --sidebar-border: var(--brand-surface-border);
+    --sidebar-ring: var(--highlight);
+}

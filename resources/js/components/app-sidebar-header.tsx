@@ -28,7 +28,7 @@ export function AppSidebarHeader({
     const { t } = useTranslations();
 
     return (
-        <header className="flex h-10 shrink-0 items-center gap-2 border-b border-sidebar-border/50 bg-toolbar bg-toolbar-blend px-4 font-semibold text-toolbar-foreground [--color-foreground:var(--toolbar-foreground)] [--color-muted-foreground:var(--toolbar-foreground)] md:px-3">
+        <header className="flex h-10 shrink-0 items-center gap-2 border-b border-sidebar-border/50 bg-toolbar bg-gradient-toolbar px-4 font-semibold text-toolbar-foreground [--color-foreground:var(--toolbar-foreground)] [--color-muted-foreground:var(--toolbar-foreground)] md:px-3">
             <div className="flex min-w-0 items-center gap-2">
                 <SidebarTrigger className="-ms-1 size-7" />
                 <nav

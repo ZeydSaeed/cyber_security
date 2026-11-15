@@ -30,7 +30,7 @@ export default function ResultCard({
         }
         if (mark === 'absent') {
             return (
-                <span className="font-medium text-destructive">
+                <span className="font-medium text-destructive-text">
                     {t('Absent')}
                 </span>
             );
@@ -39,7 +39,7 @@ export default function ResultCard({
         return mark >= pass_mark ? (
             t('Passed')
         ) : (
-            <span className="font-medium text-destructive">
+            <span className="font-medium text-destructive-text">
                 {t('Below the pass mark')}
             </span>
         );

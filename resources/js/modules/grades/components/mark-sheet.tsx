@@ -99,7 +99,7 @@ export default function MarkSheet({
             {form.errors.marks && (
                 <p
                     role="alert"
-                    className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+                    className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive-text"
                 >
                     {form.errors.marks}
                 </p>
@@ -184,7 +184,7 @@ export default function MarkSheet({
                                                 {(invalid || error) && (
                                                     <p
                                                         id={errorId}
-                                                        className="mt-1 text-sm text-destructive"
+                                                        className="mt-1 text-sm text-destructive-text"
                                                     >
                                                         {error ??
                                                             t(

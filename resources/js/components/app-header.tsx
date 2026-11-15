@@ -57,7 +57,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     return (
         <>
             {/* The toolbar in Maroona, as in the sidebar layout. */}
-            <div className="border-b border-sidebar-border/80 bg-toolbar bg-toolbar-blend font-semibold text-toolbar-foreground [--color-foreground:var(--toolbar-foreground)] [--color-muted-foreground:var(--toolbar-foreground)]">
+            <div className="border-b border-sidebar-border/80 bg-toolbar bg-gradient-toolbar font-semibold text-toolbar-foreground [--color-foreground:var(--toolbar-foreground)] [--color-muted-foreground:var(--toolbar-foreground)]">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">

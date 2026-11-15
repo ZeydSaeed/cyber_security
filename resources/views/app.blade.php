@@ -17,17 +17,9 @@
             })();
         </script>
 
-        {{-- The page background before the stylesheet arrives; the same
-             values as --background in resources/css/app.css. --}}
-        <style>
-            html {
-                background-color: oklch(0.975 0.009 232.4);
-            }
-
-            html.dark {
-                background-color: oklch(0.206 0.042 235.8);
-            }
-        </style>
+        {{-- The page background before the stylesheet arrives: generated with
+             the palette (scripts/design-system/palette.mjs). --}}
+        @include('design-system.prepaint')
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.png" type="image/png">

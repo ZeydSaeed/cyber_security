@@ -27,5 +27,13 @@ starting point only; this project never writes back to it.
   `docs/PHASE-0-DECISIONS.md` §6 and wait for approval before the next phase.
 - A phase is complete only when its acceptance criteria are verified.
 
+## Mandatory standards
+
+- **Colour:** follow `docs/standards/COLOR-DESIGN-SYSTEM.md` for every new or
+  changed component, page, theme, palette or visual style. Components use
+  token utilities only; a palette change goes through
+  `resources/design-system/palette.json`, never through component files.
+  The specification lives only in that document; do not copy it here.
+
 See `docs/PHASE-0-DECISIONS.md` for the template's approved decisions and
 `docs/decisions/` for the ADRs this project inherits.
