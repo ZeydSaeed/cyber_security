@@ -99,6 +99,8 @@
             "secondary-foreground": "linen-50",
             "accent": "primary-800",
             "accent-foreground": "linen-50",
+            "primary": "accent-300",
+            "primary-foreground": "primary-950",
             "primary-subtle": "primary-800",
             "brand-surface": "primary-900",
             "brand-surface-foreground": "neutral-0",

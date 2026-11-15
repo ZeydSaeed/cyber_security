@@ -69,10 +69,10 @@
     --secondary-foreground: var(--palette-linen-50);
     --accent: var(--palette-primary-800);
     --accent-foreground: var(--palette-linen-50);
-    --primary: var(--palette-primary-400);
+    --primary: var(--palette-accent-300);
     --primary-foreground: var(--palette-primary-950);
-    --primary-hover: var(--palette-primary-300);
-    --primary-active: var(--palette-primary-200);
+    --primary-hover: var(--palette-accent-200);
+    --primary-active: var(--palette-accent-100);
     --primary-subtle: var(--palette-primary-800);
     --primary-subtle-foreground: var(--palette-primary-50);
     --brand-surface: var(--palette-primary-900);

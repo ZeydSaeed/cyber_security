@@ -182,10 +182,10 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `secondary-foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
 - `accent`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `accent-foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
-- `primary`: primary-400 = oklch(0.72 0.056 262.8)
-- `primary-foreground`: primary-950 = oklch(0.2 0.055 262.8)
-- `primary-hover`: primary-300 = oklch(0.83 0.046 262.8)
-- `primary-active`: primary-200 = oklch(0.905 0.039 262.8)
+- `primary`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
+- `primary-foreground`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
+- `primary-hover`: accent-200 = oklch(0.905 0.077 74.1)
+- `primary-active`: accent-100 = oklch(0.955 0.035 74.1)
 - `primary-subtle`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `primary-subtle-foreground`: primary-50 = oklch(0.98 0.009 262.8)
 - `brand-surface`: primary-900 = oklch(0.28 0.078 262.8). Set in palette.json "roles".
@@ -233,11 +233,11 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 8.11:1 (min 4.5) muted-foreground on muted
 - PASS 12.86:1 (min 4.5) secondary-foreground on secondary
 - PASS 11.80:1 (min 4.5) accent-foreground on accent
-- PASS 7.32:1 (min 4.5) primary-foreground on primary
-- PASS 10.75:1 (min 4.5) primary-foreground on primary-hover
-- PASS 13.69:1 (min 4.5) primary-foreground on primary-active
-- PASS 7.32:1 (min 4.5) primary on background
-- PASS 5.92:1 (min 4.5) primary on card
+- PASS 10.50:1 (min 4.5) primary-foreground on primary
+- PASS 13.59:1 (min 4.5) primary-foreground on primary-hover
+- PASS 15.89:1 (min 4.5) primary-foreground on primary-active
+- PASS 10.50:1 (min 4.5) primary on background
+- PASS 8.51:1 (min 4.5) primary on card
 - PASS 11.80:1 (min 4.5) primary-subtle-foreground on primary-subtle
 - PASS 14.72:1 (min 4.5) brand-surface-foreground on brand-surface
 - PASS 10.50:1 (min 4.5) highlight-foreground on highlight
@@ -269,9 +269,9 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 14.72:1 (min 4.5) sidebar-foreground on sidebar
 - PASS 10.50:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
 - PASS 8.51:1 (min 3) sidebar-ring on sidebar
-- PASS 7.32:1 (min 4.5) button-primary-foreground on button-primary
-- PASS 10.75:1 (min 4.5) button-primary-foreground on button-primary-hover
-- PASS 13.69:1 (min 4.5) button-primary-foreground on button-primary-active
+- PASS 10.50:1 (min 4.5) button-primary-foreground on button-primary
+- PASS 13.59:1 (min 4.5) button-primary-foreground on button-primary-hover
+- PASS 15.89:1 (min 4.5) button-primary-foreground on button-primary-active
 - PASS 10.50:1 (min 4.5) table-head-foreground on table-head over card
 - PASS 12.62:1 (min 4.5) foreground on table-row-selected over card
 - PASS 7.37:1 (min 3) link-underline on background
