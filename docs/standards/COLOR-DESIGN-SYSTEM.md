@@ -20,6 +20,7 @@
       `heading`.
     - Gradients: page (light only), table-head, sidebar, toolbar, heading.
 - Builds on: ADR-0024 (tokens, contrast test) and ADR-0025 (shared components).
+- Decision record: ADR-0035 (`docs/decisions/0035-color-design-system.md`).
 
 This is the only full specification. `CLAUDE.md` and
 `.cursor/rules/color-design-system.mdc` point here and do not repeat it.
