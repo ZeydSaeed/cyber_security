@@ -2,15 +2,16 @@
     "version": 1,
     "colors": {
         "primary": {
-            "hex": "#023047",
-            "name": "Old Leaf"
+            "hex": "#5E8B58",
+            "name": "Sage Green"
         },
         "secondary": {
-            "hex": "#219EBC"
+            "hex": "#C9D8C0",
+            "name": "Soft Sage"
         },
         "accent": {
-            "hex": "#FFB703",
-            "name": "Maroona"
+            "hex": "#2F3632",
+            "name": "Pine Charcoal"
         },
         "neutral": {
             "hex": null
@@ -23,132 +24,114 @@
         },
         "danger": {
             "hex": "#8E1A11",
-            "name": "Error red (owner-approved, 4.5:1 on Mendung Parah)"
+            "name": "Error red (owner-approved)"
         },
         "info": {
             "hex": null
         }
     },
     "extra": {
-        "mendungparah": {
-            "hex": "#8ECAE6",
-            "name": "Mendung Parah"
-        },
-        "mendung": {
-            "hex": "#FB8500",
-            "name": "Mendung"
+        "mist": {
+            "hex": "#E9ECE8",
+            "name": "Morning Mist"
         }
     },
     "roles": {
         "light": {
-            "background": "mendungparah-50",
-            "foreground": "primary-900",
-            "card": "mendungparah-300",
-            "card-foreground": "primary-900",
-            "popover-foreground": "primary-900",
-            "muted": {
-                "mix": ["mendungparah-200", 50, "mendungparah-300"]
-            },
-            "muted-foreground": "primary-800",
-            "secondary": {
-                "mix": ["mendungparah-200", 50, "mendungparah-300"]
-            },
-            "secondary-foreground": "primary-900",
-            "accent": {
-                "mix": ["mendungparah-200", 50, "mendungparah-300"]
-            },
-            "accent-foreground": "primary-900",
+            "background": "mist-100",
+            "foreground": "accent-950",
+            "card": "neutral-0",
+            "card-foreground": "accent-950",
+            "popover-foreground": "accent-950",
+            "muted": "mist-200",
+            "secondary": "secondary-200",
+            "secondary-foreground": "accent-950",
+            "accent": "secondary-100",
+            "accent-foreground": "accent-950",
             "primary-foreground": "neutral-0",
-            "brand-surface": "primary-900",
-            "brand-surface-foreground": "neutral-0",
-            "brand-surface-border": "primary-800",
-            "highlight": "accent-300",
-            "highlight-foreground": "primary-900",
-            "border": "mendungparah-400",
-            "border-strong": "secondary-700",
-            "ring": "primary-900",
+            "brand-surface": "neutral-0",
+            "brand-surface-foreground": "accent-950",
+            "brand-surface-border": "secondary-300",
+            "highlight": "secondary-300",
+            "highlight-foreground": "accent-950",
+            "border": "secondary-300",
             "destructive": "danger-700",
             "destructive-foreground": "neutral-0",
             "destructive-text": "danger-700",
-            "warning": "accent-300",
-            "warning-foreground": "primary-900",
-            "ink": "neutral-1000",
-            "highlight-soft": "accent-100",
+            "ink": "accent-950",
+            "highlight-soft": "secondary-100",
             "highlight-soft-end": {
-                "mix": ["accent-100", 50, "accent-200"]
+                "mix": ["secondary-100", 50, "secondary-200"]
             },
-            "highlight-soft-border": "accent-200",
-            "success": "success-800"
+            "highlight-soft-border": "secondary-300"
         },
         "dark": {
-            "background": "primary-950",
-            "foreground": "mendungparah-50",
-            "card": "primary-900",
-            "card-foreground": "mendungparah-50",
-            "popover": "primary-900",
-            "popover-foreground": "mendungparah-50",
+            "background": "accent-950",
+            "foreground": "mist-50",
+            "card": "accent-900",
+            "card-foreground": "mist-50",
+            "popover": "accent-900",
+            "popover-foreground": "mist-50",
             "muted": {
-                "mix": ["primary-900", 50, "primary-800"]
+                "mix": ["accent-900", 50, "accent-800"]
             },
-            "muted-foreground": "mendungparah-300",
+            "muted-foreground": "secondary-300",
             "secondary": {
-                "mix": ["primary-900", 50, "primary-800"]
+                "mix": ["accent-900", 50, "accent-800"]
             },
-            "secondary-foreground": "mendungparah-50",
-            "accent": "primary-800",
-            "accent-foreground": "mendungparah-50",
-            "primary": "mendungparah-300",
-            "primary-foreground": "primary-950",
-            "primary-subtle": "primary-800",
-            "brand-surface": "primary-900",
-            "brand-surface-foreground": "neutral-0",
-            "brand-surface-border": "primary-800",
-            "highlight": "accent-300",
-            "highlight-foreground": "primary-900",
-            "border": "primary-800",
-            "border-strong": "mendungparah-500",
-            "ring": "accent-300",
-            "warning": "accent-300",
-            "warning-foreground": "primary-950",
-            "info": "mendungparah-300",
-            "info-foreground": "primary-950",
-            "ink": "mendungparah-50",
-            "highlight-soft": "accent-950",
-            "highlight-soft-end": "accent-900",
-            "highlight-soft-border": "accent-800"
+            "secondary-foreground": "mist-50",
+            "accent": "accent-800",
+            "accent-foreground": "mist-50",
+            "primary-subtle": "accent-800",
+            "brand-surface": "accent-900",
+            "brand-surface-foreground": "mist-50",
+            "brand-surface-border": "accent-800",
+            "highlight": "primary-700",
+            "highlight-foreground": "mist-50",
+            "border": "accent-800",
+            "border-strong": "secondary-500",
+            "ring": "secondary-300",
+            "ink": "mist-50",
+            "highlight-soft": "primary-950",
+            "highlight-soft-end": "primary-900",
+            "highlight-soft-border": "primary-800"
         }
     },
     "gradients": [
         {
             "name": "page",
-            "angle": 160,
-            "stops": ["mendungparah-50", "accent-50", "mendung-50"],
+            "angle": 180,
+            "stops": ["secondary-100", "mist-100"],
             "foreground": "foreground",
             "themes": ["light"]
         },
         {
             "name": "table-head",
             "angle": 90,
-            "stops": ["accent-300", "accent-200"],
-            "foreground": "highlight-foreground"
+            "stops": ["secondary-300", "secondary-200"],
+            "foreground": "highlight-foreground",
+            "themes": ["light"]
         },
         {
             "name": "sidebar",
             "angle": 180,
-            "stops": ["primary-900", "primary-800"],
-            "foreground": "brand-surface-foreground"
+            "stops": ["neutral-0", "mist-50"],
+            "foreground": "brand-surface-foreground",
+            "themes": ["light"]
         },
         {
             "name": "toolbar",
             "angle": 90,
-            "stops": ["accent-300", "mendung-400"],
-            "foreground": "highlight-foreground"
+            "stops": ["secondary-200", "mist-100"],
+            "foreground": "highlight-foreground",
+            "themes": ["light"]
         },
         {
             "name": "heading",
             "angle": 90,
-            "stops": ["accent-300", "mendung-400"],
-            "foreground": "highlight-foreground"
+            "stops": ["secondary-300", "secondary-200"],
+            "foreground": "highlight-foreground",
+            "themes": ["light"]
         }
     ]
 }
