@@ -59,7 +59,7 @@ for (const theme of themes) {
             ['[data-sidebar="sidebar"]', 'sidebar'],
             ['[data-slot="data-table"] thead', 'table-head'],
             ['[data-slot="button"].bg-button-primary', 'button-primary'],
-            // cyber_security's Soft Sage toolbar (L3 toolbar = highlight).
+            // cyber_security's Amber toolbar (L3 toolbar = highlight).
             ['header.bg-toolbar', 'toolbar'],
         ];
         const evidence: Record<string, string> = {

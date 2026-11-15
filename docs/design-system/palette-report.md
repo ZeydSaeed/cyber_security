@@ -6,26 +6,31 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 
 ## Supplied colours
 
-- **primary** (Sage Green): #5E8B58 = oklch(0.59 0.09 141.6); mid, vivid, green, cool; anchor step 500.
-  - White text on it 3.96:1, black text 5.30:1; as text on the light background 3.75:1, on the dark background 4.56:1.
-- **secondary** (Soft Sage): #C9D8C0 = oklch(0.864 0.036 133.6); light, muted, green, cool; anchor step 300.
-  - White text on it 1.49:1, black text 14.05:1; as text on the light background 1.42:1, on the dark background 12.08:1.
-- **accent** (Pine Charcoal): #2F3632 = oklch(0.325 0.012 160.7); dark, neutral, grey, cool; anchor step 900.
-  - White text on it 12.38:1, black text 1.70:1; as text on the light background 11.73:1, on the dark background 1.46:1.
+- **primary** (Navy): #1A3263 = oklch(0.327 0.092 262.8); dark, vivid, blue, cool; anchor step 800.
+  - White text on it 12.50:1, black text 1.68:1; as text on the light background 11.80:1, on the dark background 1.45:1.
+- **secondary** (Steel Blue): #547792 = oklch(0.553 0.058 242.2); mid, muted, blue, cool; anchor step 600.
+  - White text on it 4.75:1, black text 4.42:1; as text on the light background 4.48:1, on the dark background 3.81:1.
+- **accent** (Amber): #FAB95B = oklch(0.828 0.133 74.1); light, vivid, orange, warm; anchor step 300.
+  - White text on it 1.73:1, black text 12.14:1; as text on the light background 1.63:1, on the dark background 10.47:1.
 - **danger** (Error red (owner-approved)): #8E1A11 = oklch(0.421 0.152 29.5); mid, vivid, red, warm; anchor step 700.
-  - White text on it 9.10:1, black text 2.31:1; as text on the light background 8.62:1, on the dark background 1.99:1.
-- **mist** (Morning Mist): #E9ECE8 = oklch(0.94 0.006 137.8); light, neutral, grey, cool; anchor step 100.
-  - White text on it 1.19:1, black text 17.64:1; as text on the light background 1.13:1, on the dark background 15.17:1.
+  - White text on it 9.10:1, black text 2.31:1; as text on the light background 8.59:1, on the dark background 1.99:1.
+- **linen** (Linen): #E8E2DB = oklch(0.916 0.011 71.9); light, neutral, grey, warm; anchor step 200.
+  - White text on it 1.28:1, black text 16.36:1; as text on the light background 1.21:1, on the dark background 14.10:1.
 
 ## Derived families
 
-- **neutral**: derived: hue 141.6, chroma 0.012.
+- **neutral**: derived: hue 262.8, chroma 0.012.
 - **success**: derived: hue 150.0, chroma 0.140.
 - **warning**: derived: hue 80.0, chroma 0.160.
 - **info**: derived: hue 235.0, chroma 0.120.
 
 ## Warnings
 
+- primary-50: chroma reduced by 0.023 to fit sRGB.
+- accent-50: chroma reduced by 0.031 to fit sRGB.
+- accent-100: chroma reduced by 0.026 to fit sRGB.
+- accent-900: chroma reduced by 0.027 to fit sRGB.
+- accent-950: chroma reduced by 0.037 to fit sRGB.
 - success-950: chroma reduced by 0.028 to fit sRGB.
 - warning-50: chroma reduced by 0.038 to fit sRGB.
 - warning-100: chroma reduced by 0.023 to fit sRGB.
@@ -41,7 +46,7 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - info-100: chroma reduced by 0.022 to fit sRGB.
 - info-900: chroma reduced by 0.022 to fit sRGB.
 - info-950: chroma reduced by 0.029 to fit sRGB.
-- primary: hue within 20° of success; status colours may be confused with it, so status never relies on colour alone.
+- accent: hue within 20° of warning; status colours may be confused with it, so status never relies on colour alone.
 
 ## Problems
 
@@ -49,227 +54,230 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 
 ## Roles: light
 
-- `background`: mist-100 = oklch(0.94 0.006 137.8). Set in palette.json "roles".
-- `foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
+- `background`: linen-200 = oklch(0.916 0.011 71.9). Set in palette.json "roles".
+- `foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `card`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
-- `card-foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
+- `card-foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `popover`: neutral-0 = oklch(1 0 0)
-- `popover-foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `muted`: mist-200 = oklch(0.905 0.006 137.8). Set in palette.json "roles".
-- `muted-foreground`: neutral-700 = oklch(0.45 0.012 141.6)
-- `secondary`: secondary-200 = oklch(0.905 0.028 133.6). Set in palette.json "roles".
-- `secondary-foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `accent`: secondary-100 = oklch(0.955 0.018 133.6). Set in palette.json "roles".
-- `accent-foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `primary`: primary-700 = oklch(0.45 0.077 141.6). primary-500 did not meet its contrast requirements; primary-700 is used.
+- `popover-foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `muted`: linen-100 = oklch(0.955 0.007 71.9). Set in palette.json "roles".
+- `muted-foreground`: neutral-700 = oklch(0.45 0.012 262.8)
+- `secondary`: secondary-100 = oklch(0.955 0.023 242.2). Set in palette.json "roles".
+- `secondary-foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `accent`: secondary-100 = oklch(0.955 0.023 242.2). Set in palette.json "roles".
+- `accent-foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `primary`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `primary-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
-- `primary-hover`: primary-800 = oklch(0.37 0.07 141.6)
-- `primary-active`: primary-900 = oklch(0.28 0.062 141.6)
-- `primary-subtle`: primary-50 = oklch(0.98 0.032 141.6)
-- `primary-subtle-foreground`: primary-950 = oklch(0.2 0.054 141.6)
-- `brand-surface`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
-- `brand-surface-foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `brand-surface-border`: secondary-300 = oklch(0.864 0.036 133.6). Set in palette.json "roles".
-- `highlight`: secondary-300 = oklch(0.864 0.036 133.6). Set in palette.json "roles".
-- `highlight-foreground`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `border`: secondary-300 = oklch(0.864 0.036 133.6). Set in palette.json "roles".
-- `border-strong`: neutral-500 = oklch(0.62 0.012 141.6)
-- `ring`: primary-600 = oklch(0.53 0.085 141.6)
+- `primary-hover`: primary-900 = oklch(0.28 0.078 262.8)
+- `primary-active`: primary-950 = oklch(0.2 0.055 262.8)
+- `primary-subtle`: primary-50 = oklch(0.98 0.009 262.8)
+- `primary-subtle-foreground`: primary-950 = oklch(0.2 0.055 262.8)
+- `brand-surface`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `brand-surface-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `brand-surface-border`: primary-700 = oklch(0.45 0.08 262.8). Set in palette.json "roles".
+- `highlight`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
+- `highlight-foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `border`: linen-300 = oklch(0.83 0.011 71.9). Set in palette.json "roles".
+- `border-strong`: secondary-600 = oklch(0.553 0.058 242.2). Set in palette.json "roles".
+- `ring`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `destructive`: danger-700 = oklch(0.421 0.152 29.5). Set in palette.json "roles".
 - `destructive-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
 - `destructive-text`: danger-700 = oklch(0.421 0.152 29.5). Set in palette.json "roles".
 - `success`: success-600 = oklch(0.53 0.128 150)
 - `success-foreground`: success-50 = oklch(0.98 0.031 150)
 - `success-text`: success-700 = oklch(0.45 0.117 150)
-- `warning`: warning-300 = oklch(0.83 0.099 80)
-- `warning-foreground`: warning-950 = oklch(0.2 0.042 80)
+- `warning`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
+- `warning-foreground`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `warning-text`: warning-700 = oklch(0.45 0.093 80)
 - `info`: info-600 = oklch(0.53 0.11 235)
 - `info-foreground`: info-50 = oklch(0.98 0.01 235)
 - `info-text`: info-700 = oklch(0.45 0.095 235)
 - `overlay`: neutral-1000 at 80% = oklch(0 0 0) / 80%
-- `chart-1`: primary-600 = oklch(0.53 0.085 141.6)
-- `chart-2`: secondary-600 = oklch(0.53 0.029 133.6)
-- `chart-3`: accent-600 = oklch(0.53 0.009 160.7)
+- `chart-1`: primary-600 = oklch(0.53 0.073 262.8)
+- `chart-2`: secondary-600 = oklch(0.553 0.058 242.2)
+- `chart-3`: accent-600 = oklch(0.53 0.108 74.1)
 - `chart-4`: success-600 = oklch(0.53 0.128 150)
 - `chart-5`: danger-600 = oklch(0.53 0.133 29.5)
-- `ink`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `highlight-soft`: secondary-100 = oklch(0.955 0.018 133.6). Set in palette.json "roles".
-- `highlight-soft-end`: mix(secondary-100 50%, secondary-200) = oklch(0.93 0.023 133.6). Set in palette.json "roles".
-- `highlight-soft-border`: secondary-300 = oklch(0.864 0.036 133.6). Set in palette.json "roles".
-- gradient `page`: weakest stop 15.18:1 with foreground.
-- gradient `table-head`: weakest stop 12.09:1 with highlight-foreground.
-- gradient `sidebar`: weakest stop 17.07:1 with brand-surface-foreground.
-- gradient `toolbar`: weakest stop 13.73:1 with highlight-foreground.
-- gradient `heading`: weakest stop 12.09:1 with highlight-foreground.
+- `ink`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `highlight-soft`: accent-100 = oklch(0.955 0.035 74.1). Set in palette.json "roles".
+- `highlight-soft-end`: mix(accent-100 50%, accent-200) = oklch(0.93 0.056 74.1). Set in palette.json "roles".
+- `highlight-soft-border`: accent-200 = oklch(0.905 0.077 74.1). Set in palette.json "roles".
+- gradient `page`: weakest stop 9.74:1 with foreground.
+- gradient `table-head`: weakest stop 7.23:1 with highlight-foreground.
+- gradient `sidebar`: weakest stop 7.49:1 with brand-surface-foreground.
+- gradient `toolbar`: weakest stop 7.23:1 with highlight-foreground.
+- gradient `heading`: weakest stop 7.23:1 with highlight-foreground.
 
 ### Declared pairs: light
 
-- PASS 15.18:1 (min 4.5) foreground on background
-- PASS 13.64:1 (min 4.5) foreground on muted
-- PASS 18.07:1 (min 4.5) card-foreground on card
-- PASS 18.07:1 (min 4.5) popover-foreground on popover
-- PASS 6.22:1 (min 4.5) muted-foreground on background
-- PASS 7.40:1 (min 4.5) muted-foreground on card
-- PASS 5.59:1 (min 4.5) muted-foreground on muted
-- PASS 13.73:1 (min 4.5) secondary-foreground on secondary
-- PASS 15.93:1 (min 4.5) accent-foreground on accent
-- PASS 7.20:1 (min 4.5) primary-foreground on primary
-- PASS 10.14:1 (min 4.5) primary-foreground on primary-hover
-- PASS 14.30:1 (min 4.5) primary-foreground on primary-active
-- PASS 6.05:1 (min 4.5) primary on background
-- PASS 7.20:1 (min 4.5) primary on card
-- PASS 17.07:1 (min 4.5) primary-subtle-foreground on primary-subtle
-- PASS 18.07:1 (min 4.5) brand-surface-foreground on brand-surface
-- PASS 12.09:1 (min 4.5) highlight-foreground on highlight
+- PASS 9.74:1 (min 4.5) foreground on background
+- PASS 10.96:1 (min 4.5) foreground on muted
+- PASS 12.50:1 (min 4.5) card-foreground on card
+- PASS 12.50:1 (min 4.5) popover-foreground on popover
+- PASS 5.79:1 (min 4.5) muted-foreground on background
+- PASS 7.44:1 (min 4.5) muted-foreground on card
+- PASS 6.52:1 (min 4.5) muted-foreground on muted
+- PASS 11.00:1 (min 4.5) secondary-foreground on secondary
+- PASS 11.00:1 (min 4.5) accent-foreground on accent
+- PASS 12.50:1 (min 4.5) primary-foreground on primary
+- PASS 14.72:1 (min 4.5) primary-foreground on primary-hover
+- PASS 18.17:1 (min 4.5) primary-foreground on primary-active
+- PASS 9.74:1 (min 4.5) primary on background
+- PASS 12.50:1 (min 4.5) primary on card
+- PASS 17.15:1 (min 4.5) primary-subtle-foreground on primary-subtle
+- PASS 12.50:1 (min 4.5) brand-surface-foreground on brand-surface
+- PASS 7.23:1 (min 4.5) highlight-foreground on highlight
 - PASS 9.10:1 (min 4.5) destructive-foreground on destructive
-- PASS 7.64:1 (min 4.5) destructive-text on background
+- PASS 7.08:1 (min 4.5) destructive-text on background
 - PASS 9.10:1 (min 4.5) destructive-text on card
 - PASS 4.75:1 (min 4.5) success-foreground on success
-- PASS 5.92:1 (min 4.5) success-text on background
+- PASS 5.49:1 (min 4.5) success-text on background
 - PASS 7.05:1 (min 4.5) success-text on card
-- PASS 10.67:1 (min 4.5) warning-foreground on warning
-- PASS 6.33:1 (min 4.5) warning-text on background
+- PASS 7.23:1 (min 4.5) warning-foreground on warning
+- PASS 5.87:1 (min 4.5) warning-text on background
 - PASS 7.53:1 (min 4.5) warning-text on card
 - PASS 4.89:1 (min 4.5) info-foreground on info
-- PASS 6.14:1 (min 4.5) info-text on background
+- PASS 5.69:1 (min 4.5) info-text on background
 - PASS 7.31:1 (min 4.5) info-text on card
-- PASS 3.04:1 (min 3) border-strong on background
-- PASS 3.62:1 (min 3) border-strong on card
-- PASS 3.04:1 (min 3) input on background
-- PASS 3.62:1 (min 3) input on card
-- PASS 4.28:1 (min 3) ring on background
-- PASS 5.09:1 (min 3) ring on card
-- PASS 7.64:1 (min 3) destructive on background
+- PASS 3.70:1 (min 3) border-strong on background
+- PASS 4.75:1 (min 3) border-strong on card
+- PASS 3.70:1 (min 3) input on background
+- PASS 4.75:1 (min 3) input on card
+- PASS 9.74:1 (min 3) ring on background
+- PASS 12.50:1 (min 3) ring on card
+- PASS 7.08:1 (min 3) destructive on background
 - PASS 9.10:1 (min 3) destructive on card
-- PASS 5.09:1 (min 3) chart-1 on card
-- PASS 5.22:1 (min 3) chart-2 on card
-- PASS 5.25:1 (min 3) chart-3 on card
+- PASS 5.30:1 (min 3) chart-1 on card
+- PASS 4.75:1 (min 3) chart-2 on card
+- PASS 5.39:1 (min 3) chart-3 on card
 - PASS 4.98:1 (min 3) chart-4 on card
 - PASS 5.63:1 (min 3) chart-5 on card
-- PASS 18.07:1 (min 4.5) sidebar-foreground on sidebar
-- PASS 7.20:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
-- PASS 5.09:1 (min 3) sidebar-ring on sidebar
-- PASS 7.20:1 (min 4.5) button-primary-foreground on button-primary
-- PASS 10.14:1 (min 4.5) button-primary-foreground on button-primary-hover
-- PASS 14.30:1 (min 4.5) button-primary-foreground on button-primary-active
-- PASS 12.09:1 (min 4.5) table-head-foreground on table-head over card
-- PASS 16.77:1 (min 4.5) foreground on table-row-selected over card
-- PASS 3.04:1 (min 3) link-underline on background
-- PASS 12.09:1 (min 4.5) toolbar-foreground on toolbar
-- PASS 12.09:1 (min 4.5) heading-foreground on heading
-- PASS 15.18:1 (min 4.5) ink on background
-- PASS 18.07:1 (min 4.5) ink on card
-- PASS 15.93:1 (min 4.5) ink on highlight-soft
-- PASS 14.80:1 (min 4.5) ink on highlight-soft-end
+- PASS 12.50:1 (min 4.5) sidebar-foreground on sidebar
+- PASS 7.23:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
+- PASS 7.23:1 (min 3) sidebar-ring on sidebar
+- PASS 12.50:1 (min 4.5) button-primary-foreground on button-primary
+- PASS 14.72:1 (min 4.5) button-primary-foreground on button-primary-hover
+- PASS 18.17:1 (min 4.5) button-primary-foreground on button-primary-active
+- PASS 7.23:1 (min 4.5) table-head-foreground on table-head over card
+- PASS 11.58:1 (min 4.5) foreground on table-row-selected over card
+- PASS 3.70:1 (min 3) link-underline on background
+- PASS 7.23:1 (min 4.5) toolbar-foreground on toolbar
+- PASS 7.23:1 (min 4.5) heading-foreground on heading
+- PASS 9.74:1 (min 4.5) ink on background
+- PASS 12.50:1 (min 4.5) ink on card
+- PASS 10.94:1 (min 4.5) ink on highlight-soft
+- PASS 10.12:1 (min 4.5) ink on highlight-soft-end
 
 ## Roles: dark
 
-- `background`: accent-950 = oklch(0.2 0.007 160.7). Set in palette.json "roles".
-- `foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `card`: accent-900 = oklch(0.325 0.012 160.7). Set in palette.json "roles".
-- `card-foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `popover`: accent-900 = oklch(0.325 0.012 160.7). Set in palette.json "roles".
-- `popover-foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `muted`: mix(accent-900 50%, accent-800) = oklch(0.348 0.011 160.7). Set in palette.json "roles".
-- `muted-foreground`: secondary-300 = oklch(0.864 0.036 133.6). Set in palette.json "roles".
-- `secondary`: mix(accent-900 50%, accent-800) = oklch(0.348 0.011 160.7). Set in palette.json "roles".
-- `secondary-foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `accent`: accent-800 = oklch(0.37 0.011 160.7). Set in palette.json "roles".
-- `accent-foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `primary`: primary-400 = oklch(0.72 0.071 141.6)
-- `primary-foreground`: primary-950 = oklch(0.2 0.054 141.6)
-- `primary-hover`: primary-300 = oklch(0.83 0.054 141.6)
-- `primary-active`: primary-200 = oklch(0.905 0.043 141.6)
-- `primary-subtle`: accent-800 = oklch(0.37 0.011 160.7). Set in palette.json "roles".
-- `primary-subtle-foreground`: accent-50 = oklch(0.98 0.004 160.7)
-- `brand-surface`: accent-900 = oklch(0.325 0.012 160.7). Set in palette.json "roles".
-- `brand-surface-foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `brand-surface-border`: accent-800 = oklch(0.37 0.011 160.7). Set in palette.json "roles".
-- `highlight`: primary-700 = oklch(0.45 0.077 141.6). Set in palette.json "roles".
-- `highlight-foreground`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `border`: accent-800 = oklch(0.37 0.011 160.7). Set in palette.json "roles".
-- `border-strong`: secondary-500 = oklch(0.62 0.031 133.6). Set in palette.json "roles".
-- `ring`: secondary-300 = oklch(0.864 0.036 133.6). Set in palette.json "roles".
+- `background`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
+- `foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `card`: primary-900 = oklch(0.28 0.078 262.8). Set in palette.json "roles".
+- `card-foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `popover`: primary-900 = oklch(0.28 0.078 262.8). Set in palette.json "roles".
+- `popover-foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `muted`: mix(primary-900 50%, primary-800) = oklch(0.303 0.085 262.8). Set in palette.json "roles".
+- `muted-foreground`: secondary-300 = oklch(0.83 0.034 242.2). Set in palette.json "roles".
+- `secondary`: mix(primary-900 50%, primary-800) = oklch(0.303 0.085 262.8). Set in palette.json "roles".
+- `secondary-foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `accent`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `accent-foreground`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `primary`: primary-400 = oklch(0.72 0.056 262.8)
+- `primary-foreground`: primary-950 = oklch(0.2 0.055 262.8)
+- `primary-hover`: primary-300 = oklch(0.83 0.046 262.8)
+- `primary-active`: primary-200 = oklch(0.905 0.039 262.8)
+- `primary-subtle`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `primary-subtle-foreground`: primary-50 = oklch(0.98 0.009 262.8)
+- `brand-surface`: primary-900 = oklch(0.28 0.078 262.8). Set in palette.json "roles".
+- `brand-surface-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `brand-surface-border`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `highlight`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
+- `highlight-foreground`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
+- `border`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `border-strong`: secondary-400 = oklch(0.72 0.043 242.2). Set in palette.json "roles".
+- `ring`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
 - `destructive`: danger-500 = oklch(0.62 0.117 29.5). danger-600 did not meet its contrast requirements; danger-500 is used.
 - `destructive-foreground`: danger-950 = oklch(0.2 0.082 29.5)
 - `destructive-text`: danger-300 = oklch(0.83 0.08 29.5)
 - `success`: success-400 = oklch(0.72 0.115 150)
 - `success-foreground`: success-950 = oklch(0.2 0.056 150)
 - `success-text`: success-300 = oklch(0.83 0.087 150)
-- `warning`: warning-400 = oklch(0.72 0.131 80)
-- `warning-foreground`: warning-950 = oklch(0.2 0.042 80)
+- `warning`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
+- `warning-foreground`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
 - `warning-text`: warning-300 = oklch(0.83 0.099 80)
 - `info`: info-400 = oklch(0.72 0.098 235)
 - `info-foreground`: info-950 = oklch(0.2 0.043 235)
 - `info-text`: info-300 = oklch(0.83 0.074 235)
 - `overlay`: neutral-1000 at 80% = oklch(0 0 0) / 80%
-- `chart-1`: primary-400 = oklch(0.72 0.071 141.6)
-- `chart-2`: secondary-400 = oklch(0.72 0.033 133.6)
-- `chart-3`: accent-400 = oklch(0.72 0.007 160.7)
+- `chart-1`: primary-400 = oklch(0.72 0.056 262.8)
+- `chart-2`: secondary-400 = oklch(0.72 0.043 242.2)
+- `chart-3`: accent-400 = oklch(0.72 0.124 74.1)
 - `chart-4`: success-400 = oklch(0.72 0.115 150)
 - `chart-5`: danger-400 = oklch(0.72 0.099 29.5)
-- `ink`: mist-50 = oklch(0.98 0.002 137.8). Set in palette.json "roles".
-- `highlight-soft`: primary-950 = oklch(0.2 0.054 141.6). Set in palette.json "roles".
-- `highlight-soft-end`: primary-900 = oklch(0.28 0.062 141.6). Set in palette.json "roles".
-- `highlight-soft-border`: primary-800 = oklch(0.37 0.07 141.6). Set in palette.json "roles".
+- `ink`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `highlight-soft`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
+- `highlight-soft-end`: accent-900 = oklch(0.28 0.06 74.1). Set in palette.json "roles".
+- `highlight-soft-border`: accent-800 = oklch(0.37 0.078 74.1). Set in palette.json "roles".
+- gradient `table-head`: weakest stop 10.50:1 with highlight-foreground.
+- gradient `toolbar`: weakest stop 10.50:1 with highlight-foreground.
+- gradient `heading`: weakest stop 10.50:1 with highlight-foreground.
 
 ### Declared pairs: dark
 
-- PASS 17.07:1 (min 4.5) foreground on background
-- PASS 10.71:1 (min 4.5) foreground on muted
-- PASS 11.70:1 (min 4.5) card-foreground on card
-- PASS 11.70:1 (min 4.5) popover-foreground on popover
-- PASS 12.09:1 (min 4.5) muted-foreground on background
-- PASS 8.29:1 (min 4.5) muted-foreground on card
-- PASS 7.58:1 (min 4.5) muted-foreground on muted
-- PASS 10.71:1 (min 4.5) secondary-foreground on secondary
-- PASS 9.80:1 (min 4.5) accent-foreground on accent
-- PASS 7.41:1 (min 4.5) primary-foreground on primary
-- PASS 10.80:1 (min 4.5) primary-foreground on primary-hover
-- PASS 13.68:1 (min 4.5) primary-foreground on primary-active
-- PASS 7.48:1 (min 4.5) primary on background
-- PASS 5.13:1 (min 4.5) primary on card
-- PASS 9.81:1 (min 4.5) primary-subtle-foreground on primary-subtle
-- PASS 11.70:1 (min 4.5) brand-surface-foreground on brand-surface
-- PASS 6.80:1 (min 4.5) highlight-foreground on highlight
+- PASS 17.15:1 (min 4.5) foreground on background
+- PASS 12.86:1 (min 4.5) foreground on muted
+- PASS 13.89:1 (min 4.5) card-foreground on card
+- PASS 13.89:1 (min 4.5) popover-foreground on popover
+- PASS 10.81:1 (min 4.5) muted-foreground on background
+- PASS 8.76:1 (min 4.5) muted-foreground on card
+- PASS 8.11:1 (min 4.5) muted-foreground on muted
+- PASS 12.86:1 (min 4.5) secondary-foreground on secondary
+- PASS 11.80:1 (min 4.5) accent-foreground on accent
+- PASS 7.32:1 (min 4.5) primary-foreground on primary
+- PASS 10.75:1 (min 4.5) primary-foreground on primary-hover
+- PASS 13.69:1 (min 4.5) primary-foreground on primary-active
+- PASS 7.32:1 (min 4.5) primary on background
+- PASS 5.92:1 (min 4.5) primary on card
+- PASS 11.80:1 (min 4.5) primary-subtle-foreground on primary-subtle
+- PASS 14.72:1 (min 4.5) brand-surface-foreground on brand-surface
+- PASS 10.50:1 (min 4.5) highlight-foreground on highlight
 - PASS 4.81:1 (min 4.5) destructive-foreground on destructive
-- PASS 10.40:1 (min 4.5) destructive-text on background
-- PASS 7.12:1 (min 4.5) destructive-text on card
+- PASS 10.45:1 (min 4.5) destructive-text on background
+- PASS 8.47:1 (min 4.5) destructive-text on card
 - PASS 7.55:1 (min 4.5) success-foreground on success
-- PASS 11.06:1 (min 4.5) success-text on background
-- PASS 7.57:1 (min 4.5) success-text on card
-- PASS 7.22:1 (min 4.5) warning-foreground on warning
-- PASS 10.62:1 (min 4.5) warning-text on background
-- PASS 7.28:1 (min 4.5) warning-text on card
+- PASS 11.12:1 (min 4.5) success-text on background
+- PASS 9.00:1 (min 4.5) success-text on card
+- PASS 10.50:1 (min 4.5) warning-foreground on warning
+- PASS 10.68:1 (min 4.5) warning-text on background
+- PASS 8.65:1 (min 4.5) warning-text on card
 - PASS 7.40:1 (min 4.5) info-foreground on info
-- PASS 10.85:1 (min 4.5) info-text on background
-- PASS 7.43:1 (min 4.5) info-text on card
-- PASS 5.02:1 (min 3) border-strong on background
-- PASS 3.44:1 (min 3) border-strong on card
-- PASS 5.02:1 (min 3) input on background
-- PASS 3.44:1 (min 3) input on card
-- PASS 12.09:1 (min 3) ring on background
-- PASS 8.29:1 (min 3) ring on card
-- PASS 4.71:1 (min 3) destructive on background
-- PASS 3.23:1 (min 3) destructive on card
-- PASS 5.13:1 (min 3) chart-1 on card
-- PASS 5.05:1 (min 3) chart-2 on card
-- PASS 5.01:1 (min 3) chart-3 on card
-- PASS 5.23:1 (min 3) chart-4 on card
-- PASS 4.79:1 (min 3) chart-5 on card
-- PASS 11.70:1 (min 4.5) sidebar-foreground on sidebar
-- PASS 7.41:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
-- PASS 8.29:1 (min 3) sidebar-ring on sidebar
-- PASS 7.41:1 (min 4.5) button-primary-foreground on button-primary
-- PASS 10.80:1 (min 4.5) button-primary-foreground on button-primary-hover
-- PASS 13.68:1 (min 4.5) button-primary-foreground on button-primary-active
-- PASS 6.80:1 (min 4.5) table-head-foreground on table-head over card
-- PASS 10.53:1 (min 4.5) foreground on table-row-selected over card
-- PASS 5.02:1 (min 3) link-underline on background
-- PASS 6.80:1 (min 4.5) toolbar-foreground on toolbar
-- PASS 6.80:1 (min 4.5) heading-foreground on heading
-- PASS 17.07:1 (min 4.5) ink on background
-- PASS 11.70:1 (min 4.5) ink on card
-- PASS 16.91:1 (min 4.5) ink on highlight-soft
-- PASS 13.51:1 (min 4.5) ink on highlight-soft-end
+- PASS 10.91:1 (min 4.5) info-text on background
+- PASS 8.83:1 (min 4.5) info-text on card
+- PASS 7.37:1 (min 3) border-strong on background
+- PASS 5.97:1 (min 3) border-strong on card
+- PASS 7.37:1 (min 3) input on background
+- PASS 5.97:1 (min 3) input on card
+- PASS 10.50:1 (min 3) ring on background
+- PASS 8.51:1 (min 3) ring on card
+- PASS 4.73:1 (min 3) destructive on background
+- PASS 3.83:1 (min 3) destructive on card
+- PASS 5.92:1 (min 3) chart-1 on card
+- PASS 5.97:1 (min 3) chart-2 on card
+- PASS 5.82:1 (min 3) chart-3 on card
+- PASS 6.22:1 (min 3) chart-4 on card
+- PASS 5.70:1 (min 3) chart-5 on card
+- PASS 14.72:1 (min 4.5) sidebar-foreground on sidebar
+- PASS 10.50:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
+- PASS 8.51:1 (min 3) sidebar-ring on sidebar
+- PASS 7.32:1 (min 4.5) button-primary-foreground on button-primary
+- PASS 10.75:1 (min 4.5) button-primary-foreground on button-primary-hover
+- PASS 13.69:1 (min 4.5) button-primary-foreground on button-primary-active
+- PASS 10.50:1 (min 4.5) table-head-foreground on table-head over card
+- PASS 12.62:1 (min 4.5) foreground on table-row-selected over card
+- PASS 7.37:1 (min 3) link-underline on background
+- PASS 10.50:1 (min 4.5) toolbar-foreground on toolbar
+- PASS 10.50:1 (min 4.5) heading-foreground on heading
+- PASS 17.15:1 (min 4.5) ink on background
+- PASS 13.89:1 (min 4.5) ink on card
+- PASS 17.15:1 (min 4.5) ink on highlight-soft
+- PASS 13.89:1 (min 4.5) ink on highlight-soft-end

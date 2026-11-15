@@ -2,16 +2,16 @@
     "version": 1,
     "colors": {
         "primary": {
-            "hex": "#5E8B58",
-            "name": "Sage Green"
+            "hex": "#1A3263",
+            "name": "Navy"
         },
         "secondary": {
-            "hex": "#C9D8C0",
-            "name": "Soft Sage"
+            "hex": "#547792",
+            "name": "Steel Blue"
         },
         "accent": {
-            "hex": "#2F3632",
-            "name": "Pine Charcoal"
+            "hex": "#FAB95B",
+            "name": "Amber"
         },
         "neutral": {
             "hex": null
@@ -31,107 +31,142 @@
         }
     },
     "extra": {
-        "mist": {
-            "hex": "#E9ECE8",
-            "name": "Morning Mist"
+        "linen": {
+            "hex": "#E8E2DB",
+            "name": "Linen"
         }
     },
     "roles": {
         "light": {
-            "background": "mist-100",
-            "foreground": "accent-950",
+            "background": "linen-200",
+            "foreground": "primary-800",
             "card": "neutral-0",
-            "card-foreground": "accent-950",
-            "popover-foreground": "accent-950",
-            "muted": "mist-200",
-            "secondary": "secondary-200",
-            "secondary-foreground": "accent-950",
+            "card-foreground": "primary-800",
+            "popover-foreground": "primary-800",
+            "muted": "linen-100",
+            "secondary": "secondary-100",
+            "secondary-foreground": "primary-800",
             "accent": "secondary-100",
-            "accent-foreground": "accent-950",
+            "accent-foreground": "primary-800",
+            "primary": "primary-800",
             "primary-foreground": "neutral-0",
-            "brand-surface": "neutral-0",
-            "brand-surface-foreground": "accent-950",
-            "brand-surface-border": "secondary-300",
-            "highlight": "secondary-300",
-            "highlight-foreground": "accent-950",
-            "border": "secondary-300",
+            "brand-surface": "primary-800",
+            "brand-surface-foreground": "neutral-0",
+            "brand-surface-border": "primary-700",
+            "highlight": "accent-300",
+            "highlight-foreground": "primary-800",
+            "border": "linen-300",
+            "border-strong": "secondary-600",
+            "ring": "primary-800",
             "destructive": "danger-700",
             "destructive-foreground": "neutral-0",
             "destructive-text": "danger-700",
-            "ink": "accent-950",
-            "highlight-soft": "secondary-100",
+            "warning": "accent-300",
+            "warning-foreground": "primary-800",
+            "ink": "primary-800",
+            "highlight-soft": "accent-100",
             "highlight-soft-end": {
-                "mix": ["secondary-100", 50, "secondary-200"]
+                "mix": [
+                    "accent-100",
+                    50,
+                    "accent-200"
+                ]
             },
-            "highlight-soft-border": "secondary-300"
+            "highlight-soft-border": "accent-200"
         },
         "dark": {
-            "background": "accent-950",
-            "foreground": "mist-50",
-            "card": "accent-900",
-            "card-foreground": "mist-50",
-            "popover": "accent-900",
-            "popover-foreground": "mist-50",
+            "background": "primary-950",
+            "foreground": "linen-50",
+            "card": "primary-900",
+            "card-foreground": "linen-50",
+            "popover": "primary-900",
+            "popover-foreground": "linen-50",
             "muted": {
-                "mix": ["accent-900", 50, "accent-800"]
+                "mix": [
+                    "primary-900",
+                    50,
+                    "primary-800"
+                ]
             },
             "muted-foreground": "secondary-300",
             "secondary": {
-                "mix": ["accent-900", 50, "accent-800"]
+                "mix": [
+                    "primary-900",
+                    50,
+                    "primary-800"
+                ]
             },
-            "secondary-foreground": "mist-50",
-            "accent": "accent-800",
-            "accent-foreground": "mist-50",
-            "primary-subtle": "accent-800",
-            "brand-surface": "accent-900",
-            "brand-surface-foreground": "mist-50",
-            "brand-surface-border": "accent-800",
-            "highlight": "primary-700",
-            "highlight-foreground": "mist-50",
-            "border": "accent-800",
-            "border-strong": "secondary-500",
-            "ring": "secondary-300",
-            "ink": "mist-50",
-            "highlight-soft": "primary-950",
-            "highlight-soft-end": "primary-900",
-            "highlight-soft-border": "primary-800"
+            "secondary-foreground": "linen-50",
+            "accent": "primary-800",
+            "accent-foreground": "linen-50",
+            "primary-subtle": "primary-800",
+            "brand-surface": "primary-900",
+            "brand-surface-foreground": "neutral-0",
+            "brand-surface-border": "primary-800",
+            "highlight": "accent-300",
+            "highlight-foreground": "primary-950",
+            "border": "primary-800",
+            "border-strong": "secondary-400",
+            "ring": "accent-300",
+            "warning": "accent-300",
+            "warning-foreground": "primary-950",
+            "ink": "linen-50",
+            "highlight-soft": "accent-950",
+            "highlight-soft-end": "accent-900",
+            "highlight-soft-border": "accent-800"
         }
     },
     "gradients": [
         {
             "name": "page",
             "angle": 180,
-            "stops": ["secondary-100", "mist-100"],
+            "stops": [
+                "linen-100",
+                "linen-200"
+            ],
             "foreground": "foreground",
-            "themes": ["light"]
+            "themes": [
+                "light"
+            ]
         },
         {
             "name": "table-head",
             "angle": 90,
-            "stops": ["secondary-300", "secondary-200"],
-            "foreground": "highlight-foreground",
-            "themes": ["light"]
+            "stops": [
+                "accent-300",
+                "accent-200"
+            ],
+            "foreground": "highlight-foreground"
         },
         {
             "name": "sidebar",
             "angle": 180,
-            "stops": ["neutral-0", "mist-50"],
+            "stops": [
+                "primary-800",
+                "primary-700"
+            ],
             "foreground": "brand-surface-foreground",
-            "themes": ["light"]
+            "themes": [
+                "light"
+            ]
         },
         {
             "name": "toolbar",
             "angle": 90,
-            "stops": ["secondary-200", "mist-100"],
-            "foreground": "highlight-foreground",
-            "themes": ["light"]
+            "stops": [
+                "accent-300",
+                "accent-200"
+            ],
+            "foreground": "highlight-foreground"
         },
         {
             "name": "heading",
             "angle": 90,
-            "stops": ["secondary-300", "secondary-200"],
-            "foreground": "highlight-foreground",
-            "themes": ["light"]
+            "stops": [
+                "accent-300",
+                "accent-200"
+            ],
+            "foreground": "highlight-foreground"
         }
     ]
 }
