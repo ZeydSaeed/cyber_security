@@ -1,0 +1,14 @@
+# High alerts of the signed-in active scan (scripts/ci/zap-signed-in.sh) that
+# were reviewed and shown to be false positives. Every other High alert fails
+# the scan. An entry covers one rule, one method, one exact path and one
+# parameter, and names the test that proves it; the reason goes on the lines
+# above it (CiWorkflowsTest). Remove an entry when its reason no longer holds.
+# Format: rule id <TAB> method <TAB> path <TAB> parameter <TAB> test
+
+# SQL Injection (40018), 2026-11-16, operations run 43761057926: ZAP sent
+# name="ZAP' AND '1'='1' --" then "... '1'='2' --" with the same teacher
+# code; the second page differed because two teachers never share a code
+# ("Another teacher already has this code"), not because of the condition.
+# The name is saved through Eloquent with bound parameters; the test stores
+# SQL payloads verbatim on create and rename and replays ZAP's pair.
+40018	POST	/admin/teachers	name	tests/Feature/Grades/TeacherNameAsDataTest.php

@@ -137,6 +137,30 @@ it('gives every relaxed ZAP rule a reason', function () {
     expect($rules)->toBeGreaterThan(0);
 });
 
+it('excuses a High alert only as a reviewed, tested, exact false positive', function () {
+    $lines = file(base_path('.zap/high-allowlist.tsv'), FILE_IGNORE_NEW_LINES) ?: [];
+
+    foreach ($lines as $index => $line) {
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+
+        // One rule, one method, one exact path (no pattern), one parameter,
+        // and the test that proves the finding false.
+        expect($line)->toMatch('/^\d+\t(GET|POST|PUT|PATCH|DELETE)\t\/[A-Za-z0-9\/_-]*\t[A-Za-z0-9_\[\].-]+\ttests\/\S+Test\.php$/')
+            ->and($lines[$index - 1] ?? '')->toStartWith('#', "no reason above {$line}");
+
+        $test = explode("\t", $line)[4];
+
+        expect(base_path($test))->toBeFile("{$test} does not exist");
+    }
+
+    // The signed-in scan reads the list; nothing else may silence a High.
+    expect((string) file_get_contents(base_path('scripts/ci/zap-signed-in.sh')))
+        ->toContain('.zap/high-allowlist.tsv')
+        ->toContain('sys.exit(1 if high else 0)');
+});
+
 it('deploys only by hand, and never to production', function () {
     foreach (workflows() as $name => $workflow) {
         $triggers = array_keys((array) ($workflow['on'] ?? $workflow[true] ?? []));

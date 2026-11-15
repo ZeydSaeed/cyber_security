@@ -113,21 +113,39 @@ count=$(printf '%s\n' "$signed_in" | grep -c . || true)
 echo "::notice title=ZAP signed in::reached $count signed-in paths: $(printf '%s ' $signed_in | cut -c1-600)"
 [ "$count" -ge 5 ] || { echo "::error::ZAP reached only $count signed-in paths: the session did not hold"; exit 1; }
 
-python3 - "$OUT/report.json" <<'PY'
+# Reviewed false positives (.zap/high-allowlist.tsv): an instance is excused
+# only when rule, method, exact path and parameter all match an entry; any
+# other instance of the same alert still fails the scan.
+python3 - "$OUT/report.json" "$(dirname "$0")/../../.zap/high-allowlist.tsv" <<'PY'
 import json, sys
+from urllib.parse import urlsplit
 report = json.load(open(sys.argv[1]))
+allowed = set()
+for line in open(sys.argv[2], encoding='utf-8'):
+    line = line.rstrip('\n')
+    if line and not line.startswith('#'):
+        rule, method, path, param, _test = line.split('\t')
+        allowed.add((rule, method, path, param))
+def excused(rule, instance):
+    return (rule, instance.get('method', ''), urlsplit(instance.get('uri', '')).path, instance.get('param', '')) in allowed
 high = 0
 for site in report.get('site', []):
     for alert in site.get('alerts', []):
         risk = int(alert.get('riskcode', 0))
-        uris = sorted({i.get('uri', '') for i in alert.get('instances', [])})[:3]
+        rule = str(alert.get('pluginid'))
+        instances = alert.get('instances', [])
+        if risk >= 3 and instances and all(excused(rule, i) for i in instances):
+            for instance in instances[:5]:
+                print(f"::notice title=ZAP {rule} reviewed::{alert.get('name')} {instance.get('method', '')} {instance.get('uri', '')} param={instance.get('param', '')}: a reviewed false positive (.zap/high-allowlist.tsv)")
+            continue
+        uris = sorted({i.get('uri', '') for i in instances})[:3]
         level = 'error' if risk >= 3 else 'warning'
         high += risk >= 3
-        print(f"::{level} title=ZAP {alert.get('pluginid')}::{alert.get('name')} ({alert.get('riskdesc')}) {' '.join(uris)}")
+        print(f"::{level} title=ZAP {rule}::{alert.get('name')} ({alert.get('riskdesc')}) {' '.join(uris)}")
         if risk >= 3:
             # What exactly was attacked, so a finding can be reproduced.
-            for instance in alert.get('instances', [])[:5]:
-                print(f"::error title=ZAP {alert.get('pluginid')} instance::{instance.get('method', '')} {instance.get('uri', '')} param={instance.get('param', '')} attack={instance.get('attack', '')[:200]} evidence={instance.get('evidence', '')[:200]} {instance.get('otherinfo', '')[:300]}")
+            for instance in [i for i in instances if not excused(rule, i)][:5]:
+                print(f"::error title=ZAP {rule} instance::{instance.get('method', '')} {instance.get('uri', '')} param={instance.get('param', '')} attack={instance.get('attack', '')[:200]} evidence={instance.get('evidence', '')[:200]} {instance.get('otherinfo', '')[:300]}")
 print(f"::notice title=ZAP signed in::{high} High alerts")
 sys.exit(1 if high else 0)
 PY
