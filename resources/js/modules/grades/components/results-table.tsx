@@ -61,7 +61,7 @@ export default function ResultsTable({
                         </th>
                         <th
                             scope="col"
-                            className="sticky start-0 bg-card p-2 text-start font-medium"
+                            className="sticky start-0 bg-table-head p-2 text-start font-medium"
                         >
                             {t('Name')}
                         </th>

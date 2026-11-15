@@ -20,7 +20,9 @@ export function AppSidebarHeader({
     const { unread } = usePage().props.notifications;
 
     return (
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
+        // The toolbar in Maroona with bold Old Leaf text (owner's layout,
+        // 2026-11-15); muted text inside it takes the toolbar's own colour.
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 bg-toolbar px-6 font-semibold text-toolbar-foreground transition-[width,height] ease-linear [--color-foreground:var(--toolbar-foreground)] [--color-muted-foreground:var(--toolbar-foreground)] group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
             <div className="flex min-w-0 items-center gap-2">
                 <SidebarTrigger className="-ms-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
@@ -29,7 +31,8 @@ export function AppSidebarHeader({
             <Button
                 variant="outline"
                 size="sm"
-                className="ms-auto text-muted-foreground"
+                // Old Leaf on the Maroona toolbar, Maroona text: clear in both themes.
+                className="ms-auto border-toolbar-foreground bg-toolbar-foreground text-toolbar hover:bg-toolbar-foreground/90 hover:text-toolbar dark:border-toolbar-foreground dark:bg-toolbar-foreground dark:hover:bg-toolbar-foreground/90"
                 onClick={() =>
                     window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))
                 }
@@ -40,7 +43,7 @@ export function AppSidebarHeader({
                 <kbd
                     aria-hidden
                     dir="ltr"
-                    className="hidden rounded border bg-muted px-1.5 font-mono text-xs md:inline"
+                    className="hidden rounded border border-toolbar bg-toolbar px-1.5 font-mono text-xs text-toolbar-foreground md:inline"
                 >
                     {SEARCH_KEYS}
                 </kbd>

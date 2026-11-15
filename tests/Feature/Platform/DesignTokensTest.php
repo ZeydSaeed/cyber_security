@@ -90,10 +90,22 @@ it('gives every text pair at least 4.5:1', function (string $theme) {
 it('gives field borders and focus rings at least 3:1', function (string $theme) {
     $t = themeTokens($theme);
 
-    foreach (['input', 'ring', 'sidebar-ring'] as $token) {
+    foreach (['input', 'ring'] as $token) {
         foreach (['background', 'card'] as $surface) {
             expect(contrast($t[$token], $t[$surface]))->toBeGreaterThanOrEqual(3.0, "{$theme} {$token} on {$surface}: ".round(contrast($t[$token], $t[$surface]), 2).':1');
         }
+    }
+
+    // The sidebar's ring is drawn on the sidebar, which may be darker than
+    // the page (the owner's Old Leaf sidebar, 2026-11-15).
+    expect(contrast($t['sidebar-ring'], $t['sidebar']))->toBeGreaterThanOrEqual(3.0, "{$theme} sidebar-ring on sidebar");
+})->with('themes');
+
+it('keeps the toolbar, table heads and headings readable (owner\'s layout)', function (string $theme) {
+    $t = themeTokens($theme);
+
+    foreach (['toolbar', 'table-head', 'heading'] as $surface) {
+        expect(contrast($t["{$surface}-foreground"], $t[$surface]))->toBeGreaterThanOrEqual(4.5, "{$theme} {$surface}: ".round(contrast($t["{$surface}-foreground"], $t[$surface]), 2).':1');
     }
 })->with('themes');
 

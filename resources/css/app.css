@@ -74,49 +74,65 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Owner's layout (2026-11-15): the top toolbar, table heads and page
+       headings in Maroona with Old Leaf text. */
+    --color-toolbar: var(--toolbar);
+    --color-toolbar-foreground: var(--toolbar-foreground);
+    --color-table-head: var(--table-head);
+    --color-table-head-foreground: var(--table-head-foreground);
+    --color-heading: var(--heading);
+    --color-heading-foreground: var(--heading-foreground);
 }
 
 :root {
-    --background: oklch(0.981 0.008 228.9);
+    --background: oklch(0.808 0.073 228.7);
     --foreground: oklch(0.293 0.062 237);
-    --card: oklch(1 0 0);
+    --card: oklch(0.808 0.073 228.7);
     --card-foreground: oklch(0.293 0.062 237);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.293 0.062 237);
     --primary: oklch(0.293 0.062 237);
     --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.949 0.019 227.3);
+    --secondary: oklch(0.872 0.049 227);
     --secondary-foreground: oklch(0.293 0.062 237);
-    --muted: oklch(0.949 0.019 227.3);
-    --muted-foreground: oklch(0.474 0.038 232.1);
-    --accent: oklch(0.908 0.035 226.6);
+    --muted: oklch(0.872 0.049 227);
+    --muted-foreground: oklch(0.345 0.056 233.6);
+    --accent: oklch(0.872 0.049 227);
     --accent-foreground: oklch(0.293 0.062 237);
-    --destructive: oklch(0.5 0.182 29.5);
-    --destructive-foreground: oklch(0.5 0.182 29.5);
-    --success: oklch(0.529 0.106 154.6);
+    --destructive: oklch(0.421 0.152 29.5);
+    --destructive-foreground: oklch(0.421 0.152 29.5);
+    --success: oklch(0.393 0.09 152.5);
     --success-foreground: oklch(1 0 0);
     --warning: oklch(0.825 0.171 79.9);
     --warning-foreground: oklch(0.293 0.062 237);
     --info: oklch(0.504 0.084 220.9);
     --info-foreground: oklch(1 0 0);
-    --border: oklch(0.904 0.025 226.5);
+    --border: oklch(0.7 0.089 229.6);
     /* Form-field borders: 3:1 against the page (WCAG 1.4.11). */
-    --input: oklch(0.607 0.039 231.6);
-    --ring: oklch(0.538 0.091 219.5);
+    --input: oklch(0.481 0.073 232);
+    --ring: oklch(0.293 0.062 237);
     --chart-1: oklch(0.293 0.062 237);
     --chart-2: oklch(0.648 0.11 219);
     --chart-3: oklch(0.825 0.171 79.9);
     --chart-4: oklch(0.734 0.179 56.1);
-    --chart-5: oklch(0.808 0.073 228.7);
+    --chart-5: oklch(1 0 0);
     --radius: 0.625rem;
-    --sidebar: oklch(0.949 0.019 227.3);
-    --sidebar-foreground: oklch(0.293 0.062 237);
-    --sidebar-primary: oklch(0.293 0.062 237);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.808 0.073 228.7);
+    --sidebar: oklch(0.293 0.062 237);
+    --sidebar-foreground: oklch(1 0 0);
+    --sidebar-primary: oklch(0.825 0.171 79.9);
+    --sidebar-primary-foreground: oklch(0.293 0.062 237);
+    --sidebar-accent: oklch(0.825 0.171 79.9);
     --sidebar-accent-foreground: oklch(0.293 0.062 237);
-    --sidebar-border: oklch(0.888 0.033 226.3);
-    --sidebar-ring: oklch(0.538 0.091 219.5);
+    --sidebar-border: oklch(0.391 0.076 235.1);
+    --sidebar-ring: oklch(0.825 0.171 79.9);
+    /* Owner's layout (2026-11-15): top toolbar, table heads, headings. */
+    --toolbar: oklch(0.825 0.171 79.9);
+    --toolbar-foreground: oklch(0.293 0.062 237);
+    --table-head: oklch(0.825 0.171 79.9);
+    --table-head-foreground: oklch(0.293 0.062 237);
+    --heading: oklch(0.825 0.171 79.9);
+    --heading-foreground: oklch(0.293 0.062 237);
 }
 
 .dark {
@@ -126,7 +142,7 @@
     --card-foreground: oklch(0.949 0.019 227.3);
     --popover: oklch(0.293 0.062 237);
     --popover-foreground: oklch(0.949 0.019 227.3);
-    --primary: oklch(0.825 0.171 79.9);
+    --primary: oklch(0.808 0.073 228.7);
     --primary-foreground: oklch(0.206 0.042 235.8);
     --secondary: oklch(0.341 0.067 235.8);
     --secondary-foreground: oklch(0.949 0.019 227.3);
@@ -150,14 +166,21 @@
     --chart-3: oklch(0.825 0.171 79.9);
     --chart-4: oklch(0.734 0.179 56.1);
     --chart-5: oklch(0.949 0.019 227.3);
-    --sidebar: oklch(0.249 0.057 241.4);
-    --sidebar-foreground: oklch(0.949 0.019 227.3);
+    --sidebar: oklch(0.293 0.062 237);
+    --sidebar-foreground: oklch(1 0 0);
     --sidebar-primary: oklch(0.825 0.171 79.9);
-    --sidebar-primary-foreground: oklch(0.206 0.042 235.8);
-    --sidebar-accent: oklch(0.293 0.062 237);
-    --sidebar-accent-foreground: oklch(0.949 0.019 227.3);
-    --sidebar-border: oklch(0.293 0.062 237);
+    --sidebar-primary-foreground: oklch(0.293 0.062 237);
+    --sidebar-accent: oklch(0.825 0.171 79.9);
+    --sidebar-accent-foreground: oklch(0.293 0.062 237);
+    --sidebar-border: oklch(0.391 0.076 235.1);
     --sidebar-ring: oklch(0.825 0.171 79.9);
+    /* Owner's layout (2026-11-15): top toolbar, table heads, headings. */
+    --toolbar: oklch(0.825 0.171 79.9);
+    --toolbar-foreground: oklch(0.293 0.062 237);
+    --table-head: oklch(0.825 0.171 79.9);
+    --table-head-foreground: oklch(0.293 0.062 237);
+    --heading: oklch(0.825 0.171 79.9);
+    --heading-foreground: oklch(0.293 0.062 237);
 }
 
 @layer base {
@@ -167,6 +190,23 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    /* Every table's head row: Maroona, bold Old Leaf text (owner's layout,
+       2026-11-15). Cells inherit, whatever muted colour a table set. */
+    thead tr {
+        background-color: var(--table-head);
+        color: var(--table-head-foreground);
+    }
+
+    thead th {
+        color: inherit;
+        font-weight: 700;
+    }
+
+    /* The Old Leaf sidebar: bold white text. */
+    [data-slot='sidebar'] {
+        font-weight: 600;
     }
 
     /* Arabic needs more line height than Latin for its marks. */

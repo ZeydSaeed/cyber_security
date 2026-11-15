@@ -21,7 +21,7 @@
              values as --background in resources/css/app.css. --}}
         <style>
             html {
-                background-color: oklch(0.981 0.008 228.9);
+                background-color: oklch(0.808 0.073 228.7);
             }
 
             html.dark {

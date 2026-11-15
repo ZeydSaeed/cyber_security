@@ -9,11 +9,13 @@ export default function Heading({
 }) {
     return (
         <header className={variant === 'small' ? '' : 'mb-8 space-y-0.5'}>
+            {/* A page's heading on a Maroona band, bold Old Leaf text
+                (owner's layout, 2026-11-15). */}
             <h2
                 className={
                     variant === 'small'
                         ? 'mb-0.5 text-base font-medium'
-                        : 'text-xl font-semibold tracking-tight'
+                        : 'inline-block rounded-md bg-heading px-3 py-1 text-xl font-bold tracking-tight text-heading-foreground'
                 }
             >
                 {title}
