@@ -90,6 +90,7 @@ class GradesAdminController
             'teachers' => array_values($teachers->map(fn (Teacher $teacher): array => [
                 'uuid' => $teacher->uuid,
                 'name' => $teacher->name,
+                'specialty' => $teacher->specialty,
                 'code' => $teacher->code_encrypted === null ? null : $codes->decrypt($teacher->code_encrypted),
                 'active' => $teacher->is_active,
                 'last_seen_at' => $teacher->last_seen_at?->toIso8601String(),
@@ -102,7 +103,36 @@ class GradesAdminController
                 'sections' => array_map(fn (Section $section): string => $section->value, $subject->stage->sections()),
                 'teacher' => $subject->teacher?->uuid,
             ])->all()),
-            'codeLength' => ['min' => TeacherCodes::MIN_LENGTH, 'max' => TeacherCodes::MAX_LENGTH],
+        ]);
+    }
+
+    /**
+     * Every teacher on a slip to print and hand out (owner's request,
+     * 2026-11-16), like the students' code slips: name, specialty, each
+     * subject with its stage and sections, the link and the code. Showing
+     * the codes is audited.
+     */
+    public function printTeachers(TeacherCodes $codes, AuditLogger $audit, #[CurrentUser] User $user): Response
+    {
+        $teachers = Teacher::query()->with(['subjects' => fn ($query) => $query->orderBy('stage')->orderBy('sort_order')->orderBy('name')])
+            ->orderBy('name')->get();
+
+        $audit->record('grades.teacher_codes_viewed', null, ['printed' => true], actor: $user);
+
+        return Inertia::render('modules/grades/pages/print/teachers', [
+            'teacherLink' => route('grades.teacher.login'),
+            'teachers' => array_values($teachers->map(fn (Teacher $teacher): array => [
+                'uuid' => $teacher->uuid,
+                'name' => $teacher->name,
+                'specialty' => $teacher->specialty,
+                'code' => $teacher->code_encrypted === null ? null : $codes->decrypt($teacher->code_encrypted),
+                'subjects' => array_values($teacher->subjects->map(fn (Subject $subject): array => [
+                    'name' => $subject->name,
+                    'stage' => $subject->stage->value,
+                    'divided' => $subject->stage->isDivided(),
+                    'sections' => array_map(fn (Section $section): string => $section->value, $subject->stage->sections()),
+                ])->all()),
+            ])->all()),
         ]);
     }
 
@@ -110,12 +140,19 @@ class GradesAdminController
     {
         $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'code' => ['required', 'string', 'max:255'],
+            // Made by the application when not given (owner, 2026-11-16).
+            'code' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'specialty' => ['sometimes', 'nullable', 'string', 'max:255'],
             ...$this->subjectRules(),
         ]);
 
         DB::transaction(function () use ($request, $save, $subjects, $user): void {
-            $teacher = $save->create($user, (string) $request->string('name'), (string) $request->string('code'));
+            $teacher = $save->create(
+                $user,
+                (string) $request->string('name'),
+                $request->filled('code') ? (string) $request->string('code') : null,
+                $request->filled('specialty') ? (string) $request->string('specialty') : null,
+            );
             if ($request->has('subjects')) {
                 $this->assignSubjects($user, $teacher, $this->subjectUuids($request), $subjects);
             }
@@ -131,6 +168,7 @@ class GradesAdminController
             'name' => ['sometimes', 'required', 'string', 'max:120'],
             'code' => ['sometimes', 'required', 'string', 'max:255'],
             'active' => ['sometimes', 'required', 'boolean'],
+            'specialty' => ['sometimes', 'nullable', 'string', 'max:255'],
             ...$this->subjectRules(),
         ]);
 
@@ -140,6 +178,9 @@ class GradesAdminController
             }
             if ($request->has('code')) {
                 $save->changeCode($user, $teacher, (string) $request->string('code'));
+            }
+            if ($request->exists('specialty')) {
+                $save->changeSpecialty($user, $teacher, $request->filled('specialty') ? (string) $request->string('specialty') : null);
             }
             if ($request->has('active')) {
                 $save->setActive($user, $teacher, $request->boolean('active'));
@@ -194,6 +235,18 @@ class GradesAdminController
         }
     }
 
+    /**
+     * A new code made by the application, after the owner confirms; the
+     * old one stops working at once.
+     */
+    public function regenerateTeacherCode(Teacher $teacher, SaveTeacher $save, #[CurrentUser] User $user): RedirectResponse
+    {
+        $save->regenerateCode($user, $teacher);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('New code for :name. The old one no longer works.', ['name' => $teacher->name])]);
+
+        return to_route('grades.admin.teachers');
+    }
+
     public function destroyTeacher(Teacher $teacher, SaveTeacher $save, #[CurrentUser] User $user): RedirectResponse
     {
         $save->delete($user, $teacher);
@@ -216,11 +269,24 @@ class GradesAdminController
                     'teacher' => $subject->teacher?->uuid,
                 ])->all()),
             ], Stage::cases()),
-            // All teachers, stopped ones marked: a subject whose teacher was
-            // stopped must still show them, or saving would unassign them.
-            'teachers' => array_values(Teacher::query()->orderBy('name')->get(['uuid', 'name', 'is_active'])
-                ->map(fn (Teacher $teacher): array => ['uuid' => $teacher->uuid, 'name' => $teacher->name, 'active' => $teacher->is_active])->all()),
-            'expected' => (int) config('grades.subjects_per_stage'),
+            // No teachers here: a teacher's subjects are chosen on the
+            // teachers' page (owner's request, 2026-11-17).
+        ]);
+    }
+
+    /**
+     * Each stage with its subjects, to print (owner's request, 2026-11-17).
+     */
+    public function printSubjects(): Response
+    {
+        $subjects = Subject::query()->orderBy('stage')->orderBy('sort_order')->orderBy('name')->get(['stage', 'name']);
+
+        return Inertia::render('modules/grades/pages/print/subjects', [
+            'stages' => array_map(fn (Stage $stage): array => [
+                'stage' => $stage->value,
+                'subjects' => array_values($subjects->filter(fn (Subject $s): bool => $s->stage === $stage)
+                    ->map(fn (Subject $subject): string => $subject->name)->all()),
+            ], Stage::cases()),
         ]);
     }
 

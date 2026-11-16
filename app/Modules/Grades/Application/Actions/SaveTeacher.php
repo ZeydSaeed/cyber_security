@@ -12,10 +12,11 @@ use App\Platform\Exceptions\DomainRuleViolation;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Creates a teacher, changes a teacher's name, code or whether they may
- * sign in, or deletes one (ADR-0034). The owner sets the code (the
- * employee number); it is kept as a digest and encrypted (TeacherCodes),
- * never written to the audit trail. Changing the code or deactivating
+ * Creates a teacher, changes a teacher's name, specialty, code or whether
+ * they may sign in, or deletes one (ADR-0034). Since 2026-11-16 the
+ * application makes each code (TeacherCodes::generate) unless one is
+ * given; it is kept as a digest and encrypted, never written to the audit
+ * trail. Changing the code or deactivating
  * raises the lock version, which ends the teacher's open sessions (G2).
  * Repeating the same change changes nothing and records nothing.
  */
@@ -23,24 +24,31 @@ class SaveTeacher
 {
     public function __construct(private readonly AuditLogger $audit, private readonly TeacherCodes $codes) {}
 
-    public function create(User $actor, string $name, string $code): Teacher
+    /**
+     * A new teacher; without a code, the application makes one.
+     */
+    public function create(User $actor, string $name, ?string $code = null, ?string $specialty = null): Teacher
     {
         $name = $this->validName($name);
-        $this->codes->assertAcceptable($code);
+        $specialty = $this->validSpecialty($specialty);
+        if ($code !== null) {
+            $this->codes->assertAcceptable($code);
+        }
 
-        return DB::transaction(function () use ($actor, $name, $code): Teacher {
+        return DB::transaction(function () use ($actor, $name, $code, $specialty): Teacher {
             EnsureManager::check($actor);
-            $digest = $this->freeDigest($code, null);
+            [$code, $digest] = $code === null ? $this->newCode(null) : [$code, $this->freeDigest($code, null)];
 
             $teacher = new Teacher;
             $teacher->forceFill([
                 'name' => $name,
+                'specialty' => $specialty,
                 'code_digest' => $digest,
                 'code_encrypted' => $this->codes->encrypt($code),
                 'is_active' => true,
             ])->save();
 
-            $this->audit->record('grades.teacher_created', $teacher, ['name' => $name], actor: $actor);
+            $this->audit->record('grades.teacher_created', $teacher, ['name' => $name, 'specialty' => $specialty], actor: $actor);
 
             return $teacher;
         }, 3);
@@ -58,6 +66,39 @@ class SaveTeacher
             $old = $locked->name;
             $locked->forceFill(['name' => $name])->save();
             $this->audit->record('grades.teacher_renamed', $locked, [], ['name' => ['from' => $old, 'to' => $name]], actor: $actor);
+        });
+    }
+
+    public function changeSpecialty(User $actor, Teacher $teacher, ?string $specialty): Teacher
+    {
+        $specialty = $this->validSpecialty($specialty);
+
+        return $this->change($actor, $teacher, function (Teacher $locked) use ($actor, $specialty): void {
+            if ($locked->specialty === $specialty) {
+                return;
+            }
+
+            $old = $locked->specialty;
+            $locked->forceFill(['specialty' => $specialty])->save();
+            $this->audit->record('grades.teacher_specialty_changed', $locked, [], ['specialty' => ['from' => $old, 'to' => $specialty]], actor: $actor);
+        });
+    }
+
+    /**
+     * A new code made by the application; the old one stops working and
+     * the teacher's open sessions end. Returns the teacher with the code.
+     */
+    public function regenerateCode(User $actor, Teacher $teacher): Teacher
+    {
+        return $this->change($actor, $teacher, function (Teacher $locked) use ($actor): void {
+            [$code, $digest] = $this->newCode($locked->id);
+
+            $locked->forceFill([
+                'code_digest' => $digest,
+                'code_encrypted' => $this->codes->encrypt($code),
+                'lock_version' => $locked->lock_version + 1,
+            ])->save();
+            $this->audit->record('grades.teacher_code_changed', $locked, ['generated' => true], actor: $actor);
         });
     }
 
@@ -129,6 +170,37 @@ class SaveTeacher
 
             return $locked;
         }, 3);
+    }
+
+    /**
+     * A made code no other teacher has (a clash is about one in 3.5 * 10^9
+     * per pair: try again rather than fail).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function newCode(?int $exceptTeacherId): array
+    {
+        do {
+            $code = $this->codes->generate();
+            $digest = $this->codes->digest($code);
+            $taken = Teacher::query()
+                ->where('code_digest', $digest)
+                ->when($exceptTeacherId !== null, fn ($query) => $query->whereKeyNot($exceptTeacherId))
+                ->exists();
+        } while ($taken);
+
+        return [$code, $digest];
+    }
+
+    private function validSpecialty(?string $specialty): ?string
+    {
+        $specialty = $specialty === null ? '' : trim((string) preg_replace('/\s+/u', ' ', $specialty));
+
+        if (mb_strlen($specialty) > 80) {
+            throw new DomainRuleViolation(__('The specialty is longer than :max characters.', ['max' => 80]), 'specialty');
+        }
+
+        return $specialty === '' ? null : $specialty;
     }
 
     private function validName(string $name): string

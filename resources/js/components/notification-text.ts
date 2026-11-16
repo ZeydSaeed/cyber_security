@@ -34,7 +34,9 @@ export function notificationText(t: Translate, data: NotificationData): string {
                             ? t('First')
                             : data.stage === '2'
                               ? t('Second')
-                              : (data.stage ?? ''),
+                              : data.stage === '3'
+                                ? t('Third')
+                                : (data.stage ?? ''),
                     section: data.section ?? '',
                 },
             );

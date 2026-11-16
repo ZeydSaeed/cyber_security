@@ -7,6 +7,7 @@ use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\StudentStatus;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
@@ -30,17 +31,20 @@ beforeEach(function () {
 });
 
 describe('teachers', function () {
-    it('shows each teacher\'s employee number and subjects, and audits the showing', function () {
+    it('makes the teacher a code, shows it with the specialty and subjects, and audits the showing', function () {
         $subject = Subject::factory()->unassigned()->stage(Stage::Second)->create(['name' => 'Networks']);
         $this->actingAs($this->owner)->post('/admin/teachers', [
-            'name' => 'Huda Karim', 'code' => 'EMP-20241', 'subjects' => ['', $subject->uuid],
+            'name' => 'Huda Karim', 'specialty' => ' Electricity ', 'subjects' => ['', $subject->uuid],
         ])->assertRedirect('/admin/teachers');
         $teacher = Teacher::query()->sole();
-        expect($teacher->code_encrypted)->not->toBeNull()->not->toContain('EMP-20241')
-            ->and($subject->refresh()->teacher_id)->toBe($teacher->id);
+        $code = app(TeacherCodes::class)->decrypt((string) $teacher->code_encrypted);
+        expect($teacher->specialty)->toBe('Electricity')
+            ->and($subject->refresh()->teacher_id)->toBe($teacher->id)
+            ->and($teacher->code_digest)->toBe(app(TeacherCodes::class)->digest($code));
 
         $this->get('/admin/teachers')->assertInertia(fn (Assert $page) => $page
-            ->where('teachers.0.code', 'EMP-20241')
+            ->where('teachers.0.code', $code)
+            ->where('teachers.0.specialty', 'Electricity')
             ->missing('teachers.0.code_encrypted')
             ->where('subjects.0.name', 'Networks')
             ->where('subjects.0.stage', 2)
@@ -48,10 +52,73 @@ describe('teachers', function () {
             ->where('subjects.0.teacher', $teacher->uuid));
         expect(AuditEvent::query()->where('action', 'grades.teacher_codes_viewed')->count())->toBe(1);
 
-        $this->put("/admin/teachers/{$teacher->uuid}", ['name' => 'Huda K.', 'code' => 'EMP-30000', 'subjects' => ['']]);
-        expect(app(TeacherCodes::class)->decrypt((string) $teacher->refresh()->code_encrypted))->toBe('EMP-30000')
-            ->and($teacher->name)->toBe('Huda K.')
+        $this->put("/admin/teachers/{$teacher->uuid}", ['name' => 'Huda K.', 'specialty' => '', 'subjects' => ['']]);
+        $teacher->refresh();
+        expect($teacher->name)->toBe('Huda K.')
+            ->and($teacher->specialty)->toBeNull()
             ->and($subject->refresh()->teacher_id)->toBeNull();
+    });
+
+    it('makes teacher codes in the student shape, always starting with T, and student codes never with T', function () {
+        $teacher = collect(range(1, 300))->map(fn () => app(TeacherCodes::class)->generate());
+        $student = collect(range(1, 300))->map(fn () => app(StudentCodes::class)->generate());
+
+        foreach ($teacher as $code) {
+            expect($code)->toMatch('/^T[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{3}-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{4}$/');
+        }
+        foreach ($student as $code) {
+            expect($code)->toMatch('/^[ABCDEFGHJKMNPQRSUVWXYZ2-9][ABCDEFGHJKMNPQRSTUVWXYZ2-9]{3}-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{4}$/');
+        }
+        // Random: 300 codes from 31^7 do not repeat in practice.
+        expect($teacher->unique()->count())->toBe(300);
+    });
+
+    it('refuses a typed student code that starts with T', function () {
+        $student = Student::factory()->named('Sara Ali')->create();
+
+        $this->actingAs($this->owner)->from('/admin/students')
+            ->put("/admin/students/{$student->uuid}", ['name' => 'Sara Ali', 'stage' => 1, 'code' => 'TABC-2345'])
+            ->assertSessionHasErrors(['code' => 'A code for a student may not start with T: that letter marks the code of a teacher.']);
+    });
+
+    it('prints every teacher on a slip with specialty, subjects and code, audited', function () {
+        $subject = Subject::factory()->unassigned()->stage(Stage::Second)->create(['name' => 'Networks']);
+        $this->actingAs($this->owner)->post('/admin/teachers', [
+            'name' => 'Huda Karim', 'specialty' => 'Electricity', 'subjects' => ['', $subject->uuid],
+        ]);
+        $code = app(TeacherCodes::class)->decrypt((string) Teacher::query()->sole()->code_encrypted);
+
+        $this->get('/admin/teachers/print')->assertInertia(fn (Assert $page) => $page
+            ->component('modules/grades/pages/print/teachers')
+            ->where('teachers.0.name', 'Huda Karim')
+            ->where('teachers.0.specialty', 'Electricity')
+            ->where('teachers.0.code', $code)
+            ->where('teachers.0.subjects.0.name', 'Networks')
+            ->where('teachers.0.subjects.0.stage', 2)
+            ->where('teachers.0.subjects.0.sections', ['A', 'B'])
+            ->where('teacherLink', route('grades.teacher.login')));
+        expect(AuditEvent::query()->where('action', 'grades.teacher_codes_viewed')->where('metadata->printed', true)->exists())->toBeTrue();
+    });
+
+    it('replaces a teacher\'s code after the owner confirms; the old one stops working', function () {
+        $this->actingAs($this->owner)->post('/admin/teachers', ['name' => 'Huda Karim']);
+        $teacher = Teacher::query()->sole();
+        $old = app(TeacherCodes::class)->decrypt((string) $teacher->code_encrypted);
+        $version = $teacher->lock_version;
+
+        $this->post("/admin/teachers/{$teacher->uuid}/code")->assertRedirect('/admin/teachers');
+        $teacher->refresh();
+        $new = app(TeacherCodes::class)->decrypt((string) $teacher->code_encrypted);
+
+        expect($new)->not->toBe($old)
+            ->and($teacher->lock_version)->toBe($version + 1)
+            ->and(AuditEvent::query()->where('action', 'grades.teacher_code_changed')->exists())->toBeTrue();
+
+        auth()->logout();
+        $this->post('/teacher', ['code' => $old])->assertSessionHasErrors();
+        // Case, spaces and the dash do not matter, as for students.
+        $this->post('/teacher', ['code' => strtolower(str_replace('-', ' ', $new))])->assertRedirect();
+        expect(auth('teacher')->id())->toBe($teacher->id);
     });
 
     it('moves a subject chosen in a teacher\'s form from the teacher who had it', function () {
@@ -110,6 +177,17 @@ describe('subjects', function () {
         expect(Subject::query()->count())->toBe(0);
     });
 
+    it('prints each stage with its subjects, the third stage included', function () {
+        Subject::factory()->unassigned()->create(['name' => 'Networks']);
+        Subject::factory()->unassigned()->stage(Stage::Third)->create(['name' => 'Forensics']);
+
+        $this->actingAs($this->owner)->get('/admin/subjects/print')->assertInertia(fn (Assert $page) => $page
+            ->component('modules/grades/pages/print/subjects')
+            ->where('stages.0', ['stage' => 1, 'subjects' => ['Networks']])
+            ->where('stages.1', ['stage' => 2, 'subjects' => []])
+            ->where('stages.2', ['stage' => 3, 'subjects' => ['Forensics']]));
+    });
+
     it('keeps the stage and the subject once it has marks', function () {
         $subject = Subject::factory()->create();
         $student = Student::factory()->create();
@@ -137,6 +215,24 @@ describe('students', function () {
 
         $this->post('/admin/students', ['name' => 'Noor  Adel', 'stage' => 1])->assertSessionHasErrors('name');
         $this->post('/admin/students', ['name' => 'X', 'stage' => 2, 'section' => 'A'])->assertSessionHasErrors('name');
+    });
+
+    it('keeps the status of a student: external, or empty for a regular one', function () {
+        $this->actingAs($this->owner)->from('/admin/students')
+            ->post('/admin/students', ['name' => 'Ali Karim', 'stage' => 1, 'status' => 'external'])
+            ->assertRedirect('/admin/students');
+        $student = Student::query()->sole();
+        expect($student->status)->toBe(StudentStatus::External);
+
+        $this->get('/admin/students')->assertInertia(fn (Assert $page) => $page
+            ->where('students.rows.0.status', 'external')
+            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status']));
+
+        $this->put("/admin/students/{$student->uuid}", ['name' => 'Ali Karim', 'stage' => 1, 'status' => '']);
+        expect($student->refresh()->status)->toBeNull();
+
+        $this->put("/admin/students/{$student->uuid}", ['name' => 'Ali Karim', 'stage' => 1, 'status' => 'absent'])
+            ->assertSessionHasErrors('status');
     });
 
     it('changes a student and their code, and refuses a weak or taken code', function () {
@@ -173,7 +269,7 @@ describe('students', function () {
 
         $this->get('/admin/students')->assertInertia(fn (Assert $page) => $page
             ->where('students.rows.0.code', $code)
-            ->where('columns.order', ['full_name', 'code', 'stage', 'section']));
+            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status']));
         expect(AuditEvent::query()->where('action', 'grades.student_codes_listed')->count())->toBe(1);
 
         // Found by its code.

@@ -1,11 +1,11 @@
 import { Form, Head } from '@inertiajs/react';
-import { AlertTriangle, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Printer } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ConfirmAction from '@/components/confirm-action';
+import TableToolbar from '@/components/data-table/table-toolbar';
 import InputError from '@/components/input-error';
 import PageToolbar, { toolButton } from '@/components/page-toolbar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -18,43 +18,12 @@ import { Label } from '@/components/ui/label';
 import { useTranslations } from '@/hooks/use-translations';
 import { stageLabel } from '../../place';
 
-type Teacher = { uuid: string; name: string; active: boolean };
 type Subject = { uuid: string; name: string; teacher: string | null };
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
 
-function TeacherSelect({
-    id,
-    teachers,
-    value,
-}: {
-    id: string;
-    teachers: Teacher[];
-    value?: string | null;
-}) {
-    const { t } = useTranslations();
-
-    return (
-        <select
-            id={id}
-            name="teacher"
-            defaultValue={value ?? ''}
-            className={selectClass}
-        >
-            <option value="">{t('No teacher yet')}</option>
-            {teachers.map((teacher) => (
-                <option key={teacher.uuid} value={teacher.uuid}>
-                    {teacher.active
-                        ? teacher.name
-                        : t(':name (stopped)', { name: teacher.name })}
-                </option>
-            ))}
-        </select>
-    );
-}
-
-/** The stage by its name: "First" or "Second". */
+/** The stage by its name: "First stage", "Second stage", "Third stage". */
 function StageSelect({
     id,
     stages,
@@ -82,18 +51,16 @@ function StageSelect({
     );
 }
 
-/** A subject's name, teacher and stage, changed together. */
+/** A subject's name and stage, changed together. */
 function EditSubject({
     subject,
     stage,
     stages,
-    teachers,
     onDone,
 }: {
     subject: Subject;
     stage: number;
     stages: number[];
-    teachers: Teacher[];
     onDone: () => void;
 }) {
     const { t } = useTranslations();
@@ -103,7 +70,7 @@ function EditSubject({
             {...GradesAdminController.updateSubject.form(subject.uuid)}
             options={{ preserveScroll: true }}
             onSuccess={onDone}
-            className="grid items-start gap-3 md:grid-cols-3"
+            className="grid items-start gap-3 md:grid-cols-2"
             data-test="edit-subject"
         >
             {({ errors, processing }) => (
@@ -123,17 +90,6 @@ function EditSubject({
                         <InputError message={errors.name} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor={`teacher-${subject.uuid}`}>
-                            {t('Teacher')}
-                        </Label>
-                        <TeacherSelect
-                            id={`teacher-${subject.uuid}`}
-                            teachers={teachers}
-                            value={subject.teacher}
-                        />
-                        <InputError message={errors.teacher} />
-                    </div>
-                    <div className="grid gap-2">
                         <Label htmlFor={`stage-${subject.uuid}`}>
                             {t('Stage')}
                         </Label>
@@ -144,7 +100,7 @@ function EditSubject({
                         />
                         <InputError message={errors.stage} />
                     </div>
-                    <div className="flex gap-2 md:col-span-3">
+                    <div className="flex gap-2 md:col-span-2">
                         <Button disabled={processing}>{t('Save')}</Button>
                         <Button type="button" variant="ghost" onClick={onDone}>
                             {t('Cancel')}
@@ -157,48 +113,92 @@ function EditSubject({
 }
 
 /**
- * Subjects of each stage and who teaches them (ADR-0034). Each subject is
- * shown with its teacher; "Edit" changes its name, teacher or stage (the
- * stage only while it has no marks), and "Delete" removes one with no
- * marks. The title and "Add a subject" (a dialog) are in the top toolbar
- * (owner's layout, 2026-11-16).
+ * Subjects of each stage (ADR-0034). Each stage has as many subjects as it
+ * needs, and the subjects show no teacher: a teacher's subjects are chosen
+ * on the teachers' page (owner's requests, 2026-11-17). "Edit" changes a
+ * subject's name or stage (the stage only while it has no marks), "Delete"
+ * removes one with no marks. The title, search, stage filter and "Add a
+ * subject" (a dialog) are in the top toolbar, as on the other pages.
  */
 export default function GradesSubjects({
     stages,
-    teachers,
-    expected,
 }: {
     stages: { stage: number; subjects: Subject[] }[];
-    teachers: Teacher[];
-    expected: number;
 }) {
     const { t } = useTranslations();
     const [editing, setEditing] = useState<string | null>(null);
     const [adding, setAdding] = useState(false);
     const stageNumbers = stages.map((stage) => stage.stage);
-    const teacherName = (uuid: string | null) =>
-        teachers.find((teacher) => teacher.uuid === uuid)?.name ?? null;
+    // Search and filter on this page (all subjects are on it).
+    const [search, setSearch] = useState('');
+    const [stageFilter, setStageFilter] = useState<string | null>(null);
+    const onSearch = useCallback((text: string) => setSearch(text), []);
+    const needle = search.trim().toLowerCase();
+    const matches = (subject: Subject) =>
+        needle === '' || subject.name.toLowerCase().includes(needle);
+    const shownStages = stages.filter(
+        (stage) => stageFilter === null || String(stage.stage) === stageFilter,
+    );
 
     return (
         <>
             <Head title={t('Subjects')} />
+            {/* The same toolbar as the students' and teachers' pages:
+                title, search and filter, then the actions. */}
             <PageToolbar title={t('Subjects')}>
+                <TableToolbar
+                    compact
+                    search={search}
+                    filters={[
+                        {
+                            key: 'stage',
+                            label: t('Stage'),
+                            options: stageNumbers.map((value) => ({
+                                value: String(value),
+                                label: stageLabel(t, value),
+                            })),
+                        },
+                    ]}
+                    values={stageFilter === null ? {} : { stage: stageFilter }}
+                    onSearch={onSearch}
+                    onFilter={(_key, value) => setStageFilter(value)}
+                    onClear={() => {
+                        setSearch('');
+                        setStageFilter(null);
+                    }}
+                />
                 <Button
                     variant="outline"
                     size="sm"
-                    className={`h-7 ${toolButton}`}
+                    className={`h-8 ${toolButton}`}
                     onClick={() => setAdding(true)}
                     data-test="add-subject-button"
                 >
                     <Plus aria-hidden />
                     {t('Add a subject')}
                 </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className={`h-8 ${toolButton}`}
+                    asChild
+                >
+                    <a
+                        href={GradesAdminController.printSubjects.url()}
+                        target="_blank"
+                        rel="noopener"
+                        data-test="print-subjects"
+                    >
+                        <Printer aria-hidden />
+                        {t('Print')}
+                    </a>
+                </Button>
             </PageToolbar>
             <Dialog open={adding} onOpenChange={setAdding}>
                 <DialogContent className="bg-card" data-test="subject-dialog">
                     <DialogTitle>{t('Add a subject')}</DialogTitle>
                     <DialogDescription className="sr-only">
-                        {t('Stage, name and teacher.')}
+                        {t('Stage and name.')}
                     </DialogDescription>
                     <Form
                         {...GradesAdminController.storeSubject.form()}
@@ -232,16 +232,6 @@ export default function GradesSubjects({
                                     />
                                     <InputError message={errors.name} />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="new-teacher">
-                                        {t('Teacher')}
-                                    </Label>
-                                    <TeacherSelect
-                                        id="new-teacher"
-                                        teachers={teachers}
-                                    />
-                                    <InputError message={errors.teacher} />
-                                </div>
                                 <div className="flex gap-2">
                                     <Button disabled={processing}>
                                         {t('Add subject')}
@@ -260,7 +250,7 @@ export default function GradesSubjects({
                 </DialogContent>
             </Dialog>
             <div className="flex max-w-4xl flex-col gap-6 p-4">
-                {stages.map((stage) => (
+                {shownStages.map((stage) => (
                     <section
                         key={stage.stage}
                         className="rounded-lg border bg-card"
@@ -273,37 +263,20 @@ export default function GradesSubjects({
                             {stageLabel(t, stage.stage)}{' '}
                             <span className="text-sm font-normal text-muted-foreground">
                                 (
-                                {t(':count of :expected subjects', {
+                                {t(':count subjects', {
                                     count: String(stage.subjects.length),
-                                    expected: String(expected),
                                 })}
                                 )
                             </span>
                         </h2>
-                        {stage.subjects.length !== expected && (
-                            <p className="m-4 flex items-start gap-2 rounded-md border border-warning bg-warning/15 p-3 text-sm">
-                                <AlertTriangle
-                                    className="mt-0.5 size-4 shrink-0"
-                                    aria-hidden
-                                />
-                                {t(
-                                    'This stage has :count subjects; :expected are expected.',
-                                    {
-                                        count: String(stage.subjects.length),
-                                        expected: String(expected),
-                                    },
-                                )}
-                            </p>
-                        )}
                         <ul className="divide-y">
-                            {stage.subjects.map((subject) =>
+                            {stage.subjects.filter(matches).map((subject) =>
                                 editing === subject.uuid ? (
                                     <li key={subject.uuid} className="p-4">
                                         <EditSubject
                                             subject={subject}
                                             stage={stage.stage}
                                             stages={stageNumbers}
-                                            teachers={teachers}
                                             onDone={() => setEditing(null)}
                                         />
                                     </li>
@@ -318,13 +291,6 @@ export default function GradesSubjects({
                                             dir="auto"
                                         >
                                             {subject.name}
-                                        </span>
-                                        <span className="text-sm">
-                                            {teacherName(subject.teacher) ?? (
-                                                <Badge variant="destructive">
-                                                    {t('No teacher')}
-                                                </Badge>
-                                            )}
                                         </span>
                                         <div className="ms-auto flex gap-2">
                                             <Button

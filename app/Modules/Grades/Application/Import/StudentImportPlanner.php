@@ -63,7 +63,7 @@ final class StudentImportPlanner
             $reason = match (true) {
                 mb_strlen($name) < 3 || mb_strlen($key) < 3 => __('The name is missing or too short.'),
                 mb_strlen($name) > 160 => __('The name is longer than :max characters.', ['max' => 160]),
-                $stage === null => __('The stage must be 1 or 2.'),
+                $stage === null => __('The stage must be 1, 2 or 3.'),
                 ! $stage->isDivided() && ($section === null || ! $stage->hasSection($section)) => __('The first stage has no sections; leave the section empty.'),
                 $section === null || ! $stage->hasSection($section) => __('The section must be A or B.'),
                 $number !== null && mb_strlen($number) > 40 => __('The student number is longer than :max characters.', ['max' => 40]),

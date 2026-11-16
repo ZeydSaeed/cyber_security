@@ -303,12 +303,12 @@
     },
     {
         "fg": "print-ink",
-        "bg": "background",
+        "bg": "paper",
         "min": 4.5
     },
     {
-        "fg": "print-ink",
-        "bg": "card",
+        "fg": "side-panel-foreground",
+        "bg": "side-panel",
         "min": 4.5
     }
 ]

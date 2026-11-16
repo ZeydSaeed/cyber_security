@@ -3,13 +3,15 @@
 namespace App\Modules\Grades\Domain;
 
 /**
- * The department's two years of study (ADR-0034). Each has its own
- * subjects; only the second is divided into sections.
+ * The department's years of study (ADR-0034). Each has its own subjects;
+ * the first is one group, the second and third (added 2026-11-17, owner's
+ * request) have sections A and B.
  */
 enum Stage: int
 {
     case First = 1;
     case Second = 2;
+    case Third = 3;
 
     /**
      * The sections of the stage (owner's decision, 2026-11-15): the first
@@ -22,7 +24,7 @@ enum Stage: int
     {
         return match ($this) {
             self::First => [Section::A],
-            self::Second => [Section::A, Section::B],
+            self::Second, self::Third => [Section::A, Section::B],
         };
     }
 
@@ -48,6 +50,7 @@ enum Stage: int
         return match ($this) {
             self::First => __('First'),
             self::Second => __('Second'),
+            self::Third => __('Third'),
         };
     }
 
@@ -57,6 +60,7 @@ enum Stage: int
         return match ($this) {
             self::First => __('First stage'),
             self::Second => __('Second stage'),
+            self::Third => __('Third stage'),
         };
     }
 
@@ -81,6 +85,7 @@ enum Stage: int
         return match ($value) {
             '1', 'first', 'الاول', 'اول', 'الاولي', 'اولي' => self::First,
             '2', 'second', 'الثاني', 'ثاني', 'الثانيه', 'ثانيه' => self::Second,
+            '3', 'third', 'الثالث', 'ثالث', 'الثالثه', 'ثالثه' => self::Third,
             default => null,
         };
     }

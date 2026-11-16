@@ -26,9 +26,7 @@ export default function TeacherLogin() {
                 {({ processing, errors }) => (
                     <>
                         <div className="grid gap-2">
-                            <Label htmlFor="code">
-                                {t('Your employee number')}
-                            </Label>
+                            <Label htmlFor="code">{t('Your code')}</Label>
                             <PasswordInput
                                 id="code"
                                 name="code"

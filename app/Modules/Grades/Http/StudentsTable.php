@@ -38,6 +38,7 @@ class StudentsTable extends TableDefinition
             'code' => ['sortable' => false, 'hideable' => true],
             'stage' => ['sortable' => true, 'hideable' => true],
             'section' => ['sortable' => true, 'hideable' => true],
+            'status' => ['sortable' => true, 'hideable' => true],
         ];
     }
 

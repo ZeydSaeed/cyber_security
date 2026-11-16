@@ -74,7 +74,7 @@ it('refuses marks the rules forbid', function (array $overrides, string $constra
     'present without a mark' => [['mark' => null], 'grade_marks_mark_check'],
     'no author' => [['entered_by_teacher_id' => null], 'grade_marks_author_check'],
     'unknown period' => [['period' => 'month_9'], 'grade_marks_period_foreign'],
-    'stage 3' => [['stage' => 3], 'grade_marks_stage_check'],
+    'stage 4' => [['stage' => 4], 'grade_marks_stage_check'],
 ]);
 
 it('refuses two authors at once', function () {
@@ -103,7 +103,7 @@ it('refuses bad students, teachers and periods', function (string $table, array 
         ->toThrow(QueryException::class, $constraint);
 })->with([
     'student in section C' => ['grade_students', ['uuid' => (string) Str::uuid7(), 'full_name' => 'Some Student', 'name_key' => 'some student', 'stage' => 1, 'section' => 'C'], 'grade_students_section_check'],
-    'student in stage 3' => ['grade_students', ['uuid' => (string) Str::uuid7(), 'full_name' => 'Some Student', 'name_key' => 'some student', 'stage' => 3, 'section' => 'A'], 'grade_students_stage_check'],
+    'student in stage 4' => ['grade_students', ['uuid' => (string) Str::uuid7(), 'full_name' => 'Some Student', 'name_key' => 'some student', 'stage' => 4, 'section' => 'A'], 'grade_students_stage_check'],
     'student with a blank name' => ['grade_students', ['uuid' => (string) Str::uuid7(), 'full_name' => '   ', 'name_key' => 'xyz', 'stage' => 1, 'section' => 'A'], 'grade_students_full_name_check'],
     'teacher with a raw code' => ['grade_teachers', ['uuid' => (string) Str::uuid7(), 'name' => 'Teacher', 'code_digest' => str_pad('my-code', 64, 'x')], 'grade_teachers_code_digest_check'],
     'a second row for one period' => ['grade_periods', ['period' => 'month_1', 'status' => 'closed'], 'grade_periods_period_unique'],

@@ -28,8 +28,8 @@ export default function PrintCodes({
     return (
         <>
             <Head title={`${t('Student codes')} · ${place}`} />
-            <PrintPage title={t('Student codes')} subtitle={place}>
-                <p className="mb-4 text-sm text-muted-foreground print:hidden">
+            <PrintPage title={t('Student codes')} subtitle={place} paper>
+                <p className="mb-4 text-sm print:hidden">
                     {t(
                         'Cut along the lines and give each student their own slip. Keep the codes private.',
                     )}

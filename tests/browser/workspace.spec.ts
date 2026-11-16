@@ -89,7 +89,8 @@ for (const locale of ['ar', 'en']) {
             page,
         }) => {
             await open(page, locale, '/admin');
-            await page.locator('[data-test="open-search"]').click();
+            // The toolbar has no search button since 2026-11-16: Ctrl+K.
+            await page.keyboard.press('Control+k');
             await page.locator('[data-test="command-input"]').fill('Person 05');
 
             const person = page.locator('[data-result="users"]').first();
@@ -106,12 +107,14 @@ for (const locale of ['ar', 'en']) {
 
         test('Esc closes the search and gives focus back', async ({ page }) => {
             await open(page, locale, '/admin');
-            const button = page.locator('[data-test="open-search"]');
-            await button.click();
+            // Focus on a control first, which must have it again after Esc.
+            const home = page.locator('[data-test="home"]');
+            await home.focus();
+            await page.keyboard.press('Control+k');
             await expect(palette(page)).toBeVisible();
             await page.keyboard.press('Escape');
             await expect(palette(page)).toBeHidden();
-            await expect(button).toBeFocused();
+            await expect(home).toBeFocused();
         });
 
         test('single-key shortcuts work, not while typing, and can be turned off', async ({

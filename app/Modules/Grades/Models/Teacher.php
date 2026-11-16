@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $uuid
  * @property string $name
+ * @property string|null $specialty
  * @property string $code_digest
  * @property string|null $code_encrypted
  * @property bool $is_active

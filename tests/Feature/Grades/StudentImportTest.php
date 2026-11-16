@@ -82,7 +82,7 @@ it('rejects bad rows with their reason and row number, and imports the rest', fu
         ['name', 'stage', 'section', 'number'],
         ['Good Student One', '1', 'A', ''],
         ['Al', '1', 'A', ''],
-        ['Third Year Student', '3', 'A', ''],
+        ['Fourth Year Student', '4', 'A', ''],
         ['Section C Student', '2', 'C', ''],
         ['First Stage Section B', '1', 'B', ''],
         ['Good Student One', '1', '', ''],
@@ -95,7 +95,7 @@ it('rejects bad rows with their reason and row number, and imports the rest', fu
     expect(Student::query()->count())->toBe(2)
         ->and($plan->rejected)->toBe([
             ['row' => 3, 'reason' => 'The name is missing or too short.'],
-            ['row' => 4, 'reason' => 'The stage must be 1 or 2.'],
+            ['row' => 4, 'reason' => 'The stage must be 1, 2 or 3.'],
             ['row' => 5, 'reason' => 'The section must be A or B.'],
             ['row' => 6, 'reason' => 'The first stage has no sections; leave the section empty.'],
             ['row' => 7, 'reason' => 'Repeats row 2 of the file.'],

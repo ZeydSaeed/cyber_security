@@ -61,7 +61,8 @@ describe('stage and section', function () {
         ["\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}", Stage::First], // the first
         ["\u{0627}\u{0644}\u{0635}\u{0641} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}", Stage::Second], // the second year
         ["\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}", Stage::First], // the first stage
-        ['3', null],
+        ['4', null],
+        ['3', Stage::Third],
         ['', null],
     ]);
 
