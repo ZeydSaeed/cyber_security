@@ -1,12 +1,22 @@
 import { Form, Head } from '@inertiajs/react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Plus } from 'lucide-react';
+import { useState } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
-import Heading from '@/components/heading';
+import ConfirmAction from '@/components/confirm-action';
 import InputError from '@/components/input-error';
+import PageToolbar, { toolButton } from '@/components/page-toolbar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslations } from '@/hooks/use-translations';
+import { stageLabel } from '../../place';
 
 type Teacher = { uuid: string; name: string; active: boolean };
 type Subject = { uuid: string; name: string; teacher: string | null };
@@ -44,9 +54,114 @@ function TeacherSelect({
     );
 }
 
+/** The stage by its name: "First" or "Second". */
+function StageSelect({
+    id,
+    stages,
+    value,
+}: {
+    id: string;
+    stages: number[];
+    value?: number;
+}) {
+    const { t } = useTranslations();
+
+    return (
+        <select
+            id={id}
+            name="stage"
+            defaultValue={value}
+            className={selectClass}
+        >
+            {stages.map((stage) => (
+                <option key={stage} value={stage}>
+                    {stageLabel(t, stage)}
+                </option>
+            ))}
+        </select>
+    );
+}
+
+/** A subject's name, teacher and stage, changed together. */
+function EditSubject({
+    subject,
+    stage,
+    stages,
+    teachers,
+    onDone,
+}: {
+    subject: Subject;
+    stage: number;
+    stages: number[];
+    teachers: Teacher[];
+    onDone: () => void;
+}) {
+    const { t } = useTranslations();
+
+    return (
+        <Form
+            {...GradesAdminController.updateSubject.form(subject.uuid)}
+            options={{ preserveScroll: true }}
+            onSuccess={onDone}
+            className="grid items-start gap-3 md:grid-cols-3"
+            data-test="edit-subject"
+        >
+            {({ errors, processing }) => (
+                <>
+                    <div className="grid gap-2">
+                        <Label htmlFor={`name-${subject.uuid}`}>
+                            {t('Name')}
+                        </Label>
+                        <Input
+                            id={`name-${subject.uuid}`}
+                            name="name"
+                            defaultValue={subject.name}
+                            required
+                            maxLength={120}
+                            dir="auto"
+                        />
+                        <InputError message={errors.name} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor={`teacher-${subject.uuid}`}>
+                            {t('Teacher')}
+                        </Label>
+                        <TeacherSelect
+                            id={`teacher-${subject.uuid}`}
+                            teachers={teachers}
+                            value={subject.teacher}
+                        />
+                        <InputError message={errors.teacher} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor={`stage-${subject.uuid}`}>
+                            {t('Stage')}
+                        </Label>
+                        <StageSelect
+                            id={`stage-${subject.uuid}`}
+                            stages={stages}
+                            value={stage}
+                        />
+                        <InputError message={errors.stage} />
+                    </div>
+                    <div className="flex gap-2 md:col-span-3">
+                        <Button disabled={processing}>{t('Save')}</Button>
+                        <Button type="button" variant="ghost" onClick={onDone}>
+                            {t('Cancel')}
+                        </Button>
+                    </div>
+                </>
+            )}
+        </Form>
+    );
+}
+
 /**
- * Subjects of each stage and who teaches them (ADR-0034). A subject keeps
- * its stage; its name and teacher can change.
+ * Subjects of each stage and who teaches them (ADR-0034). Each subject is
+ * shown with its teacher; "Edit" changes its name, teacher or stage (the
+ * stage only while it has no marks), and "Delete" removes one with no
+ * marks. The title and "Add a subject" (a dialog) are in the top toolbar
+ * (owner's layout, 2026-11-16).
  */
 export default function GradesSubjects({
     stages,
@@ -58,24 +173,38 @@ export default function GradesSubjects({
     expected: number;
 }) {
     const { t } = useTranslations();
+    const [editing, setEditing] = useState<string | null>(null);
+    const [adding, setAdding] = useState(false);
+    const stageNumbers = stages.map((stage) => stage.stage);
+    const teacherName = (uuid: string | null) =>
+        teachers.find((teacher) => teacher.uuid === uuid)?.name ?? null;
 
     return (
         <>
             <Head title={t('Subjects')} />
-            <div className="flex max-w-4xl flex-col gap-6 p-4">
-                <Heading
-                    title={t('Subjects')}
-                    description={t(
-                        'Each stage has its own subjects, each with one teacher.',
-                    )}
-                />
-
-                <section className="rounded-lg border bg-card p-4">
-                    <h2 className="mb-4 font-semibold">{t('Add a subject')}</h2>
+            <PageToolbar title={t('Subjects')}>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className={`h-7 ${toolButton}`}
+                    onClick={() => setAdding(true)}
+                    data-test="add-subject-button"
+                >
+                    <Plus aria-hidden />
+                    {t('Add a subject')}
+                </Button>
+            </PageToolbar>
+            <Dialog open={adding} onOpenChange={setAdding}>
+                <DialogContent className="bg-card" data-test="subject-dialog">
+                    <DialogTitle>{t('Add a subject')}</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {t('Stage, name and teacher.')}
+                    </DialogDescription>
                     <Form
                         {...GradesAdminController.storeSubject.form()}
-                        resetOnSuccess={['name']}
-                        className="grid gap-4 md:grid-cols-3"
+                        options={{ preserveScroll: true }}
+                        onSuccess={() => setAdding(false)}
+                        className="grid gap-4"
                         data-test="add-subject"
                     >
                         {({ errors, processing }) => (
@@ -84,22 +213,10 @@ export default function GradesSubjects({
                                     <Label htmlFor="new-stage">
                                         {t('Stage')}
                                     </Label>
-                                    <select
+                                    <StageSelect
                                         id="new-stage"
-                                        name="stage"
-                                        className={selectClass}
-                                    >
-                                        {stages.map((stage) => (
-                                            <option
-                                                key={stage.stage}
-                                                value={stage.stage}
-                                            >
-                                                {t('Stage :stage', {
-                                                    stage: String(stage.stage),
-                                                })}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        stages={stageNumbers}
+                                    />
                                     <InputError message={errors.stage} />
                                 </div>
                                 <div className="grid gap-2">
@@ -125,16 +242,24 @@ export default function GradesSubjects({
                                     />
                                     <InputError message={errors.teacher} />
                                 </div>
-                                <div>
+                                <div className="flex gap-2">
                                     <Button disabled={processing}>
                                         {t('Add subject')}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => setAdding(false)}
+                                    >
+                                        {t('Cancel')}
                                     </Button>
                                 </div>
                             </>
                         )}
                     </Form>
-                </section>
-
+                </DialogContent>
+            </Dialog>
+            <div className="flex max-w-4xl flex-col gap-6 p-4">
                 {stages.map((stage) => (
                     <section
                         key={stage.stage}
@@ -145,7 +270,7 @@ export default function GradesSubjects({
                             id={`subjects-stage-${stage.stage}`}
                             className="border-b p-4 font-semibold"
                         >
-                            {t('Stage :stage', { stage: String(stage.stage) })}{' '}
+                            {stageLabel(t, stage.stage)}{' '}
                             <span className="text-sm font-normal text-muted-foreground">
                                 (
                                 {t(':count of :expected subjects', {
@@ -171,63 +296,72 @@ export default function GradesSubjects({
                             </p>
                         )}
                         <ul className="divide-y">
-                            {stage.subjects.map((subject) => (
-                                <li key={subject.uuid} className="p-4">
-                                    <Form
-                                        {...GradesAdminController.updateSubject.form(
-                                            subject.uuid,
-                                        )}
-                                        options={{ preserveScroll: true }}
-                                        className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]"
+                            {stage.subjects.map((subject) =>
+                                editing === subject.uuid ? (
+                                    <li key={subject.uuid} className="p-4">
+                                        <EditSubject
+                                            subject={subject}
+                                            stage={stage.stage}
+                                            stages={stageNumbers}
+                                            teachers={teachers}
+                                            onDone={() => setEditing(null)}
+                                        />
+                                    </li>
+                                ) : (
+                                    <li
+                                        key={subject.uuid}
+                                        className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4"
+                                        data-test="subject-row"
                                     >
-                                        {({ errors, processing }) => (
-                                            <>
-                                                <div className="grid gap-2">
-                                                    <Label
-                                                        htmlFor={`name-${subject.uuid}`}
+                                        <span
+                                            className="min-w-40 font-medium"
+                                            dir="auto"
+                                        >
+                                            {subject.name}
+                                        </span>
+                                        <span className="text-sm">
+                                            {teacherName(subject.teacher) ?? (
+                                                <Badge variant="destructive">
+                                                    {t('No teacher')}
+                                                </Badge>
+                                            )}
+                                        </span>
+                                        <div className="ms-auto flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                    setEditing(subject.uuid)
+                                                }
+                                                data-test="edit-subject-button"
+                                            >
+                                                {t('Edit')}
+                                            </Button>
+                                            <ConfirmAction
+                                                trigger={
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-destructive-text"
                                                     >
-                                                        {t('Name')}
-                                                    </Label>
-                                                    <Input
-                                                        id={`name-${subject.uuid}`}
-                                                        name="name"
-                                                        defaultValue={
-                                                            subject.name
-                                                        }
-                                                        required
-                                                        maxLength={120}
-                                                        dir="auto"
-                                                    />
-                                                    <InputError
-                                                        message={errors.name}
-                                                    />
-                                                </div>
-                                                <div className="grid gap-2">
-                                                    <Label
-                                                        htmlFor={`teacher-${subject.uuid}`}
-                                                    >
-                                                        {t('Teacher')}
-                                                    </Label>
-                                                    <TeacherSelect
-                                                        id={`teacher-${subject.uuid}`}
-                                                        teachers={teachers}
-                                                        value={subject.teacher}
-                                                    />
-                                                    <InputError
-                                                        message={errors.teacher}
-                                                    />
-                                                </div>
-                                                <Button
-                                                    variant="outline"
-                                                    disabled={processing}
-                                                >
-                                                    {t('Save')}
-                                                </Button>
-                                            </>
-                                        )}
-                                    </Form>
-                                </li>
-                            ))}
+                                                        {t('Delete')}
+                                                    </Button>
+                                                }
+                                                title={t('Delete :name?', {
+                                                    name: subject.name,
+                                                })}
+                                                description={t(
+                                                    'A subject that already has marks cannot be deleted.',
+                                                )}
+                                                confirmLabel={t('Delete')}
+                                                form={GradesAdminController.destroySubject.form(
+                                                    subject.uuid,
+                                                )}
+                                            />
+                                        </div>
+                                    </li>
+                                ),
+                            )}
                         </ul>
                     </section>
                 ))}

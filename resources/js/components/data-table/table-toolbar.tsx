@@ -1,6 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
+import { toolbarControls, toolButton } from '@/components/page-toolbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,6 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
 
 export type FilterDef = {
     key: string;
@@ -22,7 +24,9 @@ const ALL = '__all__';
 
 /**
  * Search (sent after a short pause in typing) and filters for a
- * server-side table, plus room for the column and view menus.
+ * server-side table, plus room for the column and view menus. `compact`
+ * fits it in the top toolbar (PageToolbar): one line of small controls,
+ * their labels kept for screen readers only.
  */
 export default function TableToolbar({
     search,
@@ -32,6 +36,7 @@ export default function TableToolbar({
     onFilter,
     onClear,
     children,
+    compact = false,
 }: {
     search: string;
     filters: FilterDef[];
@@ -40,6 +45,7 @@ export default function TableToolbar({
     onFilter: (key: string, value: string | null) => void;
     onClear: () => void;
     children?: ReactNode;
+    compact?: boolean;
 }) {
     const { t } = useTranslations();
     const searchId = useId();
@@ -67,10 +73,17 @@ export default function TableToolbar({
 
     const active = search !== '' || Object.keys(values).length > 0;
 
+    const labelClass = compact ? 'sr-only' : 'text-sm font-medium';
+
     return (
-        <div className="flex flex-wrap items-end gap-3">
-            <div className="grid gap-1.5">
-                <label htmlFor={searchId} className="text-sm font-medium">
+        <div
+            className={cn(
+                'flex flex-wrap gap-3',
+                compact ? `items-center gap-2 ${toolbarControls}` : 'items-end',
+            )}
+        >
+            <div className={compact ? 'grid' : 'grid gap-1.5'}>
+                <label htmlFor={searchId} className={labelClass}>
                     {t('Search')}
                 </label>
                 <div className="relative">
@@ -83,7 +96,10 @@ export default function TableToolbar({
                         type="search"
                         value={text}
                         onChange={(event) => setText(event.target.value)}
-                        className="w-56 ps-8"
+                        className={
+                            compact ? 'h-8 w-44 bg-card ps-8' : 'w-56 ps-8'
+                        }
+                        placeholder={compact ? t('Search') : undefined}
                         data-test="table-search"
                         // "/" moves focus here (keyboard shortcuts, #17).
                         data-shortcut-search
@@ -92,10 +108,13 @@ export default function TableToolbar({
             </div>
 
             {filters.map((filter) => (
-                <div key={filter.key} className="grid gap-1.5">
+                <div
+                    key={filter.key}
+                    className={compact ? 'grid' : 'grid gap-1.5'}
+                >
                     <span
                         id={`${searchId}-${filter.key}`}
-                        className="text-sm font-medium"
+                        className={labelClass}
                     >
                         {filter.label}
                     </span>
@@ -106,7 +125,8 @@ export default function TableToolbar({
                         }
                     >
                         <SelectTrigger
-                            className="w-44"
+                            size={compact ? 'sm' : 'default'}
+                            className={compact ? 'w-36 bg-card' : 'w-44'}
                             aria-labelledby={`${searchId}-${filter.key}`}
                             data-test={`filter-${filter.key}`}
                         >
@@ -128,13 +148,24 @@ export default function TableToolbar({
             ))}
 
             {active && (
-                <Button variant="ghost" onClick={onClear}>
+                <Button
+                    variant={compact ? 'outline' : 'ghost'}
+                    size={compact ? 'sm' : 'default'}
+                    // In the toolbar, a toolbar button: the page's own text
+                    // colour would not read on the toolbar in dark mode.
+                    className={compact ? toolButton : undefined}
+                    onClick={onClear}
+                >
                     <X aria-hidden />
                     {t('Clear filters')}
                 </Button>
             )}
 
-            <div className="ms-auto flex items-center gap-2">{children}</div>
+            {children && (
+                <div className="ms-auto flex items-center gap-2">
+                    {children}
+                </div>
+            )}
         </div>
     );
 }

@@ -67,12 +67,26 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Teacher allowed to sign in');
         case 'grades.teacher_deactivated':
             return t('Teacher stopped from signing in');
+        case 'grades.teacher_deleted':
+            return t('Teacher deleted');
+        case 'grades.teacher_codes_viewed':
+            return t('Employee numbers of the teachers shown');
         case 'grades.subject_created':
             return t('Subject added');
         case 'grades.subject_renamed':
             return t('Subject renamed');
         case 'grades.subject_assigned':
             return t('Subject teacher changed');
+        case 'grades.subject_stage_changed':
+            return t('Subject stage changed');
+        case 'grades.subject_deleted':
+            return t('Subject deleted');
+        case 'grades.student_created':
+            return t('Student added');
+        case 'grades.student_updated':
+            return t('Student changed');
+        case 'grades.student_deleted':
+            return t('Student deleted');
         case 'grades.window_opened':
             return t('Mark entry opened');
         case 'grades.window_closed':
@@ -97,6 +111,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Student codes issued');
         case 'grades.student_code_replaced':
             return t('Student code replaced');
+        case 'grades.student_codes_listed':
+            return t('Student codes shown in the list');
         case 'grades.student_codes_viewed':
             return t('Student codes shown for printing');
         case 'grades.student_login':

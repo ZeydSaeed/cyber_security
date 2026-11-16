@@ -20,10 +20,16 @@ export default function ResultCard({
     /** The student's own page shows the name at the top already. */
     showName?: boolean;
     /**
-     * The owner's printable card shows the name, stage, section and number
-     * on one line (owner's request, 2026-11-16).
+     * The owner's printable card shows the name, stage, section and code
+     * spread across one line (owner's request, 2026-11-16).
      */
-    place?: { stage: number; section: string; divided: boolean };
+    place?: {
+        stage: number;
+        section: string;
+        divided: boolean;
+        /** The student's code, shown as their ID. */
+        code?: string | null;
+    };
 }) {
     const { t } = useTranslations();
 
@@ -56,7 +62,7 @@ export default function ResultCard({
         <>
             {place ? (
                 <dl
-                    className="mb-6 flex flex-wrap items-baseline gap-x-8 gap-y-2"
+                    className="mb-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2"
                     data-test="card-details"
                 >
                     {[
@@ -72,7 +78,7 @@ export default function ResultCard({
                         },
                         {
                             label: t('Student ID'),
-                            value: student.number ?? '—',
+                            value: place.code ?? student.number ?? '—',
                         },
                     ].map((item) => (
                         <div key={item.label} className="flex gap-2">

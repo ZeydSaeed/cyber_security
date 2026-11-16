@@ -4,15 +4,18 @@ namespace App\Modules\Grades\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Models\GradeMark;
+use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Creates a teacher, or changes a teacher's name, code or whether they may
- * sign in (ADR-0034). The owner sets the code; it is kept only as a digest
- * and never written to the audit trail. Changing the code or deactivating
+ * Creates a teacher, changes a teacher's name, code or whether they may
+ * sign in, or deletes one (ADR-0034). The owner sets the code (the
+ * employee number); it is kept as a digest and encrypted (TeacherCodes),
+ * never written to the audit trail. Changing the code or deactivating
  * raises the lock version, which ends the teacher's open sessions (G2).
  * Repeating the same change changes nothing and records nothing.
  */
@@ -30,7 +33,12 @@ class SaveTeacher
             $digest = $this->freeDigest($code, null);
 
             $teacher = new Teacher;
-            $teacher->forceFill(['name' => $name, 'code_digest' => $digest, 'is_active' => true])->save();
+            $teacher->forceFill([
+                'name' => $name,
+                'code_digest' => $digest,
+                'code_encrypted' => $this->codes->encrypt($code),
+                'is_active' => true,
+            ])->save();
 
             $this->audit->record('grades.teacher_created', $teacher, ['name' => $name], actor: $actor);
 
@@ -61,10 +69,19 @@ class SaveTeacher
             $digest = $this->freeDigest($code, $locked->id);
 
             if (hash_equals($locked->code_digest, $digest)) {
+                // Same code: keep a copy if the teacher was saved before copies were kept.
+                if ($locked->code_encrypted === null) {
+                    $locked->forceFill(['code_encrypted' => $this->codes->encrypt($code)])->save();
+                }
+
                 return;
             }
 
-            $locked->forceFill(['code_digest' => $digest, 'lock_version' => $locked->lock_version + 1])->save();
+            $locked->forceFill([
+                'code_digest' => $digest,
+                'code_encrypted' => $this->codes->encrypt($code),
+                'lock_version' => $locked->lock_version + 1,
+            ])->save();
             $this->audit->record('grades.teacher_code_changed', $locked, actor: $actor);
         });
     }
@@ -78,6 +95,25 @@ class SaveTeacher
 
             $locked->forceFill(['is_active' => $active, 'lock_version' => $locked->lock_version + 1])->save();
             $this->audit->record($active ? 'grades.teacher_activated' : 'grades.teacher_deactivated', $locked, actor: $actor);
+        });
+    }
+
+    /**
+     * Deletes a teacher who has entered no marks; their subjects are left
+     * without a teacher. A teacher with marks keeps them signed and can
+     * only be stopped, so the marks always name who entered them.
+     */
+    public function delete(User $actor, Teacher $teacher): void
+    {
+        $this->change($actor, $teacher, function (Teacher $locked) use ($actor): void {
+            if (GradeMark::query()->where('entered_by_teacher_id', $locked->id)->exists()) {
+                throw new DomainRuleViolation(__('This teacher has entered marks and cannot be deleted. Stop their signing in instead.'), 'teacher');
+            }
+
+            $subjects = Subject::query()->where('teacher_id', $locked->id)->pluck('name')->all();
+            Subject::query()->where('teacher_id', $locked->id)->update(['teacher_id' => null]);
+            $this->audit->record('grades.teacher_deleted', $locked, ['name' => $locked->name, 'subjects' => $subjects], actor: $actor);
+            $locked->delete();
         });
     }
 

@@ -28,7 +28,13 @@ export function notificationText(t: Translate, data: NotificationData): string {
                 {
                     teacher: data.teacher ?? '',
                     subject: data.subject ?? '',
-                    stage: data.stage ?? '',
+                    // Stored as a number; shown by name (owner, 2026-11-16).
+                    stage:
+                        data.stage === '1'
+                            ? t('First')
+                            : data.stage === '2'
+                              ? t('Second')
+                              : (data.stage ?? ''),
                     section: data.section ?? '',
                 },
             );

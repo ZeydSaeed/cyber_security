@@ -15,13 +15,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * A teacher who enters marks with a code the owner sets (ADR-0034). Not a
  * user: no password, no second factor, and reaches only mark entry, on the
- * `teacher` guard. The code is kept as an HMAC digest (TeacherCodes), never
- * as written; there is no "remember me".
+ * `teacher` guard. The code (the employee number) is kept as an HMAC digest
+ * to find the teacher and encrypted so the owner can see it again
+ * (TeacherCodes); there is no "remember me".
  *
  * @property int $id
  * @property string $uuid
  * @property string $name
  * @property string $code_digest
+ * @property string|null $code_encrypted
  * @property bool $is_active
  * @property CarbonImmutable|null $last_seen_at
  * @property int $lock_version
@@ -46,7 +48,7 @@ class Teacher extends Model implements Authenticatable
     protected $table = 'grade_teachers';
 
     /** @var list<string> */
-    protected $hidden = ['code_digest'];
+    protected $hidden = ['code_digest', 'code_encrypted'];
 
     /**
      * @return array<string, string>

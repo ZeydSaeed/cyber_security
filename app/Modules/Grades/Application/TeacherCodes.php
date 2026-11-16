@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Application;
 
 use App\Platform\Exceptions\DomainRuleViolation;
+use Illuminate\Support\Facades\Crypt;
 use RuntimeException;
 
 /**
@@ -11,6 +12,9 @@ use RuntimeException;
  * checked against guesses without the key, and a teacher is found by one
  * indexed lookup. The key is GRADES_CODE_KEY, or one derived from APP_KEY
  * (rotating APP_KEY then means setting every code again).
+ *
+ * Since 2026-11-16 the code is the teacher's employee number, and a copy
+ * encrypted with the application key lets the owner see it again.
  */
 final class TeacherCodes
 {
@@ -21,6 +25,16 @@ final class TeacherCodes
     public function digest(string $code): string
     {
         return hash_hmac('sha256', self::normalise($code), $this->key());
+    }
+
+    public function encrypt(string $code): string
+    {
+        return Crypt::encryptString(self::normalise($code));
+    }
+
+    public function decrypt(string $encrypted): string
+    {
+        return Crypt::decryptString($encrypted);
     }
 
     /**

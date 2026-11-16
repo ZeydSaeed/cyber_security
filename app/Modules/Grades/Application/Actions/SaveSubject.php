@@ -4,6 +4,7 @@ namespace App\Modules\Grades\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
@@ -11,8 +12,10 @@ use App\Platform\Exceptions\DomainRuleViolation;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Creates a subject in a stage, or changes its name or teacher (ADR-0034).
- * A subject's stage never changes: its marks belong to that stage.
+ * Creates a subject in a stage, changes its name, teacher or stage, or
+ * deletes it (ADR-0034). Its marks belong to its stage: a subject with
+ * marks keeps its stage and cannot be deleted (the database refuses both
+ * too, through the marks' composite foreign key).
  */
 class SaveSubject
 {
@@ -73,6 +76,52 @@ class SaveSubject
 
             return $locked;
         }, 3);
+    }
+
+    public function changeStage(User $actor, Subject $subject, Stage $stage): Subject
+    {
+        return DB::transaction(function () use ($actor, $subject, $stage): Subject {
+            $locked = Subject::query()->whereKey($subject->id)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            if ($locked->stage === $stage) {
+                return $locked;
+            }
+
+            if ($this->hasMarks($locked)) {
+                throw new DomainRuleViolation(__('This subject already has marks, so its stage cannot change.'), 'stage');
+            }
+
+            $this->assertFreeName($stage, $locked->name, $locked->id);
+            $old = $locked->stage->value;
+            $locked->forceFill([
+                'stage' => $stage,
+                'sort_order' => (int) Subject::query()->where('stage', $stage->value)->max('sort_order') + 1,
+            ])->save();
+            $this->audit->record('grades.subject_stage_changed', $locked, [], ['stage' => ['from' => $old, 'to' => $stage->value]], actor: $actor);
+
+            return $locked;
+        }, 3);
+    }
+
+    public function delete(User $actor, Subject $subject): void
+    {
+        DB::transaction(function () use ($actor, $subject): void {
+            $locked = Subject::query()->whereKey($subject->id)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            if ($this->hasMarks($locked)) {
+                throw new DomainRuleViolation(__('This subject already has marks and cannot be deleted.'), 'subject');
+            }
+
+            $this->audit->record('grades.subject_deleted', $locked, ['stage' => $locked->stage->value, 'name' => $locked->name], actor: $actor);
+            $locked->delete();
+        }, 3);
+    }
+
+    private function hasMarks(Subject $subject): bool
+    {
+        return GradeMark::query()->where('subject_id', $subject->id)->exists();
     }
 
     private function validName(string $name): string

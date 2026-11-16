@@ -40,6 +40,27 @@ enum Stage: int
     }
 
     /**
+     * The stage by its ordinal, never its number (owner's request,
+     * 2026-11-16): "First" or "Second", translated.
+     */
+    public function name(): string
+    {
+        return match ($this) {
+            self::First => __('First'),
+            self::Second => __('Second'),
+        };
+    }
+
+    /** "First stage" or "Second stage", translated. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::First => __('First stage'),
+            self::Second => __('Second stage'),
+        };
+    }
+
+    /**
      * @return list<int>
      */
     public static function values(): array

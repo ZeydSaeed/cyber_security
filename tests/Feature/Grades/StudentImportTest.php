@@ -155,7 +155,7 @@ it('will not move a student with marks to the other stage', function () {
 
     $plan = app(ImportStudents::class)->apply($this->owner, $file, 'csv');
 
-    expect($plan->rejected)->toBe([['row' => 2, 'reason' => 'This student already has marks in stage 1 and cannot change stage.']])
+    expect($plan->rejected)->toBe([['row' => 2, 'reason' => 'This student already has marks in the First stage and cannot change stage.']])
         ->and($student->fresh()?->stage)->toBe(Stage::First);
 });
 

@@ -20,6 +20,7 @@ export default function PrintStudent(card: {
     pass_mark: number;
     subjects: { uuid: string; name: string }[];
     student: ResultRow;
+    code: string | null;
 }) {
     const { t } = useTranslations();
     const { name } = usePage<{ name: string }>().props;
@@ -69,7 +70,7 @@ export default function PrintStudent(card: {
                     pass_mark={pass_mark}
                     subjects={subjects}
                     student={student}
-                    place={{ stage, section, divided }}
+                    place={{ stage, section, divided, code: card.code }}
                 />
             </PrintPage>
         </>

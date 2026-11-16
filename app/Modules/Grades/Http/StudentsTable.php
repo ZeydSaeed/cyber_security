@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Http;
 
 use App\Access\Permission;
+use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\NameKey;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -12,8 +13,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * The owner's student list (ADR-0026, ADR-0034): server-side search by name
- * (spelling differences ignored, as the import does) or number, filters by
- * stage and section, sorting and paging.
+ * (spelling differences ignored, as the import does), number or code
+ * (compared by its digest, never stored as written), filters by stage and
+ * section, sorting and paging. The code column cannot be sorted: codes are
+ * kept encrypted.
  *
  * @extends TableDefinition<Student>
  */
@@ -32,7 +35,7 @@ class StudentsTable extends TableDefinition
     {
         return [
             'full_name' => ['sortable' => true, 'hideable' => false],
-            'student_number' => ['sortable' => true, 'hideable' => true],
+            'code' => ['sortable' => false, 'hideable' => true],
             'stage' => ['sortable' => true, 'hideable' => true],
             'section' => ['sortable' => true, 'hideable' => true],
         ];
@@ -63,6 +66,7 @@ class StudentsTable extends TableDefinition
         $query->where(function (Builder $where) use ($key, $search): void {
             $this->whereContains($where, ['name_key'], $key);
             $where->orWhere('student_number', trim($search));
+            $where->orWhere('code_digest', app(StudentCodes::class)->digest($search));
         });
     }
 

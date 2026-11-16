@@ -7,6 +7,7 @@ use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\Queries\TeacherSheets;
 use App\Modules\Grades\Application\ResultsWorkbook;
+use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -65,9 +66,16 @@ class ResultsController
         return Inertia::render('modules/grades/pages/print/section', $this->sheets->section($stage, $section));
     }
 
-    public function printStudent(Student $student): Response
+    /**
+     * The owner's card shows the student's code as their ID (owner's
+     * request, 2026-11-16): the card is handed to the student.
+     */
+    public function printStudent(Student $student, StudentCodes $codes): Response
     {
-        return Inertia::render('modules/grades/pages/print/student', $this->sheets->student($student));
+        return Inertia::render('modules/grades/pages/print/student', [
+            ...$this->sheets->student($student),
+            'code' => $student->code_encrypted === null ? null : $codes->decrypt($student->code_encrypted),
+        ]);
     }
 
     public function export(Request $request, ResultsWorkbook $workbook, AuditLogger $audit, #[CurrentUser] User $user): BinaryFileResponse
@@ -78,7 +86,9 @@ class ResultsController
         @mkdir(dirname($path), 0700, true);
 
         $workbook->write($path, $sheet, [
-            'title' => __('Stage :stage, section :section', ['stage' => $stage->value, 'section' => $section->value]),
+            'title' => $stage->isDivided()
+                ? __(':stage · section :section', ['stage' => $stage->label(), 'section' => $section->value])
+                : $stage->label(),
             'number' => __('Number'),
             'name' => __('Name'),
             'total' => __('Total out of :max', ['max' => $sheet['students'][0]['maximum'] ?? count($sheet['subjects']) * 100]),

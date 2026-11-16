@@ -99,6 +99,7 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `chart-4`: success-600 = oklch(0.53 0.128 150)
 - `chart-5`: danger-600 = oklch(0.53 0.133 29.5)
 - `ink`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
+- `print-ink`: neutral-1000 = oklch(0 0 0). Set in palette.json "roles".
 - `highlight-soft`: accent-100 = oklch(0.955 0.035 74.1). Set in palette.json "roles".
 - `highlight-soft-end`: mix(accent-100 50%, accent-200) = oklch(0.93 0.056 74.1). Set in palette.json "roles".
 - `highlight-soft-border`: accent-200 = oklch(0.905 0.077 74.1). Set in palette.json "roles".
@@ -171,6 +172,8 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 11.80:1 (min 4.5) foreground on sheet
 - PASS 7.02:1 (min 4.5) muted-foreground on sheet
 - PASS 8.58:1 (min 4.5) destructive-text on sheet
+- PASS 16.36:1 (min 4.5) print-ink on background
+- PASS 21.00:1 (min 4.5) print-ink on card
 
 ## Roles: dark
 
@@ -219,6 +222,7 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `chart-4`: success-400 = oklch(0.72 0.115 150)
 - `chart-5`: danger-400 = oklch(0.72 0.099 29.5)
 - `ink`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `print-ink`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
 - `highlight-soft`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
 - `highlight-soft-end`: accent-900 = oklch(0.28 0.06 74.1). Set in palette.json "roles".
 - `highlight-soft-border`: accent-800 = oklch(0.37 0.078 74.1). Set in palette.json "roles".
@@ -289,3 +293,5 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 13.89:1 (min 4.5) foreground on sheet
 - PASS 8.76:1 (min 4.5) muted-foreground on sheet
 - PASS 8.47:1 (min 4.5) destructive-text on sheet
+- PASS 17.15:1 (min 4.5) print-ink on background
+- PASS 13.89:1 (min 4.5) print-ink on card

@@ -17,7 +17,8 @@
       and Maroona toolbar, table heads and headings (L3 = `highlight`).
     - Project roles (§6.5): `ink`, `sheet` (the result card's off-white
       table), `highlight-soft`, `highlight-soft-end`,
-      `highlight-soft-border`. Extra L3 tokens: `grid-line`, `toolbar`,
+      `highlight-soft-border`, `print-ink` (black text and lines on printed
+      code slips, 2026-11-16). Extra L3 tokens: `grid-line`, `toolbar`,
       `heading`.
     - Gradients: page (light only), table-head, sidebar, toolbar, heading.
 - Builds on: ADR-0024 (tokens, contrast test) and ADR-0025 (shared components).

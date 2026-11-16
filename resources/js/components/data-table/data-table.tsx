@@ -20,7 +20,9 @@ export type ColumnDef<Row> = {
  * pages; this renders one page in the person's column order (#3), with
  * sortable headers (aria-sort), optional row selection (#23) and a row
  * action (#16). On narrow screens the table scrolls inside its own region,
- * which the keyboard can reach. Texts arrive translated.
+ * which the keyboard can reach. Texts arrive translated. `bordered` draws
+ * inner and outer grid lines on the card colour, and `numberFrom` adds a
+ * "#" column counting from that number (owner's layout, 2026-11-16).
  */
 export default function DataTable<Row>({
     caption,
@@ -37,6 +39,9 @@ export default function DataTable<Row>({
     busy = false,
     filtered = false,
     onClearFilters,
+    bordered = false,
+    numberFrom,
+    actionsLabel,
 }: {
     caption: string;
     columns: ColumnDef<Row>[];
@@ -52,6 +57,10 @@ export default function DataTable<Row>({
     busy?: boolean;
     filtered?: boolean;
     onClearFilters?: () => void;
+    bordered?: boolean;
+    numberFrom?: number | null;
+    /** A visible header for the row actions' column; hidden when absent. */
+    actionsLabel?: string;
 }) {
     const { t } = useTranslations();
     const captionId = useId();
@@ -66,6 +75,7 @@ export default function DataTable<Row>({
     const selectedOnPage = pageIds.filter((id) => selected?.includes(id));
     const allSelected =
         pageIds.length > 0 && selectedOnPage.length === pageIds.length;
+    const numbered = numberFrom !== undefined;
 
     const toggleAll = () => {
         if (!onSelectedChange || !selected) {
@@ -121,12 +131,18 @@ export default function DataTable<Row>({
             // Scrollable on narrow screens, so reachable by keyboard.
             tabIndex={0}
             data-slot="data-table"
-            className="overflow-x-auto rounded-xl border focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+            className={cn(
+                'overflow-x-auto rounded-xl border focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+                bordered && 'border-grid-line bg-card',
+            )}
         >
             <table
                 aria-busy={busy || undefined}
                 className={cn(
                     'w-full min-w-[40rem] text-sm transition-opacity',
+                    // The outer line is the region's own border.
+                    bordered &&
+                        'border-collapse border-hidden [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line',
                     busy && 'opacity-60',
                 )}
             >
@@ -135,6 +151,14 @@ export default function DataTable<Row>({
                 </caption>
                 <thead className="bg-table-head text-start text-table-head-foreground">
                     <tr className="border-b">
+                        {numbered && (
+                            <th
+                                scope="col"
+                                className="w-12 px-4 py-3 text-start font-medium"
+                            >
+                                #
+                            </th>
+                        )}
                         {selectable && (
                             <th scope="col" className="w-10 px-4 py-3">
                                 <Checkbox
@@ -206,14 +230,21 @@ export default function DataTable<Row>({
                             );
                         })}
                         {rowAction && (
-                            <th scope="col" className="px-4 py-3">
-                                <span className="sr-only">{t('Actions')}</span>
+                            <th
+                                scope="col"
+                                className="px-4 py-3 text-start font-medium"
+                            >
+                                {actionsLabel ?? (
+                                    <span className="sr-only">
+                                        {t('Actions')}
+                                    </span>
+                                )}
                             </th>
                         )}
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row) => {
+                    {rows.map((row, index) => {
                         const id = rowId(row);
                         const isSelected = selected?.includes(id) ?? false;
 
@@ -227,6 +258,11 @@ export default function DataTable<Row>({
                                     isSelected && 'bg-table-row-selected',
                                 )}
                             >
+                                {numbered && (
+                                    <td className="px-4 py-3 text-muted-foreground tabular-nums">
+                                        {(numberFrom ?? 1) + index}
+                                    </td>
+                                )}
                                 {selectable && (
                                     <td className="px-4 py-3">
                                         <Checkbox

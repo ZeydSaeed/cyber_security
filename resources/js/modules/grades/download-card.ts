@@ -12,6 +12,8 @@ export type CardData = {
     pass_mark: number;
     subjects: { uuid: string; name: string }[];
     student: ResultRow;
+    /** The student's code, shown as their ID on the owner's card. */
+    code?: string | null;
 };
 
 /**
@@ -115,19 +117,22 @@ export async function downloadResultCard(
     ctx.lineTo(width - pad, 240);
     ctx.stroke();
 
-    // Details on one line.
-    const details: [string, string][] = [
+    // Details on one line, spread from edge to edge (owner, 2026-11-16).
+    const details = [
         [t('Name'), student.name],
         [t('Stage'), stageName(t, card.stage)],
         [t('Section'), card.divided ? card.section : '—'],
-        [t('Student ID'), student.number ?? '—'],
-    ];
+        [t('Student ID'), card.code ?? student.number ?? '—'],
+    ].map(([label, value]) => `${label}: ${value}`);
+    ctx.font = `600 26px ${font}`;
+    const widths = details.map((item) => ctx.measureText(item).width);
+    const used = widths.reduce((sum, w) => sum + w, 0);
+    const gap = Math.max(32, (width - pad * 2 - used) / (details.length - 1));
     let cursor = pad;
-    for (const [label, value] of details) {
-        const item = `${label}: ${value}`;
+    details.forEach((item, i) => {
         text(item, x(cursor), 310, 26, { weight: 600 });
-        cursor += ctx.measureText(item).width + 56;
-    }
+        cursor += widths[i] + gap;
+    });
 
     // Table: subject, mark, status.
     const tableWidth = width - pad * 2;

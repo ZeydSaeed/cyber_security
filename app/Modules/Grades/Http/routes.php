@@ -50,6 +50,10 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->middleware('throttle:60,1')
             ->whereUuid('teacher')
             ->name('teachers.update');
+        Route::delete('teachers/{teacher}', [GradesAdminController::class, 'destroyTeacher'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('teacher')
+            ->name('teachers.destroy');
 
         Route::get('subjects', [GradesAdminController::class, 'subjects'])->name('subjects');
         Route::post('subjects', [GradesAdminController::class, 'storeSubject'])->middleware('throttle:60,1')->name('subjects.store');
@@ -57,6 +61,10 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->middleware('throttle:60,1')
             ->whereUuid('subject')
             ->name('subjects.update');
+        Route::delete('subjects/{subject}', [GradesAdminController::class, 'destroySubject'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('subject')
+            ->name('subjects.destroy');
 
         // A teacher's sheet, corrected by the owner (at any time).
         Route::get('subjects/{subject}/{section}', [ResultsController::class, 'sheet'])
@@ -69,6 +77,21 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->whereIn('section', ['A', 'B'])
             ->name('sheet.save');
 
+        // One student by hand.
+        Route::post('students', [StudentsAdminController::class, 'store'])->middleware('throttle:60,1')->name('students.store');
+        Route::put('students/{student}', [StudentsAdminController::class, 'update'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('student')
+            ->name('students.update');
+        Route::delete('students/{student}', [StudentsAdminController::class, 'destroy'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('student')
+            ->name('students.destroy');
+
+        // The file to fill for the import.
+        Route::get('students/import/template', [StudentsAdminController::class, 'template'])
+            ->middleware('throttle:20,1')
+            ->name('students.template');
         Route::post('students/import', [StudentsAdminController::class, 'upload'])->middleware('throttle:20,1')->name('students.upload');
         Route::get('students/import', [StudentsAdminController::class, 'preview'])->name('students.preview');
         Route::post('students/import/apply', [StudentsAdminController::class, 'apply'])->middleware('throttle:20,1')->name('students.apply');

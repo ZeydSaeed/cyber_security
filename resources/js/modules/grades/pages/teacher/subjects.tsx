@@ -4,7 +4,7 @@ import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMar
 import EmptyState from '@/components/empty-state';
 import { useTranslations } from '@/hooks/use-translations';
 import WindowNotice from '../../components/window-notice';
-import { sectionLabel } from '../../place';
+import { sectionLabel, stageLabel } from '../../place';
 import type { TeacherSubject } from '../../types';
 
 /**
@@ -47,9 +47,7 @@ export default function TeacherSubjects({
                                 <bdi>{subject.name}</bdi>
                             </h3>
                             <p className="mb-3 text-sm text-muted-foreground">
-                                {t('Stage :stage', {
-                                    stage: String(subject.stage),
-                                })}
+                                {stageLabel(t, subject.stage)}
                             </p>
                             <ul className="flex flex-col gap-2">
                                 {subject.sections.map((section) => {

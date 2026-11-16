@@ -1,291 +1,486 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { UserPlus } from 'lucide-react';
+import { Fragment, useState } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
+import ConfirmAction from '@/components/confirm-action';
 import EmptyState from '@/components/empty-state';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import PageToolbar, { toolButton } from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslations } from '@/hooks/use-translations';
-import CopyLink from '../../components/copy-link';
+import { stageLabel } from '../../place';
 
 type Teacher = {
     uuid: string;
     name: string;
+    /** The employee number, or null when none is kept yet. */
+    code: string | null;
     active: boolean;
     last_seen_at: string | null;
-    subjects: string[];
 };
 
-/** A name and a code: adding a teacher, or changing one. */
-function TeacherFields({
-    errors,
+type Subject = {
+    uuid: string;
+    name: string;
+    stage: number;
+    divided: boolean;
+    sections: string[];
+    teacher: string | null;
+};
+
+/**
+ * Adding a teacher, or changing one: name, employee number and the
+ * subjects they teach. A subject chosen here moves to this teacher from
+ * whoever had it.
+ */
+function TeacherDialog({
+    teacher,
+    teachers,
+    subjects,
     codeLength,
-    name,
-    withName = true,
-    withCode = true,
+    onClose,
 }: {
-    errors: Record<string, string | undefined>;
+    teacher: Teacher | null;
+    teachers: Teacher[];
+    subjects: Subject[];
     codeLength: { min: number; max: number };
-    name?: string;
-    withName?: boolean;
-    withCode?: boolean;
+    onClose: () => void;
 }) {
     const { t } = useTranslations();
-    const prefix = name === undefined ? 'new' : 'edit';
+    const form =
+        teacher === null
+            ? GradesAdminController.storeTeacher.form()
+            : GradesAdminController.updateTeacher.form(teacher.uuid);
+    const nameOf = (uuid: string | null) =>
+        teachers.find((other) => other.uuid === uuid)?.name ?? null;
+    const stages = [...new Set(subjects.map((subject) => subject.stage))];
 
     return (
-        <>
-            {withName && (
-                <div className="grid gap-2">
-                    <Label htmlFor={`${prefix}-name`}>{t('Name')}</Label>
-                    <Input
-                        id={`${prefix}-name`}
-                        name="name"
-                        defaultValue={name}
-                        required
-                        maxLength={120}
-                        dir="auto"
-                    />
-                    <InputError message={errors.name} />
-                </div>
-            )}
-            {withCode && (
-                <div className="grid gap-2">
-                    <Label htmlFor={`${prefix}-code`}>{t('Code')}</Label>
-                    <Input
-                        id={`${prefix}-code`}
-                        name="code"
-                        required
-                        minLength={codeLength.min}
-                        maxLength={codeLength.max}
-                        autoComplete="off"
-                        spellCheck={false}
-                        dir="ltr"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                        {t(
-                            'At least :min characters, no spaces. Choose one that is hard to guess, not 12345678.',
-                            { min: String(codeLength.min) },
-                        )}
-                    </p>
-                    <InputError message={errors.code} />
-                </div>
-            )}
-        </>
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent
+                className="max-h-[90vh] overflow-y-auto bg-card sm:max-w-2xl"
+                data-test="teacher-dialog"
+            >
+                <DialogTitle>
+                    {teacher === null ? t('Add a teacher') : t('Edit teacher')}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                    {t('Name, employee number and subjects.')}
+                </DialogDescription>
+                <Form
+                    {...form}
+                    options={{ preserveScroll: true }}
+                    onSuccess={onClose}
+                    className="grid gap-4"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="teacher-name">
+                                        {t('Name')}
+                                    </Label>
+                                    <Input
+                                        id="teacher-name"
+                                        name="name"
+                                        defaultValue={teacher?.name}
+                                        required
+                                        maxLength={120}
+                                        dir="auto"
+                                    />
+                                    <InputError message={errors.name} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="teacher-code">
+                                        {t('Employee number')}
+                                    </Label>
+                                    <Input
+                                        id="teacher-code"
+                                        name="code"
+                                        defaultValue={teacher?.code ?? ''}
+                                        required
+                                        minLength={codeLength.min}
+                                        maxLength={codeLength.max}
+                                        autoComplete="off"
+                                        spellCheck={false}
+                                        dir="ltr"
+                                    />
+                                    <InputError message={errors.code} />
+                                </div>
+                            </div>
+
+                            <fieldset className="grid gap-3">
+                                <legend className="mb-2 text-sm font-medium">
+                                    {t('Subjects they teach')}
+                                </legend>
+                                {/* Sent even when none is chosen: "none". */}
+                                <input
+                                    type="hidden"
+                                    name="subjects[]"
+                                    value=""
+                                />
+                                {subjects.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('No subjects yet.')}
+                                    </p>
+                                )}
+                                {stages.map((stage) => (
+                                    <div key={stage} className="grid gap-2">
+                                        <p className="text-sm font-semibold">
+                                            {stageLabel(t, stage)}
+                                        </p>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {subjects
+                                                .filter(
+                                                    (subject) =>
+                                                        subject.stage === stage,
+                                                )
+                                                .map((subject) => {
+                                                    const other =
+                                                        subject.teacher !==
+                                                            null &&
+                                                        subject.teacher !==
+                                                            teacher?.uuid
+                                                            ? nameOf(
+                                                                  subject.teacher,
+                                                              )
+                                                            : null;
+
+                                                    return (
+                                                        <label
+                                                            key={subject.uuid}
+                                                            className="flex items-start gap-2 text-sm"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                name="subjects[]"
+                                                                value={
+                                                                    subject.uuid
+                                                                }
+                                                                defaultChecked={
+                                                                    teacher !==
+                                                                        null &&
+                                                                    subject.teacher ===
+                                                                        teacher.uuid
+                                                                }
+                                                                className="mt-1 size-4 accent-primary"
+                                                            />
+                                                            <span>
+                                                                <bdi>
+                                                                    {
+                                                                        subject.name
+                                                                    }
+                                                                </bdi>
+                                                                {other && (
+                                                                    <span className="block text-muted-foreground">
+                                                                        {t(
+                                                                            'Now taught by :name',
+                                                                            {
+                                                                                name: other,
+                                                                            },
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        </label>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                ))}
+                                <InputError message={errors.subjects} />
+                            </fieldset>
+
+                            <div className="flex gap-2">
+                                <Button
+                                    disabled={processing}
+                                    data-test="save-teacher"
+                                >
+                                    {t('Save')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={onClose}
+                                >
+                                    {t('Cancel')}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
     );
 }
 
 /**
- * Teachers and their codes (ADR-0034). The owner sets each code and gives
- * it to the teacher with the link; codes are never shown again, only
- * changed. Changing a code or stopping a teacher ends their open sessions.
+ * Teachers in one table (owner's request, 2026-11-16): the number in
+ * order, the name, the employee number (the teacher's code to sign in),
+ * the subjects they teach with each one's stage and sections, and the
+ * actions: edit, stop or allow signing in, delete. "Add a teacher" is in
+ * the top toolbar. Employee numbers are kept encrypted; showing this page
+ * is audited. Changing a number or stopping a teacher ends their sessions.
  */
 export default function GradesTeachers({
     teachers,
-    teacherLink,
+    subjects,
     codeLength,
 }: {
     teachers: Teacher[];
-    teacherLink: string;
+    subjects: Subject[];
     codeLength: { min: number; max: number };
 }) {
     const { t, locale } = useTranslations();
-    const [editing, setEditing] = useState<{
-        uuid: string;
-        what: 'name' | 'code';
-    } | null>(null);
-    const dates = new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
+    // null: closed; 'new': adding; a teacher: changing them.
+    const [dialog, setDialog] = useState<Teacher | 'new' | null>(null);
     const list = new Intl.ListFormat(locale === 'ar' ? 'ar' : 'en', {
         type: 'conjunction',
     });
+    const taught = (teacher: Teacher) =>
+        subjects.filter((subject) => subject.teacher === teacher.uuid);
+    // One line per subject, so the subject, stage and section line up.
+    const lines = (teacher: Teacher, line: (subject: Subject) => string) => {
+        const own = taught(teacher);
+
+        return own.length === 0 ? (
+            <span className="text-muted-foreground">—</span>
+        ) : (
+            own.map((subject) => (
+                <Fragment key={subject.uuid}>
+                    <bdi className="block">{line(subject)}</bdi>
+                </Fragment>
+            ))
+        );
+    };
 
     return (
         <>
             <Head title={t('Teachers')} />
-            <div className="flex max-w-4xl flex-col gap-6 p-4">
-                <Heading
-                    title={t('Teachers')}
-                    description={t(
-                        'Each teacher signs in with the code you set. Give it to them with the link.',
-                    )}
+            <PageToolbar title={t('Teachers')}>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className={`h-7 ${toolButton}`}
+                    onClick={() => setDialog('new')}
+                    data-test="add-teacher"
+                >
+                    <UserPlus aria-hidden />
+                    {t('Add a teacher')}
+                </Button>
+            </PageToolbar>
+
+            {dialog !== null && (
+                <TeacherDialog
+                    key={dialog === 'new' ? 'new' : dialog.uuid}
+                    teacher={dialog === 'new' ? null : dialog}
+                    teachers={teachers}
+                    subjects={subjects}
+                    codeLength={codeLength}
+                    onClose={() => setDialog(null)}
                 />
+            )}
 
-                <section className="rounded-lg border bg-card p-4">
-                    <CopyLink
-                        id="teacher-link"
-                        href={teacherLink}
-                        label={t('Link for the teachers')}
-                    />
-                </section>
-
-                <section className="rounded-lg border bg-card p-4">
-                    <h2 className="mb-4 font-semibold">{t('Add a teacher')}</h2>
-                    <Form
-                        {...GradesAdminController.storeTeacher.form()}
-                        resetOnSuccess
-                        className="grid gap-4 md:grid-cols-2"
-                        data-test="add-teacher"
-                    >
-                        {({ errors, processing }) => (
-                            <>
-                                <TeacherFields
-                                    errors={errors}
-                                    codeLength={codeLength}
-                                />
-                                <div>
-                                    <Button disabled={processing}>
-                                        {t('Add teacher')}
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </Form>
-                </section>
-
+            <div className="flex flex-col gap-6 p-4">
                 {teachers.length === 0 ? (
                     <EmptyState
                         title={t('No teachers yet')}
                         description={t(
-                            'Add each teacher with a code of their own.',
+                            'Add each teacher with their employee number.',
                         )}
                     />
                 ) : (
-                    <ul
-                        className="flex flex-col divide-y rounded-lg border bg-card"
-                        data-test="teachers"
+                    <div
+                        className="overflow-x-auto rounded-xl border border-grid-line bg-card focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                        tabIndex={0}
+                        role="region"
+                        aria-label={t('Teachers')}
                     >
-                        {teachers.map((teacher) => (
-                            <li
-                                key={teacher.uuid}
-                                className="flex flex-col gap-3 p-4"
-                            >
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    <span className="font-medium" dir="auto">
-                                        {teacher.name}
-                                    </span>
-                                    {!teacher.active && (
-                                        <Badge variant="secondary">
-                                            {t('Stopped')}
-                                        </Badge>
-                                    )}
-                                    <span className="text-sm text-muted-foreground">
-                                        {teacher.subjects.length === 0
-                                            ? t('No subject yet')
-                                            : list.format(teacher.subjects)}
-                                    </span>
-                                    <span className="ms-auto text-sm text-muted-foreground">
-                                        {teacher.last_seen_at
-                                            ? t('Last seen :when', {
-                                                  when: dates.format(
-                                                      new Date(
-                                                          teacher.last_seen_at,
-                                                      ),
-                                                  ),
-                                              })
-                                            : t('Not signed in yet')}
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setEditing({
-                                                uuid: teacher.uuid,
-                                                what: 'name',
-                                            })
-                                        }
+                        <table
+                            className="w-full min-w-[48rem] border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line"
+                            data-test="teachers"
+                        >
+                            <caption className="sr-only">
+                                {t('Teachers')}
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th
+                                        scope="col"
+                                        className="w-12 px-4 py-3 text-start"
                                     >
-                                        {t('Rename')}
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setEditing({
-                                                uuid: teacher.uuid,
-                                                what: 'code',
-                                            })
-                                        }
-                                        data-test="change-code"
+                                        #
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
                                     >
-                                        {t('Change code')}
-                                    </Button>
-                                    <Button
-                                        variant={
-                                            teacher.active
-                                                ? 'outline'
-                                                : 'default'
-                                        }
-                                        size="sm"
-                                        onClick={() =>
-                                            router.put(
-                                                GradesAdminController.updateTeacher.url(
-                                                    teacher.uuid,
-                                                ),
-                                                { active: !teacher.active },
-                                                { preserveScroll: true },
-                                            )
-                                        }
+                                        {t('Name')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
                                     >
-                                        {teacher.active
-                                            ? t('Stop signing in')
-                                            : t('Allow signing in')}
-                                    </Button>
-                                </div>
-
-                                {editing?.uuid === teacher.uuid && (
-                                    <Form
-                                        {...GradesAdminController.updateTeacher.form(
-                                            teacher.uuid,
-                                        )}
-                                        options={{ preserveScroll: true }}
-                                        onSuccess={() => setEditing(null)}
-                                        className="grid gap-4 rounded-md border p-3 md:grid-cols-2"
+                                        {t('Employee number')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
                                     >
-                                        {({ errors, processing }) => (
-                                            <>
-                                                <TeacherFields
-                                                    errors={errors}
-                                                    codeLength={codeLength}
-                                                    name={teacher.name}
-                                                    withName={
-                                                        editing.what === 'name'
+                                        {t('Subject')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
+                                    >
+                                        {t('Stage')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
+                                    >
+                                        {t('Section')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
+                                    >
+                                        {t('Actions')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {teachers.map((teacher, index) => (
+                                    <tr
+                                        key={teacher.uuid}
+                                        data-test="teacher-row"
+                                    >
+                                        <td className="px-4 py-3 align-top text-muted-foreground tabular-nums">
+                                            {index + 1}
+                                        </td>
+                                        <th
+                                            scope="row"
+                                            className="px-4 py-3 text-start align-top font-medium"
+                                        >
+                                            <bdi>{teacher.name}</bdi>
+                                            {!teacher.active && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="ms-2"
+                                                >
+                                                    {t('Stopped')}
+                                                </Badge>
+                                            )}
+                                        </th>
+                                        <td className="px-4 py-3 align-top">
+                                            {teacher.code ? (
+                                                <span
+                                                    dir="ltr"
+                                                    className="font-mono"
+                                                    data-test="teacher-code"
+                                                >
+                                                    {teacher.code}
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    {t(
+                                                        'Not kept: set a new one',
+                                                    )}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 align-top">
+                                            {lines(
+                                                teacher,
+                                                (subject) => subject.name,
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 align-top">
+                                            {lines(teacher, (subject) =>
+                                                stageLabel(t, subject.stage),
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 align-top">
+                                            {lines(teacher, (subject) =>
+                                                subject.divided
+                                                    ? list.format(
+                                                          subject.sections,
+                                                      )
+                                                    : t('All students'),
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 align-top">
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setDialog(teacher)
                                                     }
-                                                    withCode={
-                                                        editing.what === 'code'
+                                                    data-test="edit-teacher"
+                                                >
+                                                    {t('Edit')}
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        router.put(
+                                                            GradesAdminController.updateTeacher.url(
+                                                                teacher.uuid,
+                                                            ),
+                                                            {
+                                                                active: !teacher.active,
+                                                            },
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        )
                                                     }
+                                                    data-test="toggle-teacher"
+                                                >
+                                                    {teacher.active
+                                                        ? t('Stop signing in')
+                                                        : t('Allow signing in')}
+                                                </Button>
+                                                <ConfirmAction
+                                                    trigger={
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-destructive-text"
+                                                            data-test="delete-teacher"
+                                                        >
+                                                            {t('Delete')}
+                                                        </Button>
+                                                    }
+                                                    title={t('Delete :name?', {
+                                                        name: teacher.name,
+                                                    })}
+                                                    description={t(
+                                                        'Their subjects are left without a teacher. A teacher who has entered marks cannot be deleted; stop their signing in instead.',
+                                                    )}
+                                                    confirmLabel={t('Delete')}
+                                                    form={GradesAdminController.destroyTeacher.form(
+                                                        teacher.uuid,
+                                                    )}
                                                 />
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        disabled={processing}
-                                                    >
-                                                        {t('Save')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        onClick={() =>
-                                                            setEditing(null)
-                                                        }
-                                                    >
-                                                        {t('Cancel')}
-                                                    </Button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </Form>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </>

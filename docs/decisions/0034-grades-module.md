@@ -283,3 +283,23 @@ Later months add a `Period` case, not new tables.
    design tokens (light: navy primary, warm surfaces, crimson for
    destructive and focus; dark: navy surfaces, peach primary), every pair
    checked by `DesignTokensTest`.
+
+## Amendment, 2026-11-16 (owner's request)
+
+- A teacher's code is their **employee number**, and the owner can see it
+  again. Besides the HMAC digest, the code is now kept encrypted with the
+  application key (`grade_teachers.code_encrypted`), as students' codes
+  are. It is sent to the owner's page only on request (a partial reload of
+  `codes`), and each showing is audited (`grades.teacher_codes_viewed`).
+  Teachers saved earlier have no copy until their number is set again.
+- The owner can delete a teacher, a subject or a student, and change a
+  subject's stage and a student's stage, section and number. Records with
+  marks are protected: a teacher who entered marks can only be stopped; a
+  subject or student with marks keeps its stage and cannot be deleted.
+- Students' codes are shown in the owner's student list to those with
+  `grades.manage` (each showing audited as `grades.student_codes_listed`)
+  and on the owner's result card as the student's ID. The owner may type a
+  student's code (8 to 16 Latin letters and digits, unique); a new student
+  still gets one made by the application. The teachers' page shows the
+  employee numbers directly (each visit audited).
+- Stages are shown by name ("First", "Second"), never as a number.

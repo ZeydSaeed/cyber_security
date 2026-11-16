@@ -5,8 +5,9 @@ import { placeLabel } from '../../place';
 
 /**
  * A group's codes, to print and cut into slips (ADR-0034): each slip has
- * the student's name, the link and their code. Opening this page is
- * recorded in the audit trail.
+ * the student's name, the link and their code, in black text inside a
+ * black frame (print-ink, owner's request 2026-11-16). Opening this page
+ * is recorded in the audit trail.
  */
 export default function PrintCodes({
     stage,
@@ -40,12 +41,13 @@ export default function PrintCodes({
                     {students.map((student) => (
                         <li
                             key={`${student.name}-${student.code}`}
-                            className="break-inside-avoid rounded-md border border-dashed p-3"
+                            className="break-inside-avoid rounded-md border-2 border-print-ink p-3 text-print-ink"
+                            data-test="code-slip"
                         >
                             <p className="font-medium">
                                 <bdi>{student.name}</bdi>
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm">
                                 {t('Open :link and type your code:', {
                                     link: studentLink,
                                 })}

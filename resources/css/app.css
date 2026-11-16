@@ -82,8 +82,10 @@
     --color-chart-5: var(--chart-5);
 
     /* Project roles (§6.5): the ink text on the teachers' and students'
-       pages, soft highlight cards (owner, 2026-11-15). */
+       pages, soft highlight cards (owner, 2026-11-15); black text and
+       lines on printed code slips (owner, 2026-11-16). */
     --color-ink: var(--ink);
+    --color-print-ink: var(--print-ink);
     /* The result card's off-white table (owner's request, 2026-11-16). */
     --color-sheet: var(--sheet);
     --color-highlight-soft: var(--highlight-soft);

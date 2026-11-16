@@ -3,9 +3,10 @@ import type { useTranslations } from '@/hooks/use-translations';
 type Translate = ReturnType<typeof useTranslations>['t'];
 
 /**
- * A stage and section as people read them (ADR-0034): "Stage 2 · Section A",
- * or only "Stage 1" for a stage that is not divided into sections (the
- * server says which, from Stage::sections()).
+ * A stage and section as people read them (ADR-0034): "Second stage ·
+ * Section A", or only "First stage" for a stage that is not divided into
+ * sections (the server says which, from Stage::sections()). A stage is
+ * never shown as a number (owner's request, 2026-11-16).
  */
 export function placeLabel(
     t: Translate,
@@ -13,7 +14,7 @@ export function placeLabel(
     section: string,
     divided: boolean,
 ): string {
-    const stageText = t('Stage :stage', { stage: String(stage) });
+    const stageText = stageLabel(t, stage);
 
     return divided
         ? `${stageText} · ${t('Section :section', { section })}`
@@ -44,6 +45,11 @@ export function placeLabelFull(
     return divided
         ? `${stageText} · ${t('Section: :section', { section })}`
         : stageText;
+}
+
+/** A stage by its name: "First stage" or "Second stage". */
+export function stageLabel(t: Translate, stage: number): string {
+    return stage === 1 ? t('First stage') : t('Second stage');
 }
 
 /** A stage by its ordinal name: "First" or "Second". */

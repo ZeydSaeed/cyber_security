@@ -2,6 +2,7 @@
 
 namespace App\Modules\Grades\Application;
 
+use App\Platform\Exceptions\DomainRuleViolation;
 use Illuminate\Support\Facades\Crypt;
 use RuntimeException;
 
@@ -11,13 +12,16 @@ use RuntimeException;
  * 0/O, 1/I/L), shown as XXXX-XXXX. 31^8 is about 8.5 * 10^11 codes, so with
  * the sign-in limits guessing one is out of reach. Kept as an HMAC digest
  * to find the student and encrypted with the application key so the owner
- * can print the list again; never in the audit trail.
+ * can print the list again; never in the audit trail. Since 2026-11-16 the
+ * owner may also type a student's code (8 to 16 letters and digits).
  */
 final class StudentCodes
 {
     public const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
     public const LENGTH = 8;
+
+    public const MAX_LENGTH = 16;
 
     public function generate(): string
     {
@@ -45,7 +49,19 @@ final class StudentCodes
     {
         $code = Crypt::decryptString($encrypted);
 
-        return substr($code, 0, 4).'-'.substr($code, 4);
+        // A made code reads as XXXX-XXXX; one the owner typed, as typed.
+        return strlen($code) === self::LENGTH ? substr($code, 0, 4).'-'.substr($code, 4) : $code;
+    }
+
+    /**
+     * The rules for a code the owner types: once spaces and dashes are
+     * dropped, 8 to 16 Latin letters and digits. Throws beside the field.
+     */
+    public function assertAcceptable(string $code, string $field = 'code'): void
+    {
+        if (preg_match('/^[A-Z0-9]{'.self::LENGTH.','.self::MAX_LENGTH.'}$/', self::normalise($code)) !== 1) {
+            throw new DomainRuleViolation(__('The code must be :min to :max Latin letters and digits.', ['min' => self::LENGTH, 'max' => self::MAX_LENGTH]), $field);
+        }
     }
 
     /**

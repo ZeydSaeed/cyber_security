@@ -6,7 +6,8 @@ import type { MarkValue, ResultSheet } from '../types';
  * A section's results (ADR-0034): a row per student, a column per subject
  * of the stage, then the total, the percentage, subjects below the pass
  * mark and absences. A mark below the pass mark or an absence is marked
- * with words, not colour alone. Used on screen and in print.
+ * with words, not colour alone. Inner and outer grid lines (owner's
+ * layout, 2026-11-16). Used on screen and in print.
  */
 export default function ResultsTable({
     sheet,
@@ -42,20 +43,21 @@ export default function ResultsTable({
     return (
         // Scrolls sideways on a phone: reachable by keyboard, and named.
         <div
-            className="overflow-x-auto rounded-lg border bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:overflow-visible print:border-0"
+            className="overflow-x-auto rounded-lg border border-grid-line bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:overflow-visible"
             tabIndex={0}
             role="region"
             aria-label={t('Results')}
         >
             <table
-                className="w-full border-collapse text-sm"
+                // The outer line is the region's own border.
+                className="w-full border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line"
                 data-test="results-table"
             >
                 <caption className="sr-only">
                     {placeLabel(t, sheet.stage, sheet.section, sheet.divided)}
                 </caption>
                 <thead>
-                    <tr className="border-b text-muted-foreground print:text-foreground">
+                    <tr className="border-b">
                         <th scope="col" className="p-2 text-start font-medium">
                             #
                         </th>

@@ -46,6 +46,7 @@
     --chart-4: var(--palette-success-600);
     --chart-5: var(--palette-danger-600);
     --ink: var(--palette-primary-800);
+    --print-ink: var(--palette-neutral-1000);
     --highlight-soft: var(--palette-accent-100);
     --highlight-soft-end: color-mix(in oklch, var(--palette-accent-100) 50%, var(--palette-accent-200));
     --highlight-soft-border: var(--palette-accent-200);
@@ -103,6 +104,7 @@
     --chart-4: var(--palette-success-400);
     --chart-5: var(--palette-danger-400);
     --ink: var(--palette-linen-50);
+    --print-ink: var(--palette-linen-50);
     --highlight-soft: var(--palette-accent-950);
     --highlight-soft-end: var(--palette-accent-900);
     --highlight-soft-border: var(--palette-accent-800);

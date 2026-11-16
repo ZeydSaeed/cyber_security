@@ -3,12 +3,12 @@ import { AlertTriangle, Eye, EyeOff, Lock, LockOpen } from 'lucide-react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
 import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
-import Heading from '@/components/heading';
+import PageToolbar from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import CopyLink from '../../components/copy-link';
-import { sectionLabel } from '../../place';
+import { sectionLabel, stageLabel } from '../../place';
 
 type Stage = {
     stage: number;
@@ -24,8 +24,10 @@ type Stage = {
 
 /**
  * The owner's overview of the first month (ADR-0034): mark entry, the
- * results' publication to the students, the links for teachers and
- * students, and each stage's subjects with how many marks each group has.
+ * results' publication to the students, the links for teachers, students
+ * and the administration, and each stage's subjects with how many marks
+ * each group has. The title is in the top toolbar, the sections' buttons
+ * first on the page (owner's layout, 2026-11-16).
  */
 export default function GradesOverview({
     window,
@@ -33,6 +35,7 @@ export default function GradesOverview({
     stages,
     teacherLink,
     studentLink,
+    adminLink,
     canManage,
 }: {
     window: {
@@ -45,6 +48,7 @@ export default function GradesOverview({
     stages: Stage[];
     teacherLink: string;
     studentLink: string;
+    adminLink: string;
     canManage: boolean;
 }) {
     const { t } = useTranslations();
@@ -54,9 +58,8 @@ export default function GradesOverview({
     return (
         <>
             <Head title={t('First-month marks')} />
+            <PageToolbar title={t('First-month marks')} />
             <div className="flex flex-col gap-6 p-4">
-                <Heading title={t('First-month marks')} />
-
                 <nav
                     aria-label={t('First-month marks')}
                     className="flex flex-wrap gap-2"
@@ -215,7 +218,7 @@ export default function GradesOverview({
                 </section>
 
                 {canManage && (
-                    <section className="grid gap-6 rounded-lg border bg-card p-4 md:grid-cols-2">
+                    <section className="grid gap-6 rounded-lg border bg-card p-4 md:grid-cols-2 xl:grid-cols-3">
                         <CopyLink
                             id="teacher-link"
                             href={teacherLink}
@@ -225,6 +228,11 @@ export default function GradesOverview({
                             id="student-link"
                             href={studentLink}
                             label={t('Link for the students')}
+                        />
+                        <CopyLink
+                            id="admin-link"
+                            href={adminLink}
+                            label={t('Link for the administration')}
                         />
                     </section>
                 )}
@@ -243,9 +251,7 @@ export default function GradesOverview({
                                     id={`stage-${stage.stage}`}
                                     className="font-semibold"
                                 >
-                                    {t('Stage :stage', {
-                                        stage: String(stage.stage),
-                                    })}
+                                    {stageLabel(t, stage.stage)}
                                 </h2>
                                 <span className="text-sm text-muted-foreground">
                                     {sections
@@ -296,9 +302,7 @@ export default function GradesOverview({
                             <div className="overflow-x-auto p-4">
                                 <table className="w-full text-sm">
                                     <caption className="sr-only">
-                                        {t('Stage :stage', {
-                                            stage: String(stage.stage),
-                                        })}
+                                        {stageLabel(t, stage.stage)}
                                     </caption>
                                     <thead>
                                         <tr className="text-muted-foreground">

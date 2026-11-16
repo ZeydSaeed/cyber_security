@@ -300,5 +300,15 @@
         "fg": "destructive-text",
         "bg": "sheet",
         "min": 4.5
+    },
+    {
+        "fg": "print-ink",
+        "bg": "background",
+        "min": 4.5
+    },
+    {
+        "fg": "print-ink",
+        "bg": "card",
+        "min": 4.5
     }
 ]

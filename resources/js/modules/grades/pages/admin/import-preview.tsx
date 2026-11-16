@@ -5,6 +5,7 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
+import { stageName } from '../../place';
 
 type Change = { from: string | number | null; to: string | number | null };
 
@@ -238,7 +239,9 @@ export default function ImportPreview({
                                             <td className="p-2">
                                                 <bdi>{row.name}</bdi>
                                             </td>
-                                            <td className="p-2">{row.stage}</td>
+                                            <td className="p-2">
+                                                {stageName(t, row.stage)}
+                                            </td>
                                             <td className="p-2">
                                                 {row.section}
                                             </td>

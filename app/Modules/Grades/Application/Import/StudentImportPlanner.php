@@ -121,7 +121,7 @@ final class StudentImportPlanner
             ], fn (mixed $value): bool => $value !== null);
 
             if (isset($set['stage']) && isset($withMarks[$existing->id])) {
-                $rejected[] = ['row' => $row, 'reason' => self::text(__('This student already has marks in stage :stage and cannot change stage.', ['stage' => $existing->stage->value]))];
+                $rejected[] = ['row' => $row, 'reason' => self::text(__('This student already has marks in the :stage stage and cannot change stage.', ['stage' => $existing->stage->name()]))];
 
                 continue;
             }
