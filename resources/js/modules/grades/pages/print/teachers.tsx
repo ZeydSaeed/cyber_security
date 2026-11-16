@@ -33,6 +33,14 @@ type TeacherSlip = {
  * uses the `slips` page (app.css), whose zero browser margin leaves no room
  * for the browser's own date, title, address and page number; the margins
  * are the list's own padding, repeated on every sheet.
+ *
+ * The link and the code sit in their own dashed frame, to be cut off the
+ * slip after printing, with the code labelled "Teacher ID:" (owner's
+ * request, 2026-11-17).
+ *
+ * Eight slips on each A4 sheet, two columns by four rows, and the degree
+ * and the specialty on one line, far apart (owner's requests, 2026-11-17).
+ * Each sheet is its own list of at most eight, one A4 page high.
  */
 export default function PrintTeachers({
     teacherLink,
@@ -45,95 +53,136 @@ export default function PrintTeachers({
     const list = new Intl.ListFormat(locale === 'ar' ? 'ar' : 'en', {
         type: 'conjunction',
     });
+    const sheets: TeacherSlip[][] = [];
+
+    for (let i = 0; i < teachers.length; i += SLIPS_PER_SHEET) {
+        sheets.push(teachers.slice(i, i + SLIPS_PER_SHEET));
+    }
 
     return (
         <>
             <Head title={t('Teachers')} />
             <PrintPage title={t('Teachers')} paper printHeader={false}>
-                <ul
-                    className="print-slips grid gap-3 sm:grid-cols-2 print:grid-cols-2 print:gap-[5mm]"
+                <div
+                    className="grid gap-3 print:block"
                     data-test="teacher-slips"
                 >
-                    {teachers.map((teacher) => (
-                        <li
-                            key={teacher.uuid}
-                            className="break-inside-avoid rounded-md border-2 border-print-ink p-3 text-print-ink print:p-[3mm]"
-                            data-test="teacher-slip"
+                    {sheets.map((sheet, index) => (
+                        <ul
+                            key={sheet[0].uuid}
+                            className={`print-slips grid gap-3 sm:grid-cols-2 print:h-[297mm] print:grid-cols-2 print:grid-rows-4 print:gap-[5mm] ${index < sheets.length - 1 ? 'print:break-after-page' : ''}`}
+                            data-test="slip-sheet"
                         >
-                            <div className="grid gap-1 text-sm print:gap-0.5 print:text-[11px]">
-                                <Field label={t('Teacher name')}>
-                                    <bdi className="text-base font-medium print:text-[13px]">
-                                        {teacher.name}
-                                    </bdi>
-                                </Field>
-                                <Field label={t('Degree')} />
-                                <Field label={t('Specialty')}>
-                                    <bdi>{teacher.specialty ?? '—'}</bdi>
-                                </Field>
-                                {(teacher.subjects.length === 0
-                                    ? [null]
-                                    : teacher.subjects
-                                ).map((subject) => (
-                                    <div
-                                        key={
-                                            subject
-                                                ? `${subject.name}-${subject.stage}`
-                                                : 'none'
-                                        }
-                                        className="mt-1 grid gap-1 border-t border-dashed border-print-ink pt-1"
-                                        data-test="slip-subject"
-                                    >
-                                        <Field label={t('Subject taught')} />
-                                        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                                            <Tick label={t('Practical')} />
-                                            <Tick label={t('Theoretical')} />
-                                        </div>
-                                        <div className="flex flex-wrap gap-x-32 gap-y-1">
-                                            <Field label={t('Stage')}>
-                                                {subject
-                                                    ? stageLabel(
-                                                          t,
-                                                          subject.stage,
-                                                      )
-                                                    : '—'}
-                                            </Field>
-                                            <Field label={t('Section')}>
-                                                {subject?.divided
-                                                    ? list.format(
-                                                          subject.sections,
-                                                      )
-                                                    : '—'}
-                                            </Field>
-                                        </div>
-                                        <Field
-                                            label={t('Assistant teacher name')}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                            <p className="mt-2 text-sm print:mt-1 print:text-[11px]">
-                                {t('Open :link and type your code:', {
-                                    link: teacherLink,
-                                })}
-                            </p>
-                            {teacher.code ? (
-                                <p
-                                    className="mt-1 font-mono text-lg tracking-widest print:mt-0.5 print:text-base"
-                                    dir="ltr"
-                                    data-test="slip-code"
+                            {sheet.map((teacher) => (
+                                <li
+                                    key={teacher.uuid}
+                                    className="break-inside-avoid rounded-md border-2 border-print-ink p-3 text-print-ink print:p-[3mm]"
+                                    data-test="teacher-slip"
                                 >
-                                    {teacher.code}
-                                </p>
-                            ) : (
-                                <p className="mt-1">{t('No code yet')}</p>
-                            )}
-                        </li>
+                                    <div className="grid gap-1 text-sm print:gap-0.5 print:text-[11px]">
+                                        <Field label={t('Teacher name')}>
+                                            <bdi className="text-base font-medium print:text-[13px]">
+                                                {teacher.name}
+                                            </bdi>
+                                        </Field>
+                                        <div className="flex flex-wrap gap-x-32 gap-y-1">
+                                            <Field label={t('Degree')} />
+                                            <Field label={t('Specialty')}>
+                                                <bdi>
+                                                    {teacher.specialty ?? '—'}
+                                                </bdi>
+                                            </Field>
+                                        </div>
+                                        {(teacher.subjects.length === 0
+                                            ? [null]
+                                            : teacher.subjects
+                                        ).map((subject) => (
+                                            <div
+                                                key={
+                                                    subject
+                                                        ? `${subject.name}-${subject.stage}`
+                                                        : 'none'
+                                                }
+                                                className="mt-1 grid gap-1 border-t border-dashed border-print-ink pt-1"
+                                                data-test="slip-subject"
+                                            >
+                                                <Field
+                                                    label={t('Subject taught')}
+                                                />
+                                                <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                                                    <Tick
+                                                        label={t('Practical')}
+                                                    />
+                                                    <Tick
+                                                        label={t('Theoretical')}
+                                                    />
+                                                </div>
+                                                <div className="flex flex-wrap gap-x-32 gap-y-1">
+                                                    <Field label={t('Stage')}>
+                                                        {subject
+                                                            ? stageLabel(
+                                                                  t,
+                                                                  subject.stage,
+                                                              )
+                                                            : '—'}
+                                                    </Field>
+                                                    <Field label={t('Section')}>
+                                                        {subject?.divided
+                                                            ? list.format(
+                                                                  subject.sections,
+                                                              )
+                                                            : '—'}
+                                                    </Field>
+                                                </div>
+                                                <Field
+                                                    label={t(
+                                                        'Assistant teacher name',
+                                                    )}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div
+                                        className="mt-2 border-2 border-dashed border-print-ink p-2 text-sm print:mt-1.5 print:p-[2mm] print:text-[11px]"
+                                        data-test="slip-cut"
+                                    >
+                                        <p>
+                                            {t(
+                                                'Open :link and type your code:',
+                                                {
+                                                    link: teacherLink,
+                                                },
+                                            )}
+                                        </p>
+                                        <p className="mt-1 flex flex-wrap items-baseline gap-x-2 print:mt-0.5">
+                                            <span className="font-semibold">
+                                                {t('Teacher ID:')}
+                                            </span>
+                                            {teacher.code ? (
+                                                <span
+                                                    className="font-mono text-lg tracking-widest print:text-base"
+                                                    dir="ltr"
+                                                    data-test="slip-code"
+                                                >
+                                                    {teacher.code}
+                                                </span>
+                                            ) : (
+                                                <span>{t('No code yet')}</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
                     ))}
-                </ul>
+                </div>
             </PrintPage>
         </>
     );
 }
+
+/** Two columns by four rows on each A4 sheet (owner, 2026-11-17). */
+const SLIPS_PER_SHEET = 8;
 
 /** A label and its value; with no value, the space is filled in by hand. */
 function Field({ label, children }: { label: string; children?: ReactNode }) {
