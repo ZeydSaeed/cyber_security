@@ -25,10 +25,12 @@ final class StudentCodes
 
     public function generate(): string
     {
-        $code = '';
+        // Never T first: that letter marks a teacher's code (TeacherCodes).
+        $first = str_replace(TeacherCodes::MARK, '', self::ALPHABET);
+        $code = $first[random_int(0, strlen($first) - 1)];
         $last = strlen(self::ALPHABET) - 1;
 
-        for ($i = 0; $i < self::LENGTH; $i++) {
+        for ($i = 1; $i < self::LENGTH; $i++) {
             $code .= self::ALPHABET[random_int(0, $last)];
         }
 
@@ -62,6 +64,10 @@ final class StudentCodes
         if (preg_match('/^[A-Z0-9]{'.self::LENGTH.','.self::MAX_LENGTH.'}$/', self::normalise($code)) !== 1) {
             throw new DomainRuleViolation(__('The code must be :min to :max Latin letters and digits.', ['min' => self::LENGTH, 'max' => self::MAX_LENGTH]), $field);
         }
+
+        if (TeacherCodes::isTeacherCode($code)) {
+            throw new DomainRuleViolation(__('A code for a student may not start with T: that letter marks the code of a teacher.'), $field);
+        }
     }
 
     /**
@@ -70,7 +76,7 @@ final class StudentCodes
      */
     public static function normalise(string $code): string
     {
-        $code = strtoupper(TeacherCodes::normalise($code));
+        $code = strtoupper(TeacherCodes::digits($code));
 
         return (string) preg_replace('/[\s\-_]+/u', '', $code);
     }

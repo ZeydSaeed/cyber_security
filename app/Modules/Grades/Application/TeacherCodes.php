@@ -13,14 +13,50 @@ use RuntimeException;
  * indexed lookup. The key is GRADES_CODE_KEY, or one derived from APP_KEY
  * (rotating APP_KEY then means setting every code again).
  *
- * Since 2026-11-16 the code is the teacher's employee number, and a copy
- * encrypted with the application key lets the owner see it again.
+ * A copy encrypted with the application key lets the owner see it again.
+ *
+ * Since 2026-11-16 (owner's request) the application makes each code in
+ * a student's shape, XXXX-XXXX from the same alphabet, but always starting
+ * with T, which no student's code does: the first letter tells a teacher's
+ * code from a student's. The seven random characters give 31^7, about
+ * 2.8 * 10^10 codes; with the sign-in limits (5 a minute, 20 an hour per
+ * address) guessing one is out of reach. As for students, case, spaces and
+ * dashes do not matter. A code typed by the owner (SaveTeacher::changeCode,
+ * 8 to 64 characters) is compared the same way.
  */
 final class TeacherCodes
 {
     public const MIN_LENGTH = 8;
 
     public const MAX_LENGTH = 64;
+
+    /**
+     * Every code the application makes starts with this letter; a
+     * student's code never does (StudentCodes::generate).
+     */
+    public const MARK = 'T';
+
+    /**
+     * A new random code shaped like a student's (XXXX-XXXX, from the same
+     * alphabet without look-alikes) but starting with T: "TK7M-Q2XZ".
+     */
+    public function generate(): string
+    {
+        $code = self::MARK;
+        $last = strlen(StudentCodes::ALPHABET) - 1;
+
+        for ($i = 1; $i < StudentCodes::LENGTH; $i++) {
+            $code .= StudentCodes::ALPHABET[random_int(0, $last)];
+        }
+
+        return substr($code, 0, 4).'-'.substr($code, 4);
+    }
+
+    /** Whether a code, as typed, is one of the teachers' made codes. */
+    public static function isTeacherCode(string $code): bool
+    {
+        return str_starts_with(self::normalise($code), self::MARK);
+    }
 
     public function digest(string $code): string
     {
@@ -34,7 +70,10 @@ final class TeacherCodes
 
     public function decrypt(string $encrypted): string
     {
-        return Crypt::decryptString($encrypted);
+        $code = Crypt::decryptString($encrypted);
+
+        // A made code reads as XXXX-XXXX, as a student's does.
+        return strlen($code) === StudentCodes::LENGTH ? substr($code, 0, 4).'-'.substr($code, 4) : $code;
     }
 
     /**
@@ -43,23 +82,39 @@ final class TeacherCodes
      */
     public function assertAcceptable(string $code, string $field = 'code'): void
     {
-        $code = self::normalise($code);
-        $length = mb_strlen($code);
+        // Spaces are checked as written: comparison would drop them.
+        $written = self::digits($code);
+        $length = mb_strlen(self::normalise($code));
 
         if ($length < self::MIN_LENGTH || $length > self::MAX_LENGTH) {
             throw new DomainRuleViolation(__('The code must be between :min and :max characters.', ['min' => self::MIN_LENGTH, 'max' => self::MAX_LENGTH]), $field);
         }
 
-        if (preg_match('/\s/u', $code) === 1) {
+        if (preg_match('/\s/u', $written) === 1) {
             throw new DomainRuleViolation(__('The code may not contain spaces.'), $field);
         }
     }
 
     /**
-     * Codes are compared as typed, without surrounding spaces and with
-     * Arabic-Indic digits read as 0-9 (a phone keyboard may type either).
+     * Codes are compared without case, spaces or dashes, with Arabic-Indic
+     * digits read as 0-9 (a phone keyboard may type either).
      */
     public static function normalise(string $code): string
+    {
+        return self::compact(strtoupper(self::digits($code)));
+    }
+
+    /** Drops spaces, dashes and underscores. */
+    private static function compact(string $code): string
+    {
+        return (string) preg_replace('/[\s\-_]+/u', '', $code);
+    }
+
+    /**
+     * Arabic-Indic digits as 0-9, surrounding spaces dropped; shared with
+     * StudentCodes.
+     */
+    public static function digits(string $code): string
     {
         return trim(strtr($code, [
             "\u{0660}" => '0', "\u{0661}" => '1', "\u{0662}" => '2', "\u{0663}" => '3', "\u{0664}" => '4',

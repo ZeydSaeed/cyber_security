@@ -1,5 +1,5 @@
-import { Form, Head, router } from '@inertiajs/react';
-import { FileDown, UserPlus } from 'lucide-react';
+import { Form, Head, Link } from '@inertiajs/react';
+import { Printer, UserPlus } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
 import ConfirmAction from '@/components/confirm-action';
@@ -33,6 +33,8 @@ type StudentRow = {
     number: string | null;
     stage: number;
     section: string;
+    /** 'external' (intisab), or null for a regular student. */
+    status: string | null;
 };
 
 const TABLE_PROPS = ['students', 'state'];
@@ -43,15 +45,17 @@ const selectClass =
 /**
  * Adding a student to a stage and section, or changing one: name, stage,
  * section and, for a student already added, their code (ID). A new
- * student's code is made by the application. The first stage has no
- * sections, so the section is asked for the second stage only.
+ * student's code is made by the application. The section is asked only
+ * for a stage divided into sections (the server says which).
  */
 function StudentDialog({
     student,
+    stages,
     open,
     onClose,
 }: {
     student: StudentRow | null;
+    stages: { stage: number; divided: boolean }[];
     open: boolean;
     onClose: () => void;
 }) {
@@ -69,7 +73,7 @@ function StudentDialog({
                     {student === null ? t('Add a student') : t('Edit student')}
                 </DialogTitle>
                 <DialogDescription className="sr-only">
-                    {t('Name, code, stage and section.')}
+                    {t('Name, code, stage, section and status.')}
                 </DialogDescription>
                 <Form
                     {...form}
@@ -131,16 +135,22 @@ function StudentDialog({
                                         }
                                         className={selectClass}
                                     >
-                                        <option value={1}>
-                                            {stageLabel(t, 1)}
-                                        </option>
-                                        <option value={2}>
-                                            {stageLabel(t, 2)}
-                                        </option>
+                                        {stages.map((option) => (
+                                            <option
+                                                key={option.stage}
+                                                value={option.stage}
+                                            >
+                                                {stageLabel(t, option.stage)}
+                                            </option>
+                                        ))}
                                     </select>
                                     <InputError message={errors.stage} />
                                 </div>
-                                {stage === 2 && (
+                                {stages.some(
+                                    (option) =>
+                                        option.stage === stage &&
+                                        option.divided,
+                                ) && (
                                     <div className="grid gap-2">
                                         <Label htmlFor="student-section">
                                             {t('Section')}
@@ -149,7 +159,7 @@ function StudentDialog({
                                             id="student-section"
                                             name="section"
                                             defaultValue={
-                                                student?.stage === 2
+                                                student?.stage === stage
                                                     ? student.section
                                                     : 'A'
                                             }
@@ -161,6 +171,23 @@ function StudentDialog({
                                         <InputError message={errors.section} />
                                     </div>
                                 )}
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="student-status">
+                                    {t('Student status')}
+                                </Label>
+                                <select
+                                    id="student-status"
+                                    name="status"
+                                    defaultValue={student?.status ?? ''}
+                                    className={selectClass}
+                                >
+                                    <option value="">{t('Regular')}</option>
+                                    <option value="external">
+                                        {t('External')}
+                                    </option>
+                                </select>
+                                <InputError message={errors.status} />
                             </div>
                             {/* Refusals not about one field (marks, a clash). */}
                             <InputError message={errors.student} />
@@ -187,20 +214,6 @@ function StudentDialog({
     );
 }
 
-/** "Codes of the first stage", or "... second stage · Section A". */
-function codesLabel(
-    t: ReturnType<typeof useTranslations>['t'],
-    place: { stage: number; section: string; divided: boolean },
-): string {
-    const stage = t('Codes of the :stage stage', {
-        stage: place.stage === 1 ? t('First') : t('Second'),
-    });
-
-    return place.divided
-        ? `${stage} · ${t('Section :section', { section: place.section })}`
-        : stage;
-}
-
 /**
  * The students (ADR-0026, ADR-0034): a server-side list (search by name,
  * number or code, stage and section filters, both in the top toolbar),
@@ -214,14 +227,12 @@ export default function GradesStudents({
     state,
     columns,
     canImport,
-    withoutCode,
     places,
 }: {
     students: { rows: StudentRow[] } & PageMeta;
     state: TableState;
     columns: ColumnPrefs;
     canImport: boolean;
-    withoutCode: number;
     places: { stage: number; section: string; divided: boolean }[];
 }) {
     const { t } = useTranslations();
@@ -232,6 +243,12 @@ export default function GradesStudents({
     );
     const filtered =
         state.search !== '' || Object.keys(state.filters).length > 0;
+    // Each stage once, and whether it has sections (from the server).
+    const stages = places.filter(
+        (place, i) => places.findIndex((p) => p.stage === place.stage) === i,
+    );
+    const divided = (stage: number) =>
+        stages.some((place) => place.stage === stage && place.divided);
     // null: closed; 'new': adding; a row: changing that student.
     const [dialog, setDialog] = useState<StudentRow | 'new' | null>(null);
 
@@ -245,6 +262,7 @@ export default function GradesStudents({
         {
             key: 'code',
             header: t('Code'),
+            className: 'text-center',
             cell: (s) =>
                 s.code ? (
                     <span
@@ -260,14 +278,24 @@ export default function GradesStudents({
             key: 'stage',
             header: t('Stage'),
             sortable: true,
+            className: 'text-center',
             cell: (s) => stageName(t, s.stage),
         },
         {
             key: 'section',
             header: t('Section'),
             sortable: true,
-            // The first stage has no sections.
-            cell: (s) => (s.stage === 1 ? '—' : s.section),
+            className: 'text-center',
+            // A stage without sections shows none.
+            cell: (s) => (divided(s.stage) ? s.section : '—'),
+        },
+        {
+            key: 'status',
+            header: t('Student status'),
+            sortable: true,
+            className: 'text-center',
+            // Empty for a regular student (owner's request, 2026-11-16).
+            cell: (s) => (s.status === 'external' ? t('External') : null),
         },
     ];
 
@@ -282,9 +310,9 @@ export default function GradesStudents({
                         {
                             key: 'stage',
                             label: t('Stage'),
-                            options: ['1', '2'].map((value) => ({
-                                value,
-                                label: stageLabel(t, Number(value)),
+                            options: stages.map((place) => ({
+                                value: String(place.stage),
+                                label: stageLabel(t, place.stage),
                             })),
                         },
                         {
@@ -319,10 +347,29 @@ export default function GradesStudents({
                         {t('Add a student')}
                     </Button>
                 )}
+                {/* The code slips, on a page of their own (owner,
+                    2026-11-17), as the teachers' page prints its slips. */}
+                {canImport && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className={`h-8 ${toolButton}`}
+                        asChild
+                    >
+                        <Link
+                            href={StudentsAdminController.printMenu.url()}
+                            data-test="print-students"
+                        >
+                            <Printer aria-hidden />
+                            {t('Print')}
+                        </Link>
+                    </Button>
+                )}
             </PageToolbar>
 
             {dialog !== null && (
                 <StudentDialog
+                    stages={stages}
                     // A fresh form for each student.
                     key={dialog === 'new' ? 'new' : dialog.uuid}
                     student={dialog === 'new' ? null : dialog}
@@ -332,145 +379,6 @@ export default function GradesStudents({
             )}
 
             <div className="flex flex-col gap-6 p-4">
-                {canImport && (
-                    <section className="max-w-2xl rounded-lg border bg-card p-4">
-                        <h2 className="mb-1 font-semibold">
-                            {t('Import students')}
-                        </h2>
-                        <p className="mb-3 text-sm text-muted-foreground">
-                            {t(
-                                'An Excel (.xlsx) or CSV file with the columns name, stage (1 or 2), section (A or B) and, if you have it, the student number. You will see what changes before anything is saved.',
-                            )}
-                        </p>
-                        <details
-                            className="mb-4 rounded-md border p-3 text-sm"
-                            data-test="import-help"
-                        >
-                            <summary className="cursor-pointer font-medium">
-                                {t('How to fill the file')}
-                            </summary>
-                            <ul className="mt-2 list-disc space-y-1 ps-5">
-                                <li>
-                                    {t(
-                                        "Name: the student's full name, at least 3 letters.",
-                                    )}
-                                </li>
-                                <li>
-                                    {t(
-                                        'Stage: 1 for the first stage, 2 for the second.',
-                                    )}
-                                </li>
-                                <li>
-                                    {t(
-                                        'Section: A or B for the second stage; leave it empty for the first stage.',
-                                    )}
-                                </li>
-                                <li>
-                                    {t(
-                                        'Student number: optional. If you write it, it must not repeat.',
-                                    )}
-                                </li>
-                                <li>
-                                    {t(
-                                        "One student per row, under the headers. The file's second sheet has an example.",
-                                    )}
-                                </li>
-                            </ul>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-3"
-                                asChild
-                            >
-                                <a
-                                    href={StudentsAdminController.template.url()}
-                                    data-test="import-template"
-                                >
-                                    <FileDown aria-hidden />
-                                    {t('Download the file to fill')}
-                                </a>
-                            </Button>
-                        </details>
-                        <Form
-                            {...StudentsAdminController.upload.form()}
-                            className="flex flex-col gap-3 sm:flex-row sm:items-end"
-                            data-test="import-form"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <div className="grid flex-1 gap-2">
-                                        <Label htmlFor="import-file">
-                                            {t('File')}
-                                        </Label>
-                                        <Input
-                                            id="import-file"
-                                            type="file"
-                                            name="file"
-                                            accept=".xlsx,.csv"
-                                            required
-                                        />
-                                        <InputError message={errors.file} />
-                                    </div>
-                                    <Button disabled={processing}>
-                                        {t('Preview')}
-                                    </Button>
-                                </>
-                            )}
-                        </Form>
-                    </section>
-                )}
-
-                {canImport && (
-                    <section
-                        className="max-w-2xl rounded-lg border bg-card p-4"
-                        data-test="student-codes"
-                    >
-                        <h2 className="mb-3 font-semibold">
-                            {t('Student codes')}
-                        </h2>
-                        {withoutCode > 0 && (
-                            <div className="mb-4 flex flex-wrap items-center gap-3">
-                                <span className="text-sm">
-                                    {t(':count students have no code yet.', {
-                                        count: String(withoutCode),
-                                    })}
-                                </span>
-                                <Button
-                                    size="sm"
-                                    onClick={() =>
-                                        router.post(
-                                            StudentsAdminController.issueCodes.url(),
-                                            {},
-                                            { preserveScroll: true },
-                                        )
-                                    }
-                                    data-test="issue-codes"
-                                >
-                                    {t('Give them codes')}
-                                </Button>
-                            </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                            {places.map((place) => (
-                                <Button
-                                    key={`${place.stage}${place.section}`}
-                                    variant="outline"
-                                    size="sm"
-                                    asChild
-                                >
-                                    <a
-                                        href={`${StudentsAdminController.codes.url()}?stage=${place.stage}&section=${place.section}`}
-                                        target="_blank"
-                                        rel="noopener"
-                                    >
-                                        {codesLabel(t, place)}
-                                    </a>
-                                </Button>
-                            ))}
-                        </div>
-                    </section>
-                )}
-
                 <DataTable
                     caption={t('Students')}
                     columns={columnDefs}
@@ -507,23 +415,32 @@ export default function GradesStudents({
                                       >
                                           {t('Edit')}
                                       </Button>
-                                      <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() =>
-                                              router.post(
-                                                  StudentsAdminController.replaceCode.url(
-                                                      student.uuid,
-                                                  ),
-                                                  {},
-                                                  { preserveScroll: true },
-                                              )
+                                      {/* Asks first: the old code stops
+                                          working (owner, 2026-11-16). */}
+                                      <ConfirmAction
+                                          trigger={
+                                              <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  data-test="new-student-code"
+                                              >
+                                                  {student.has_code
+                                                      ? t('New code')
+                                                      : t('Give a code')}
+                                              </Button>
                                           }
-                                      >
-                                          {student.has_code
-                                              ? t('New code')
-                                              : t('Give a code')}
-                                      </Button>
+                                          title={t('A new code for :name?', {
+                                              name: student.name,
+                                          })}
+                                          description={t(
+                                              'The current code will be cancelled at once and a new one made. Give the student the new code.',
+                                          )}
+                                          confirmLabel={t('Make a new code')}
+                                          tone="default"
+                                          form={StudentsAdminController.replaceCode.form(
+                                              student.uuid,
+                                          )}
+                                      />
                                       <ConfirmAction
                                           trigger={
                                               <Button

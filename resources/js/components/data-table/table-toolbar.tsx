@@ -26,7 +26,7 @@ const ALL = '__all__';
  * Search (sent after a short pause in typing) and filters for a
  * server-side table, plus room for the column and view menus. `compact`
  * fits it in the top toolbar (PageToolbar): one line of small controls,
- * their labels kept for screen readers only.
+ * each filter's title inside its field.
  */
 export default function TableToolbar({
     search,
@@ -97,7 +97,9 @@ export default function TableToolbar({
                         value={text}
                         onChange={(event) => setText(event.target.value)}
                         className={
-                            compact ? 'h-8 w-44 bg-card ps-8' : 'w-56 ps-8'
+                            compact
+                                ? 'h-8 w-56 bg-card ps-8 sm:w-80'
+                                : 'w-56 ps-8'
                         }
                         placeholder={compact ? t('Search') : undefined}
                         data-test="table-search"
@@ -126,10 +128,23 @@ export default function TableToolbar({
                     >
                         <SelectTrigger
                             size={compact ? 'sm' : 'default'}
-                            className={compact ? 'w-36 bg-card' : 'w-44'}
+                            className={
+                                compact ? 'w-auto min-w-40 bg-card' : 'w-44'
+                            }
                             aria-labelledby={`${searchId}-${filter.key}`}
                             data-test={`filter-${filter.key}`}
                         >
+                            {/* In the toolbar the title is inside the field,
+                                "Stage: All" (owner, 2026-11-16); the label
+                                outside is for screen readers only. */}
+                            {compact && (
+                                <span
+                                    aria-hidden
+                                    className="font-semibold text-muted-foreground"
+                                >
+                                    {filter.label}:
+                                </span>
+                            )}
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

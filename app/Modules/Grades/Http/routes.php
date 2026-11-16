@@ -45,17 +45,23 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
         Route::put('publish', [GradesAdminController::class, 'publish'])->name('publish');
 
         Route::get('teachers', [GradesAdminController::class, 'teachers'])->name('teachers');
+        Route::get('teachers/print', [GradesAdminController::class, 'printTeachers'])->name('teachers.print');
         Route::post('teachers', [GradesAdminController::class, 'storeTeacher'])->middleware('throttle:30,1')->name('teachers.store');
         Route::put('teachers/{teacher}', [GradesAdminController::class, 'updateTeacher'])
             ->middleware('throttle:60,1')
             ->whereUuid('teacher')
             ->name('teachers.update');
+        Route::post('teachers/{teacher}/code', [GradesAdminController::class, 'regenerateTeacherCode'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('teacher')
+            ->name('teachers.code');
         Route::delete('teachers/{teacher}', [GradesAdminController::class, 'destroyTeacher'])
             ->middleware('throttle:30,1')
             ->whereUuid('teacher')
             ->name('teachers.destroy');
 
         Route::get('subjects', [GradesAdminController::class, 'subjects'])->name('subjects');
+        Route::get('subjects/print', [GradesAdminController::class, 'printSubjects'])->name('subjects.print');
         Route::post('subjects', [GradesAdminController::class, 'storeSubject'])->middleware('throttle:60,1')->name('subjects.store');
         Route::put('subjects/{subject}', [GradesAdminController::class, 'updateSubject'])
             ->middleware('throttle:60,1')
@@ -104,6 +110,7 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->whereUuid('student')
             ->name('students.code.replace');
         Route::get('students/codes', [StudentsAdminController::class, 'codes'])->name('students.codes');
+        Route::get('students/print', [StudentsAdminController::class, 'printMenu'])->name('students.print');
     });
 });
 

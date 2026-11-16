@@ -47,12 +47,26 @@ export function placeLabelFull(
         : stageText;
 }
 
-/** A stage by its name: "First stage" or "Second stage". */
+/** A stage by its name: "First stage", "Second stage" or "Third stage". */
 export function stageLabel(t: Translate, stage: number): string {
-    return stage === 1 ? t('First stage') : t('Second stage');
+    switch (stage) {
+        case 1:
+            return t('First stage');
+        case 2:
+            return t('Second stage');
+        default:
+            return t('Third stage');
+    }
 }
 
-/** A stage by its ordinal name: "First" or "Second". */
+/** A stage by its ordinal name: "First", "Second" or "Third". */
 export function stageName(t: Translate, stage: number): string {
-    return stage === 1 ? t('First') : t('Second');
+    switch (stage) {
+        case 1:
+            return t('First');
+        case 2:
+            return t('Second');
+        default:
+            return t('Third');
+    }
 }

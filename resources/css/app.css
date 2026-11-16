@@ -83,9 +83,15 @@
 
     /* Project roles (§6.5): the ink text on the teachers' and students'
        pages, soft highlight cards (owner, 2026-11-15); black text and
-       lines on printed code slips (owner, 2026-11-16). */
+       lines on printed code slips (owner, 2026-11-16), on white paper in
+       every theme (owner, 2026-11-17). */
     --color-ink: var(--ink);
     --color-print-ink: var(--print-ink);
+    --color-paper: var(--paper);
+    /* The sidebar's solid colour, text and border (owner, 2026-11-16). */
+    --color-side-panel: var(--side-panel);
+    --color-side-panel-foreground: var(--side-panel-foreground);
+    --color-side-panel-border: var(--side-panel-border);
     /* The result card's off-white table (owner's request, 2026-11-16). */
     --color-sheet: var(--sheet);
     --color-highlight-soft: var(--highlight-soft);
@@ -192,7 +198,7 @@
 }
 
 /*
-| Blends of the owner's palette (page, table head, sidebar, toolbar,
+| Blends of the owner's palette (page, table head, toolbar,
 | heading). They are gradient tokens from palette.json, every stop checked
 | against its text; the solid tokens underneath are the fallback. The page
 | blend is light-only (none in dark).
@@ -206,8 +212,28 @@
     thead tr {
         background-image: var(--gradient-table-head);
     }
+}
 
-    [data-sidebar='sidebar'] {
-        background-image: var(--gradient-sidebar);
+/* The teachers' printed slips (owner's request, 2026-11-17): A4 sheets
+   with no browser margin, so the browser prints no date, title, address
+   or page number. */
+@page slips {
+    size: A4;
+    margin: 0;
+}
+
+/* The whole document takes the slips page, so nothing around the list
+   falls back to the default page (which would add a blank one). */
+body:has(.print-slips),
+.print-slips {
+    page: slips;
+}
+
+/* The margins, on every sheet: the list's padding is repeated at each
+   page break (owner's request for roomier margins, 2026-11-17). */
+@media print {
+    .print-slips {
+        padding: 15mm;
+        box-decoration-break: clone;
     }
 }

@@ -1,8 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { AlertTriangle, Eye, EyeOff, Lock, LockOpen } from 'lucide-react';
+import { Eye, EyeOff, Lock, LockOpen } from 'lucide-react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
-import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
 import PageToolbar from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,12 +25,11 @@ type Stage = {
  * The owner's overview of the first month (ADR-0034): mark entry, the
  * results' publication to the students, the links for teachers, students
  * and the administration, and each stage's subjects with how many marks
- * each group has. The title is in the top toolbar, the sections' buttons
- * first on the page (owner's layout, 2026-11-16).
+ * each group has. The title is in the top toolbar; teachers, students,
+ * subjects and results are in the sidebar (owner's layout, 2026-11-16).
  */
 export default function GradesOverview({
     window,
-    expected_subjects,
     stages,
     teacherLink,
     studentLink,
@@ -44,7 +42,6 @@ export default function GradesOverview({
         opened_at: string | null;
         closed_at: string | null;
     };
-    expected_subjects: number;
     stages: Stage[];
     teacherLink: string;
     studentLink: string;
@@ -60,40 +57,6 @@ export default function GradesOverview({
             <Head title={t('First-month marks')} />
             <PageToolbar title={t('First-month marks')} />
             <div className="flex flex-col gap-6 p-4">
-                <nav
-                    aria-label={t('First-month marks')}
-                    className="flex flex-wrap gap-2"
-                >
-                    {canManage && (
-                        <>
-                            <Button variant="outline" asChild>
-                                <Link
-                                    href={GradesAdminController.teachers.url()}
-                                >
-                                    {t('Teachers')}
-                                </Link>
-                            </Button>
-                            <Button variant="outline" asChild>
-                                <Link
-                                    href={GradesAdminController.subjects.url()}
-                                >
-                                    {t('Subjects')}
-                                </Link>
-                            </Button>
-                        </>
-                    )}
-                    <Button variant="outline" asChild>
-                        <Link href={StudentsAdminController.index.url()}>
-                            {t('Students')}
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href={ResultsController.index.url()}>
-                            {t('Results')}
-                        </Link>
-                    </Button>
-                </nav>
-
                 <section
                     className="grid gap-4 rounded-lg border bg-card p-4 md:grid-cols-2"
                     data-test="entry-window"
@@ -280,24 +243,6 @@ export default function GradesOverview({
                                         .join(' · ')}
                                 </span>
                             </header>
-
-                            {stage.subjects.length !== expected_subjects && (
-                                <p className="m-4 mb-0 flex items-start gap-2 rounded-md border border-warning bg-warning/15 p-3 text-sm">
-                                    <AlertTriangle
-                                        className="mt-0.5 size-4 shrink-0"
-                                        aria-hidden
-                                    />
-                                    {t(
-                                        'This stage has :count subjects; :expected are expected.',
-                                        {
-                                            count: String(
-                                                stage.subjects.length,
-                                            ),
-                                            expected: String(expected_subjects),
-                                        },
-                                    )}
-                                </p>
-                            )}
 
                             <div className="overflow-x-auto p-4">
                                 <table className="w-full text-sm">

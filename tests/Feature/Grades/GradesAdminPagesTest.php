@@ -131,7 +131,8 @@ describe('set-up', function () {
         $teacher->forceFill(['is_active' => false])->save();
         $this->get('/admin/subjects')->assertInertia(fn (Assert $page) => $page
             ->where('stages.1.subjects.0.teacher', $teacher->uuid)
-            ->where('teachers.0', ['uuid' => $teacher->uuid, 'name' => 'Omar', 'active' => false]));
+            // Teachers are chosen on the teachers' page now (2026-11-17).
+            ->missing('teachers'));
 
         // The page sends both fields back; the stopped teacher stays.
         $this->put("/admin/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => $teacher->uuid]);

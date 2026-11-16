@@ -120,4 +120,17 @@
     --palette-linen-800: oklch(0.37 0.008 71.9);
     --palette-linen-900: oklch(0.28 0.007 71.9);
     --palette-linen-950: oklch(0.2 0.007 71.9);
+    /* olive Olive (owner's sidebar, 2026-11-16): supplied #323D25 */
+    --palette-olive-base: oklch(0.343 0.042 128.5);
+    --palette-olive-50: oklch(0.98 0.015 128.5);
+    --palette-olive-100: oklch(0.955 0.016 128.5);
+    --palette-olive-200: oklch(0.905 0.018 128.5);
+    --palette-olive-300: oklch(0.83 0.021 128.5);
+    --palette-olive-400: oklch(0.72 0.026 128.5);
+    --palette-olive-500: oklch(0.62 0.03 128.5);
+    --palette-olive-600: oklch(0.53 0.034 128.5);
+    --palette-olive-700: oklch(0.45 0.038 128.5);
+    --palette-olive-800: oklch(0.343 0.042 128.5);
+    --palette-olive-900: oklch(0.28 0.035 128.5);
+    --palette-olive-950: oklch(0.2 0.025 128.5);
 }

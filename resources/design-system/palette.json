@@ -34,6 +34,10 @@
         "linen": {
             "hex": "#E8E2DB",
             "name": "Linen"
+        },
+        "olive": {
+            "hex": "#323D25",
+            "name": "Olive (owner's sidebar, 2026-11-16)"
         }
     },
     "roles": {
@@ -65,6 +69,10 @@
             "warning-foreground": "primary-800",
             "ink": "primary-800",
             "print-ink": "neutral-1000",
+            "paper": "neutral-0",
+            "side-panel": "olive-800",
+            "side-panel-foreground": "neutral-0",
+            "side-panel-border": "olive-700",
             "highlight-soft": "accent-100",
             "highlight-soft-end": {
                 "mix": ["accent-100", 50, "accent-200"]
@@ -103,7 +111,11 @@
             "warning": "accent-300",
             "warning-foreground": "primary-950",
             "ink": "linen-50",
-            "print-ink": "linen-50",
+            "print-ink": "neutral-1000",
+            "paper": "neutral-0",
+            "side-panel": "olive-800",
+            "side-panel-foreground": "neutral-0",
+            "side-panel-border": "olive-700",
             "highlight-soft": "accent-950",
             "highlight-soft-end": "accent-900",
             "highlight-soft-border": "accent-800",
@@ -123,13 +135,6 @@
             "angle": 90,
             "stops": ["accent-300", "accent-200"],
             "foreground": "highlight-foreground"
-        },
-        {
-            "name": "sidebar",
-            "angle": 180,
-            "stops": ["primary-800", "primary-700"],
-            "foreground": "brand-surface-foreground",
-            "themes": ["light"]
         },
         {
             "name": "toolbar",

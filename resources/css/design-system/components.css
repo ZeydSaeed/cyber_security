@@ -3,8 +3,9 @@
 | colour decision of one component and reference L2 roles only, so they hold
 | no theme values: the theme changes the roles underneath.
 |
-| cyber_security's layout (owner, 2026-11-16): a Navy sidebar
-| (brand-surface) with the current item in Amber; the top toolbar, table
+| cyber_security's layout (owner, 2026-11-16): a solid Olive sidebar
+| (project role side-panel, olive-800) in both themes, with the current
+| item in Amber; the top toolbar, table
 | heads and page headings in Amber with Navy text (highlight).
 */
 :root {
@@ -32,13 +33,15 @@
     --heading: var(--highlight);
     --heading-foreground: var(--highlight-foreground);
 
-    /* Sidebar (components/ui/sidebar.tsx): Navy (brand-surface), Amber
-       current item (sidebar-accent; sidebar-primary is unused here and not
-       declared). */
-    --sidebar: var(--brand-surface);
-    --sidebar-foreground: var(--brand-surface-foreground);
+    /* Sidebar (components/ui/sidebar.tsx): one solid colour, Olive
+       (olive-800) with white text in both themes (side-panel, owner
+       2026-11-16); Amber current item (sidebar-accent; sidebar-primary is
+       unused here and not declared); the focus ring in the ring colour,
+       which reads on both. */
+    --sidebar: var(--side-panel);
+    --sidebar-foreground: var(--side-panel-foreground);
     --sidebar-accent: var(--highlight);
     --sidebar-accent-foreground: var(--highlight-foreground);
-    --sidebar-border: var(--brand-surface-border);
-    --sidebar-ring: var(--highlight);
+    --sidebar-border: var(--side-panel-border);
+    --sidebar-ring: var(--side-panel-foreground);
 }

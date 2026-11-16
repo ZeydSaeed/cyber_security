@@ -16,6 +16,8 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
   - White text on it 9.10:1, black text 2.31:1; as text on the light background 8.59:1, on the dark background 1.99:1.
 - **linen** (Linen): #E8E2DB = oklch(0.916 0.011 71.9); light, neutral, grey, warm; anchor step 200.
   - White text on it 1.28:1, black text 16.36:1; as text on the light background 1.21:1, on the dark background 14.10:1.
+- **olive** (Olive (owner's sidebar, 2026-11-16)): #323D25 = oklch(0.343 0.042 128.5); dark, muted, green, cool; anchor step 800.
+  - White text on it 11.47:1, black text 1.83:1; as text on the light background 10.83:1, on the dark background 1.58:1.
 
 ## Derived families
 
@@ -100,13 +102,16 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `chart-5`: danger-600 = oklch(0.53 0.133 29.5)
 - `ink`: primary-800 = oklch(0.327 0.092 262.8). Set in palette.json "roles".
 - `print-ink`: neutral-1000 = oklch(0 0 0). Set in palette.json "roles".
+- `paper`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `side-panel`: olive-800 = oklch(0.343 0.042 128.5). Set in palette.json "roles".
+- `side-panel-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `side-panel-border`: olive-700 = oklch(0.45 0.038 128.5). Set in palette.json "roles".
 - `highlight-soft`: accent-100 = oklch(0.955 0.035 74.1). Set in palette.json "roles".
 - `highlight-soft-end`: mix(accent-100 50%, accent-200) = oklch(0.93 0.056 74.1). Set in palette.json "roles".
 - `highlight-soft-border`: accent-200 = oklch(0.905 0.077 74.1). Set in palette.json "roles".
 - `sheet`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
 - gradient `page`: weakest stop 9.74:1 with foreground.
 - gradient `table-head`: weakest stop 7.23:1 with highlight-foreground.
-- gradient `sidebar`: weakest stop 7.49:1 with brand-surface-foreground.
 - gradient `toolbar`: weakest stop 7.23:1 with highlight-foreground.
 - gradient `heading`: weakest stop 7.23:1 with highlight-foreground.
 
@@ -154,9 +159,9 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 5.39:1 (min 3) chart-3 on card
 - PASS 4.98:1 (min 3) chart-4 on card
 - PASS 5.63:1 (min 3) chart-5 on card
-- PASS 12.50:1 (min 4.5) sidebar-foreground on sidebar
+- PASS 11.47:1 (min 4.5) sidebar-foreground on sidebar
 - PASS 7.23:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
-- PASS 7.23:1 (min 3) sidebar-ring on sidebar
+- PASS 11.47:1 (min 3) sidebar-ring on sidebar
 - PASS 12.50:1 (min 4.5) button-primary-foreground on button-primary
 - PASS 14.72:1 (min 4.5) button-primary-foreground on button-primary-hover
 - PASS 18.17:1 (min 4.5) button-primary-foreground on button-primary-active
@@ -172,8 +177,8 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 11.80:1 (min 4.5) foreground on sheet
 - PASS 7.02:1 (min 4.5) muted-foreground on sheet
 - PASS 8.58:1 (min 4.5) destructive-text on sheet
-- PASS 16.36:1 (min 4.5) print-ink on background
-- PASS 21.00:1 (min 4.5) print-ink on card
+- PASS 21.00:1 (min 4.5) print-ink on paper
+- PASS 11.47:1 (min 4.5) side-panel-foreground on side-panel
 
 ## Roles: dark
 
@@ -222,7 +227,11 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `chart-4`: success-400 = oklch(0.72 0.115 150)
 - `chart-5`: danger-400 = oklch(0.72 0.099 29.5)
 - `ink`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
-- `print-ink`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `print-ink`: neutral-1000 = oklch(0 0 0). Set in palette.json "roles".
+- `paper`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `side-panel`: olive-800 = oklch(0.343 0.042 128.5). Set in palette.json "roles".
+- `side-panel-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `side-panel-border`: olive-700 = oklch(0.45 0.038 128.5). Set in palette.json "roles".
 - `highlight-soft`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
 - `highlight-soft-end`: accent-900 = oklch(0.28 0.06 74.1). Set in palette.json "roles".
 - `highlight-soft-border`: accent-800 = oklch(0.37 0.078 74.1). Set in palette.json "roles".
@@ -275,9 +284,9 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 5.82:1 (min 3) chart-3 on card
 - PASS 6.22:1 (min 3) chart-4 on card
 - PASS 5.70:1 (min 3) chart-5 on card
-- PASS 14.72:1 (min 4.5) sidebar-foreground on sidebar
+- PASS 11.47:1 (min 4.5) sidebar-foreground on sidebar
 - PASS 10.50:1 (min 4.5) sidebar-accent-foreground on sidebar-accent
-- PASS 8.51:1 (min 3) sidebar-ring on sidebar
+- PASS 11.47:1 (min 3) sidebar-ring on sidebar
 - PASS 10.50:1 (min 4.5) button-primary-foreground on button-primary
 - PASS 13.59:1 (min 4.5) button-primary-foreground on button-primary-hover
 - PASS 15.89:1 (min 4.5) button-primary-foreground on button-primary-active
@@ -293,5 +302,5 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 13.89:1 (min 4.5) foreground on sheet
 - PASS 8.76:1 (min 4.5) muted-foreground on sheet
 - PASS 8.47:1 (min 4.5) destructive-text on sheet
-- PASS 17.15:1 (min 4.5) print-ink on background
-- PASS 13.89:1 (min 4.5) print-ink on card
+- PASS 21.00:1 (min 4.5) print-ink on paper
+- PASS 11.47:1 (min 4.5) side-panel-foreground on side-panel

@@ -12,25 +12,43 @@ import { useTranslations } from '@/hooks/use-translations';
  * under it at the start, the title in the middle, and the print button (and
  * any other actions) at the end. The actions keep their space when printed,
  * so the title stays centred on paper too.
+ *
+ * `paper` shows the page as white paper with black ink in every theme
+ * (owner's request, 2026-11-17), for the code slips. `printHeader={false}`
+ * keeps the header on screen only (the teachers' slips, 2026-11-17).
  */
 export default function PrintPage({
     title,
     subtitle,
     actions,
+    paper = false,
+    printHeader = true,
     children,
 }: {
     title: string;
     subtitle?: string;
     /** Further buttons beside Print (e.g. Download). */
     actions?: ReactNode;
+    /** White paper and black ink in every theme. */
+    paper?: boolean;
+    /** Print the header too (default), or show it on screen only. */
+    printHeader?: boolean;
     children: ReactNode;
 }) {
     const { t } = useTranslations();
     const { name } = usePage<{ name: string }>().props;
 
-    return (
-        <div className="mx-auto max-w-5xl bg-background p-6 text-foreground print:max-w-none print:p-0">
-            <header className="mb-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b pb-4">
+    const sheet = (
+        <div
+            className={
+                paper
+                    ? 'mx-auto max-w-5xl p-6 print:max-w-none print:p-0'
+                    : 'mx-auto max-w-5xl bg-background p-6 text-foreground print:max-w-none print:p-0'
+            }
+        >
+            <header
+                className={`mb-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b pb-4 ${paper ? 'border-print-ink' : ''} ${printHeader ? '' : 'print:hidden'}`}
+            >
                 <div className="flex flex-col items-center justify-self-start text-center">
                     <AppLogoIcon className="size-16" />
                     <p
@@ -54,5 +72,16 @@ export default function PrintPage({
             </header>
             <main>{children}</main>
         </div>
+    );
+
+    return paper ? (
+        <div
+            className="min-h-screen bg-paper text-print-ink print:min-h-0"
+            data-test="print-paper"
+        >
+            {sheet}
+        </div>
+    ) : (
+        sheet
     );
 }

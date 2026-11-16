@@ -5,8 +5,7 @@ import { pageReady } from './lib/ready';
 /*
 | The owner's Grades pages (ADR-0034), signed in as the browser seeder's
 | administrator, in Arabic and English, on a phone and a desktop: axe and
-| no sideways scrolling on every page, then the student import (preview,
-| then apply) and the printable pages. The seeder provides a teacher, two
+| no sideways scrolling on every page, then the printable pages. The seeder provides a teacher, two
 | first-stage subjects and six students per section; teacher.spec.ts has
 | entered some marks by the time these run, or not: nothing here depends
 | on it.
@@ -56,6 +55,9 @@ const pages = [
     '/admin/students',
     '/admin/results?stage=1&section=A',
     '/admin/results/print?stage=1&section=A',
+    '/admin/teachers/print',
+    '/admin/students/print',
+    '/admin/subjects/print',
 ];
 
 for (const { locale, dir } of [
@@ -89,32 +91,37 @@ for (const { locale, dir } of [
 test.describe('grades owner flow', () => {
     test.use({ viewport: viewports.desktop });
 
-    test('imports students after a preview, and prints a result card', async ({
-        page,
-    }) => {
-        await open(page, '/admin/students', 'en');
+    // The code slips print on white paper with black ink in every theme
+    // (owner's request, 2026-11-17).
+    for (const path of [
+        '/admin/teachers/print',
+        '/admin/students/codes?stage=1&section=A',
+    ]) {
+        test(`${path} is white in the dark theme`, async ({ page }) => {
+            await page.emulateMedia({ colorScheme: 'dark' });
+            await page
+                .context()
+                .addCookies([
+                    { name: 'appearance', value: 'dark', url: baseURL },
+                ]);
+            await open(page, path, 'ar');
+            await expect(page.locator('html')).toHaveClass(/\bdark\b/);
 
-        const csv =
-            'name,stage,section\nBrowser Imported One,2,A\nBrowser Imported Two,2,B\nToo,7,A\n';
-        await page.setInputFiles('#import-file', {
-            name: 'students.csv',
-            mimeType: 'text/csv',
-            buffer: Buffer.from(csv),
+            const paper = page.locator('[data-test="print-paper"]');
+            await expect(paper).toHaveCSS('background-color', 'oklch(1 0 0)');
+            await expect(paper).toHaveCSS('color', 'oklch(0 0 0)');
+            await check(page, `${path} (dark)`, 'rtl');
+            const name = path.replace(/[/?=&]+/g, '-').replace(/^-/, '');
+            await page.screenshot({
+                path: `storage/framework/screenshots/${name}-ar-dark.png`,
+                fullPage: true,
+            });
         });
-        await page.getByRole('button', { name: 'Preview' }).click();
+    }
 
-        await page.waitForURL(/\/admin\/students\/import$/);
-        await pageReady(page);
-        await check(page, 'the import preview', 'ltr');
-        await expect(
-            page.locator('[data-test="rejected-rows"] li'),
-        ).toHaveCount(1);
-
-        await page.click('[data-test="apply-import"]');
-        await page.waitForURL(/\/admin\/students(\?.*)?$/);
-        await pageReady(page);
-        await expect(page.getByText('Browser Imported One')).toBeVisible();
-
+    // The import card left the students page on 2026-11-16 (the owner adds
+    // students one by one); the import itself keeps its feature tests.
+    test('prints a result card', async ({ page }) => {
         await open(page, '/admin/results?stage=1&section=A', 'ar');
         const card = page.locator('[data-test="result-row"] a').first();
         const href = await card.getAttribute('href');

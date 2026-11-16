@@ -1,8 +1,9 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { UserPlus } from 'lucide-react';
-import { Fragment, useState } from 'react';
+import { Printer, UserPlus } from 'lucide-react';
+import { Fragment, useCallback, useState } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ConfirmAction from '@/components/confirm-action';
+import TableToolbar from '@/components/data-table/table-toolbar';
 import EmptyState from '@/components/empty-state';
 import InputError from '@/components/input-error';
 import PageToolbar, { toolButton } from '@/components/page-toolbar';
@@ -22,7 +23,9 @@ import { stageLabel } from '../../place';
 type Teacher = {
     uuid: string;
     name: string;
-    /** The employee number, or null when none is kept yet. */
+    /** As the school's staff list writes it, e.g. "Electricity". */
+    specialty: string | null;
+    /** The code to sign in, made by the application; null if none kept. */
     code: string | null;
     active: boolean;
     last_seen_at: string | null;
@@ -46,13 +49,11 @@ function TeacherDialog({
     teacher,
     teachers,
     subjects,
-    codeLength,
     onClose,
 }: {
     teacher: Teacher | null;
     teachers: Teacher[];
     subjects: Subject[];
-    codeLength: { min: number; max: number };
     onClose: () => void;
 }) {
     const { t } = useTranslations();
@@ -74,7 +75,7 @@ function TeacherDialog({
                     {teacher === null ? t('Add a teacher') : t('Edit teacher')}
                 </DialogTitle>
                 <DialogDescription className="sr-only">
-                    {t('Name, employee number and subjects.')}
+                    {t('Name, specialty and subjects.')}
                 </DialogDescription>
                 <Form
                     {...form}
@@ -100,21 +101,17 @@ function TeacherDialog({
                                     <InputError message={errors.name} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="teacher-code">
-                                        {t('Employee number')}
+                                    <Label htmlFor="teacher-specialty">
+                                        {t('Specialty')}
                                     </Label>
                                     <Input
-                                        id="teacher-code"
-                                        name="code"
-                                        defaultValue={teacher?.code ?? ''}
-                                        required
-                                        minLength={codeLength.min}
-                                        maxLength={codeLength.max}
-                                        autoComplete="off"
-                                        spellCheck={false}
-                                        dir="ltr"
+                                        id="teacher-specialty"
+                                        name="specialty"
+                                        defaultValue={teacher?.specialty ?? ''}
+                                        maxLength={80}
+                                        dir="auto"
                                     />
-                                    <InputError message={errors.code} />
+                                    <InputError message={errors.specialty} />
                                 </div>
                             </div>
 
@@ -228,21 +225,41 @@ function TeacherDialog({
  * order, the name, the employee number (the teacher's code to sign in),
  * the subjects they teach with each one's stage and sections, and the
  * actions: edit, stop or allow signing in, delete. "Add a teacher" is in
- * the top toolbar. Employee numbers are kept encrypted; showing this page
+ * the top toolbar. Codes are made by the application ("New code", after a
+ * confirmation) and kept encrypted; showing this page
  * is audited. Changing a number or stopping a teacher ends their sessions.
  */
 export default function GradesTeachers({
     teachers,
     subjects,
-    codeLength,
 }: {
     teachers: Teacher[];
     subjects: Subject[];
-    codeLength: { min: number; max: number };
 }) {
     const { t, locale } = useTranslations();
     // null: closed; 'new': adding; a teacher: changing them.
     const [dialog, setDialog] = useState<Teacher | 'new' | null>(null);
+    // Search and filter on this page (all teachers are on it).
+    const [search, setSearch] = useState('');
+    const [specialty, setSpecialty] = useState<string | null>(null);
+    const onSearch = useCallback((text: string) => setSearch(text), []);
+    const specialties = [
+        ...new Set(
+            teachers
+                .map((teacher) => teacher.specialty)
+                .filter((value): value is string => value !== null),
+        ),
+    ].sort((a, b) => a.localeCompare(b, locale));
+    const needle = search.trim().toLowerCase();
+    const shown = teachers.filter(
+        (teacher) =>
+            (specialty === null || teacher.specialty === specialty) &&
+            (needle === '' ||
+                [teacher.name, teacher.specialty ?? '', teacher.code ?? '']
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(needle)),
+    );
     const list = new Intl.ListFormat(locale === 'ar' ? 'ar' : 'en', {
         type: 'conjunction',
     });
@@ -252,30 +269,69 @@ export default function GradesTeachers({
     const lines = (teacher: Teacher, line: (subject: Subject) => string) => {
         const own = taught(teacher);
 
-        return own.length === 0 ? (
-            <span className="text-muted-foreground">—</span>
-        ) : (
-            own.map((subject) => (
-                <Fragment key={subject.uuid}>
-                    <bdi className="block">{line(subject)}</bdi>
-                </Fragment>
-            ))
-        );
+        return own.length === 0
+            ? null
+            : own.map((subject) => (
+                  <Fragment key={subject.uuid}>
+                      <bdi className="block min-h-5 whitespace-nowrap">
+                          {line(subject)}
+                      </bdi>
+                  </Fragment>
+              ));
     };
 
     return (
         <>
             <Head title={t('Teachers')} />
+            {/* The same toolbar as the students' and subjects' pages:
+                title, search and filter, then the actions. */}
             <PageToolbar title={t('Teachers')}>
+                <TableToolbar
+                    compact
+                    search={search}
+                    filters={[
+                        {
+                            key: 'specialty',
+                            label: t('Specialty'),
+                            options: specialties.map((value) => ({
+                                value,
+                                label: value,
+                            })),
+                        },
+                    ]}
+                    values={specialty === null ? {} : { specialty }}
+                    onSearch={onSearch}
+                    onFilter={(_key, value) => setSpecialty(value)}
+                    onClear={() => {
+                        setSearch('');
+                        setSpecialty(null);
+                    }}
+                />
                 <Button
                     variant="outline"
                     size="sm"
-                    className={`h-7 ${toolButton}`}
+                    className={`h-8 ${toolButton}`}
                     onClick={() => setDialog('new')}
                     data-test="add-teacher"
                 >
                     <UserPlus aria-hidden />
                     {t('Add a teacher')}
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className={`h-8 ${toolButton}`}
+                    asChild
+                >
+                    <a
+                        href={GradesAdminController.printTeachers.url()}
+                        target="_blank"
+                        rel="noopener"
+                        data-test="print-teachers"
+                    >
+                        <Printer aria-hidden />
+                        {t('Print')}
+                    </a>
                 </Button>
             </PageToolbar>
 
@@ -285,17 +341,22 @@ export default function GradesTeachers({
                     teacher={dialog === 'new' ? null : dialog}
                     teachers={teachers}
                     subjects={subjects}
-                    codeLength={codeLength}
                     onClose={() => setDialog(null)}
                 />
             )}
 
             <div className="flex flex-col gap-6 p-4">
-                {teachers.length === 0 ? (
+                {shown.length === 0 && teachers.length > 0 ? (
+                    <EmptyState
+                        kind="no-results"
+                        title={t('No results')}
+                        description={t('Nothing matches these filters.')}
+                    />
+                ) : teachers.length === 0 ? (
                     <EmptyState
                         title={t('No teachers yet')}
                         description={t(
-                            'Add each teacher with their employee number.',
+                            'Add each teacher; the application makes their code.',
                         )}
                     />
                 ) : (
@@ -316,7 +377,7 @@ export default function GradesTeachers({
                                 <tr>
                                     <th
                                         scope="col"
-                                        className="w-12 px-4 py-3 text-start"
+                                        className="w-12 px-4 py-3 text-center"
                                     >
                                         #
                                     </th>
@@ -328,9 +389,15 @@ export default function GradesTeachers({
                                     </th>
                                     <th
                                         scope="col"
-                                        className="px-4 py-3 text-start"
+                                        className="px-4 py-3 text-center"
                                     >
-                                        {t('Employee number')}
+                                        {t('Specialty')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center"
+                                    >
+                                        {t('Code')}
                                     </th>
                                     <th
                                         scope="col"
@@ -340,13 +407,13 @@ export default function GradesTeachers({
                                     </th>
                                     <th
                                         scope="col"
-                                        className="px-4 py-3 text-start"
+                                        className="px-4 py-3 text-center"
                                     >
                                         {t('Stage')}
                                     </th>
                                     <th
                                         scope="col"
-                                        className="px-4 py-3 text-start"
+                                        className="px-4 py-3 text-center"
                                     >
                                         {t('Section')}
                                     </th>
@@ -359,12 +426,12 @@ export default function GradesTeachers({
                                 </tr>
                             </thead>
                             <tbody>
-                                {teachers.map((teacher, index) => (
+                                {shown.map((teacher, index) => (
                                     <tr
                                         key={teacher.uuid}
                                         data-test="teacher-row"
                                     >
-                                        <td className="px-4 py-3 align-top text-muted-foreground tabular-nums">
+                                        <td className="px-4 py-3 text-center align-top text-muted-foreground tabular-nums">
                                             {index + 1}
                                         </td>
                                         <th
@@ -381,7 +448,12 @@ export default function GradesTeachers({
                                                 </Badge>
                                             )}
                                         </th>
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-4 py-3 text-center align-top">
+                                            {teacher.specialty && (
+                                                <bdi>{teacher.specialty}</bdi>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center align-top">
                                             {teacher.code ? (
                                                 <span
                                                     dir="ltr"
@@ -393,7 +465,7 @@ export default function GradesTeachers({
                                             ) : (
                                                 <span className="text-muted-foreground">
                                                     {t(
-                                                        'Not kept: set a new one',
+                                                        'None yet: make a new one',
                                                     )}
                                                 </span>
                                             )}
@@ -404,18 +476,18 @@ export default function GradesTeachers({
                                                 (subject) => subject.name,
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-4 py-3 text-center align-top">
                                             {lines(teacher, (subject) =>
                                                 stageLabel(t, subject.stage),
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-4 py-3 text-center align-top">
                                             {lines(teacher, (subject) =>
                                                 subject.divided
                                                     ? list.format(
                                                           subject.sections,
                                                       )
-                                                    : t('All students'),
+                                                    : '',
                                             )}
                                         </td>
                                         <td className="px-4 py-3 align-top">
@@ -430,6 +502,31 @@ export default function GradesTeachers({
                                                 >
                                                     {t('Edit')}
                                                 </Button>
+                                                <ConfirmAction
+                                                    trigger={
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            data-test="new-teacher-code"
+                                                        >
+                                                            {t('New code')}
+                                                        </Button>
+                                                    }
+                                                    title={t(
+                                                        'A new code for :name?',
+                                                        { name: teacher.name },
+                                                    )}
+                                                    description={t(
+                                                        'The current code will be cancelled at once and a new one made. Give the teacher the new code.',
+                                                    )}
+                                                    confirmLabel={t(
+                                                        'Make a new code',
+                                                    )}
+                                                    tone="default"
+                                                    form={GradesAdminController.regenerateTeacherCode.form(
+                                                        teacher.uuid,
+                                                    )}
+                                                />
                                                 <Button
                                                     variant="outline"
                                                     size="sm"

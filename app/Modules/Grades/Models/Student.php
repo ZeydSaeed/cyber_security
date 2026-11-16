@@ -5,6 +5,7 @@ namespace App\Modules\Grades\Models;
 use App\Modules\Grades\Database\Factories\StudentFactory;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\StudentStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $student_number
  * @property string|null $code_digest
  * @property string|null $code_encrypted
+ * @property StudentStatus|null $status
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
@@ -72,6 +74,7 @@ class Student extends Model implements Authenticatable
         return [
             'stage' => Stage::class,
             'section' => Section::class,
+            'status' => StudentStatus::class,
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

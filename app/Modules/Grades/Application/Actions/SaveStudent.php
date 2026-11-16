@@ -7,6 +7,7 @@ use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\NameKey;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\StudentStatus;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\Student;
 use App\Platform\Audit\AuditLogger;
@@ -22,7 +23,8 @@ use Illuminate\Support\Facades\DB;
  * type (StudentCodes::assertAcceptable), which ends the student's open
  * sessions. A student with marks keeps their stage and cannot be deleted:
  * the marks belong to that stage (the database refuses both too). The
- * student number, if any, is left to the import.
+ * student number, if any, is left to the import. A student's status is
+ * empty, or "external" for one enrolled by correspondence (intisab).
  */
 class SaveStudent
 {
@@ -32,11 +34,11 @@ class SaveStudent
         private readonly StudentCodes $codes,
     ) {}
 
-    public function create(User $actor, string $name, Stage $stage, ?Section $section): Student
+    public function create(User $actor, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null): Student
     {
         [$name, $key, $section] = $this->valid($name, $stage, $section);
 
-        return DB::transaction(function () use ($actor, $name, $key, $stage, $section): Student {
+        return DB::transaction(function () use ($actor, $name, $key, $stage, $section, $status): Student {
             EnsureManager::check($actor);
             $this->assertFreeName($stage, $key, null);
 
@@ -46,11 +48,12 @@ class SaveStudent
                 'name_key' => $key,
                 'stage' => $stage,
                 'section' => $section,
+                'status' => $status,
             ])->save();
             $this->issue->give($student);
 
             $this->audit->record('grades.student_created', $student, [
-                'name' => $name, 'stage' => $stage->value, 'section' => $section->value,
+                'name' => $name, 'stage' => $stage->value, 'section' => $section->value, 'status' => $status?->value,
             ], actor: $actor);
 
             return $student;
@@ -58,10 +61,10 @@ class SaveStudent
     }
 
     /**
-     * Changes the name, stage and section, and the code when one is given
+     * Changes the name, stage, section and status, and the code when one is given
      * (null or the same code changes nothing).
      */
-    public function update(User $actor, Student $student, string $name, Stage $stage, ?Section $section, ?string $code = null): Student
+    public function update(User $actor, Student $student, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null, ?string $code = null): Student
     {
         [$name, $key, $section] = $this->valid($name, $stage, $section);
         $code = $code === null || trim($code) === '' ? null : $code;
@@ -69,7 +72,7 @@ class SaveStudent
             $this->codes->assertAcceptable($code);
         }
 
-        return DB::transaction(function () use ($actor, $student, $name, $key, $stage, $section, $code): Student {
+        return DB::transaction(function () use ($actor, $student, $name, $key, $stage, $section, $status, $code): Student {
             $locked = Student::query()->whereKey($student->id)->lockForUpdate()->firstOrFail();
             EnsureManager::check($actor);
 
@@ -80,6 +83,7 @@ class SaveStudent
                 'full_name' => $locked->full_name !== $name ? ['from' => $locked->full_name, 'to' => $name] : null,
                 'stage' => $locked->stage !== $stage ? ['from' => $locked->stage->value, 'to' => $stage->value] : null,
                 'section' => $locked->section !== $section ? ['from' => $locked->section->value, 'to' => $section->value] : null,
+                'status' => $locked->status !== $status ? ['from' => $locked->status?->value, 'to' => $status?->value] : null,
             ]);
 
             if ($changes === [] && ! $newCode) {
@@ -94,7 +98,7 @@ class SaveStudent
                 $this->assertFreeName($stage, $key, $locked->id);
             }
 
-            $fields = ['full_name' => $name, 'name_key' => $key, 'stage' => $stage, 'section' => $section];
+            $fields = ['full_name' => $name, 'name_key' => $key, 'stage' => $stage, 'section' => $section, 'status' => $status];
 
             if ($newCode) {
                 if (Student::query()->where('code_digest', $digest)->whereKeyNot($locked->id)->exists()) {

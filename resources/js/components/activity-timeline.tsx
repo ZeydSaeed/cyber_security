@@ -67,6 +67,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Teacher allowed to sign in');
         case 'grades.teacher_deactivated':
             return t('Teacher stopped from signing in');
+        case 'grades.teacher_specialty_changed':
+            return t('Teacher specialty changed');
         case 'grades.teacher_deleted':
             return t('Teacher deleted');
         case 'grades.teacher_codes_viewed':

@@ -154,7 +154,7 @@ export default function DataTable<Row>({
                         {numbered && (
                             <th
                                 scope="col"
-                                className="w-12 px-4 py-3 text-start font-medium"
+                                className="w-12 px-4 py-3 text-center font-medium"
                             >
                                 #
                             </th>
@@ -259,7 +259,7 @@ export default function DataTable<Row>({
                                 )}
                             >
                                 {numbered && (
-                                    <td className="px-4 py-3 text-muted-foreground tabular-nums">
+                                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                                         {(numberFrom ?? 1) + index}
                                     </td>
                                 )}

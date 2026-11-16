@@ -11,6 +11,7 @@ use App\Modules\Grades\Application\Import\StudentImportTemplate;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\StudentStatus;
 use App\Modules\Grades\Models\Student;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Files\FileStore;
@@ -63,6 +64,7 @@ class StudentsAdminController
                     'number' => $student->student_number,
                     'stage' => $student->stage->value,
                     'section' => $student->section->value,
+                    'status' => $student->status?->value,
                 ])->all()),
                 'page' => $students->currentPage(),
                 'last_page' => $students->lastPage(),
@@ -73,7 +75,6 @@ class StudentsAdminController
             'state' => $state->toArray(),
             'columns' => TableColumns::for($viewer->id, $table),
             'canImport' => $showCodes,
-            'withoutCode' => Student::query()->whereNull('code_digest')->count(),
             'places' => ResultsController::places(),
         ]);
     }
@@ -89,8 +90,8 @@ class StudentsAdminController
     public function update(Request $request, Student $student, SaveStudent $save, #[CurrentUser] User $user): RedirectResponse
     {
         $request->validate(['code' => ['nullable', 'string', 'max:40']]);
-        [$name, $stage, $section] = $this->studentFields($request);
-        $save->update($user, $student, $name, $stage, $section, $request->filled('code') ? (string) $request->string('code') : null);
+        [$name, $stage, $section, $status] = $this->studentFields($request);
+        $save->update($user, $student, $name, $stage, $section, $status, $request->filled('code') ? (string) $request->string('code') : null);
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Changes saved.')]);
 
         return back();
@@ -125,8 +126,8 @@ class StudentsAdminController
             'how' => __('What to write'),
             'rules' => [
                 'name' => __('The full name of the student, at least 3 letters.'),
-                'stage' => __('1 for the first stage, 2 for the second.'),
-                'section' => __('A or B for the second stage; leave it empty for the first stage.'),
+                'stage' => __('1 for the first stage, 2 for the second, 3 for the third.'),
+                'section' => __('A or B for the second and third stages; leave it empty for the first stage.'),
                 'number' => __('Optional: the number of the student at the school. If you write it, it must not repeat.'),
             ],
             'example' => __('Example'),
@@ -147,6 +148,18 @@ class StudentsAdminController
         ], $arabic);
 
         return response()->download($path, 'students-template.xlsx')->deleteFileAfterSend();
+    }
+
+    /**
+     * The Print page (owner's request, 2026-11-17): each group's code slips,
+     * and codes for students who have none yet.
+     */
+    public function printMenu(): Response
+    {
+        return Inertia::render('modules/grades/pages/admin/print', [
+            'places' => ResultsController::places(),
+            'withoutCode' => Student::query()->whereNull('code_digest')->count(),
+        ]);
     }
 
     public function issueCodes(IssueStudentCodes $issue, #[CurrentUser] User $user): RedirectResponse
@@ -247,7 +260,7 @@ class StudentsAdminController
     }
 
     /**
-     * @return array{0: string, 1: Stage, 2: Section|null}
+     * @return array{0: string, 1: Stage, 2: Section|null, 3: StudentStatus|null}
      */
     private function studentFields(Request $request): array
     {
@@ -255,13 +268,16 @@ class StudentsAdminController
             'name' => ['required', 'string', 'max:160'],
             'stage' => ['required', Rule::enum(Stage::class)],
             'section' => ['nullable', Rule::enum(Section::class)],
+            'status' => ['nullable', Rule::enum(StudentStatus::class)],
         ]);
         $section = $request->input('section');
+        $status = $request->input('status');
 
         return [
             (string) $request->string('name'),
             Stage::from($request->integer('stage')),
             is_string($section) && $section !== '' ? Section::from($section) : null,
+            is_string($status) && $status !== '' ? StudentStatus::from($status) : null,
         ];
     }
 

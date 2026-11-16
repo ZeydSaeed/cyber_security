@@ -55,7 +55,8 @@ class DrillSeeder extends Seeder
         }
 
         $subjectList = [];
-        foreach (Stage::cases() as $stage) {
+        // The drill's figures are for two stages (its students are in 1 and 2).
+        foreach ([Stage::First, Stage::Second] as $stage) {
             foreach (range(1, 8) as $n) {
                 $subjectList[] = $subjects->create($owner, $stage, "Subject {$stage->value}.{$n}", $staff[($n - 1) % 8]);
             }
