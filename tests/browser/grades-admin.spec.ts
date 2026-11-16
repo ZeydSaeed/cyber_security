@@ -125,6 +125,19 @@ test.describe('grades owner flow', () => {
         await expect(page.locator('[data-test="card-name"]')).toHaveText(
             /Student 1-/,
         );
+        await page.screenshot({
+            path: 'storage/framework/screenshots/grades-result-card-ar.png',
+            fullPage: true,
+        });
+        // The card saves as a PNG image (owner's request, 2026-11-16).
+        const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            page.click('[data-test="download"]'),
+        ]);
+        expect(download.suggestedFilename()).toMatch(/^result-.+\.png$/);
+        await download.saveAs(
+            'storage/framework/screenshots/grades-result-card-ar-download.png',
+        );
         await page.emulateMedia({ media: 'print' });
         await expect(page.locator('[data-test="print"]')).toBeHidden();
         await page.screenshot({

@@ -84,6 +84,8 @@
     /* Project roles (§6.5): the ink text on the teachers' and students'
        pages, soft highlight cards (owner, 2026-11-15). */
     --color-ink: var(--ink);
+    /* The result card's off-white table (owner's request, 2026-11-16). */
+    --color-sheet: var(--sheet);
     --color-highlight-soft: var(--highlight-soft);
     --color-highlight-soft-end: var(--highlight-soft-end);
     --color-highlight-soft-border: var(--highlight-soft-border);

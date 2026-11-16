@@ -72,7 +72,8 @@
                     "accent-200"
                 ]
             },
-            "highlight-soft-border": "accent-200"
+            "highlight-soft-border": "accent-200",
+            "sheet": "linen-50"
         },
         "dark": {
             "background": "primary-950",
@@ -115,7 +116,8 @@
             "ink": "linen-50",
             "highlight-soft": "accent-950",
             "highlight-soft-end": "accent-900",
-            "highlight-soft-border": "accent-800"
+            "highlight-soft-border": "accent-800",
+            "sheet": "primary-900"
         }
     },
     "gradients": [

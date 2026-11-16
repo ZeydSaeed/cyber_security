@@ -285,5 +285,20 @@
         "fg": "ink",
         "bg": "highlight-soft-end",
         "min": 4.5
+    },
+    {
+        "fg": "foreground",
+        "bg": "sheet",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "sheet",
+        "min": 4.5
+    },
+    {
+        "fg": "destructive-text",
+        "bg": "sheet",
+        "min": 4.5
     }
 ]

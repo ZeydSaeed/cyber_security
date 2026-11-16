@@ -35,7 +35,7 @@ export default function GradesResults({
                 <Heading
                     title={t('Results')}
                     description={t(
-                        'Each subject is out of 100; :mark is the pass mark. An absence counts as 0. No ranking.',
+                        'Each subject is out of 100; :mark is the pass mark. An absence counts as 0.',
                         { mark: String(sheet.pass_mark) },
                     )}
                 />

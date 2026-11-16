@@ -39,10 +39,14 @@ export function placeLabelFull(
     section: string,
     divided: boolean,
 ): string {
-    const name = stage === 1 ? t('First') : t('Second');
-    const stageText = t('Stage: :name', { name });
+    const stageText = t('Stage: :name', { name: stageName(t, stage) });
 
     return divided
         ? `${stageText} · ${t('Section: :section', { section })}`
         : stageText;
+}
+
+/** A stage by its ordinal name: "First" or "Second". */
+export function stageName(t: Translate, stage: number): string {
+    return stage === 1 ? t('First') : t('Second');
 }

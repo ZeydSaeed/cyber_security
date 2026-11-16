@@ -439,7 +439,7 @@
     "Subject": "المادة",
     "Teacher": "المدرّس",
     "No teacher": "دون مدرّس",
-    "Each subject is out of 100; :mark is the pass mark. An absence counts as 0. No ranking.": "كل مادة من 100، ودرجة النجاح :mark. يُحسب الغياب صفراً. لا ترتيب للطلاب.",
+    "Each subject is out of 100; :mark is the pass mark. An absence counts as 0.": "كل مادة من 100، ودرجة النجاح :mark. يُحسب الغياب صفراً.",
     "Sections": "الشعب",
     ":students students · :complete with every mark · :passed passed every subject": ":students طالب · :complete اكتملت درجاتهم · :passed نجحوا في كل المواد",
     "Print the section": "طباعة الشعبة",
@@ -536,5 +536,8 @@
     "First": "الأول",
     "Second": "الثاني",
     "Stage: :name": "الصف: :name",
-    "Section: :section": "الشعبة: :section"
+    "Section: :section": "الشعبة: :section",
+    "Student ID": "الرقم التعريفي",
+    "Download the result": "تحميل",
+    "Could not prepare the download. Try again, or print the card.": "تعذّر تجهيز التحميل. حاول مرة أخرى، أو اطبع البطاقة."
 }

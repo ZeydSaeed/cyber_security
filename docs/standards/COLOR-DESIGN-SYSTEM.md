@@ -15,7 +15,8 @@
     - Most roles are set in `palette.json` `roles` to keep the owner's layout:
       Mendung Parah cards, an Old Leaf sidebar (L3 `sidebar` = `brand-surface`)
       and Maroona toolbar, table heads and headings (L3 = `highlight`).
-    - Project roles (§6.5): `ink`, `highlight-soft`, `highlight-soft-end`,
+    - Project roles (§6.5): `ink`, `sheet` (the result card's off-white
+      table), `highlight-soft`, `highlight-soft-end`,
       `highlight-soft-border`. Extra L3 tokens: `grid-line`, `toolbar`,
       `heading`.
     - Gradients: page (light only), table-head, sidebar, toolbar, heading.

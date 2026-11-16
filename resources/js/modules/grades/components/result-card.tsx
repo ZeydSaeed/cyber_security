@@ -1,4 +1,5 @@
 import { useTranslations } from '@/hooks/use-translations';
+import { stageName } from '../place';
 import type { ResultRow } from '../types';
 
 /**
@@ -11,12 +12,18 @@ export default function ResultCard({
     subjects,
     student,
     showName = true,
+    place,
 }: {
     pass_mark: number;
     subjects: { uuid: string; name: string }[];
     student: ResultRow;
     /** The student's own page shows the name at the top already. */
     showName?: boolean;
+    /**
+     * The owner's printable card shows the name, stage, section and number
+     * on one line (owner's request, 2026-11-16).
+     */
+    place?: { stage: number; section: string; divided: boolean };
 }) {
     const { t } = useTranslations();
 
@@ -47,31 +54,62 @@ export default function ResultCard({
 
     return (
         <>
-            <dl className="mb-6 grid gap-x-6 gap-y-2 empty:hidden sm:grid-cols-2">
-                {showName && (
-                    <div>
-                        <dt className="text-sm text-muted-foreground">
-                            {t('Name')}
-                        </dt>
-                        <dd
-                            className="text-lg font-semibold"
-                            data-test="card-name"
-                        >
-                            <bdi>{student.name}</bdi>
-                        </dd>
-                    </div>
-                )}
-                {student.number && (
-                    <div>
-                        <dt className="text-sm text-muted-foreground">
-                            {t('Number')}
-                        </dt>
-                        <dd className="text-lg">
-                            <bdi>{student.number}</bdi>
-                        </dd>
-                    </div>
-                )}
-            </dl>
+            {place ? (
+                <dl
+                    className="mb-6 flex flex-wrap items-baseline gap-x-8 gap-y-2"
+                    data-test="card-details"
+                >
+                    {[
+                        {
+                            label: t('Name'),
+                            value: student.name,
+                            test: 'card-name',
+                        },
+                        { label: t('Stage'), value: stageName(t, place.stage) },
+                        {
+                            label: t('Section'),
+                            value: place.divided ? place.section : '—',
+                        },
+                        {
+                            label: t('Student ID'),
+                            value: student.number ?? '—',
+                        },
+                    ].map((item) => (
+                        <div key={item.label} className="flex gap-2">
+                            <dt className="font-semibold">{item.label}:</dt>
+                            <dd data-test={item.test}>
+                                <bdi>{item.value}</bdi>
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            ) : (
+                <dl className="mb-6 grid gap-x-6 gap-y-2 empty:hidden sm:grid-cols-2">
+                    {showName && (
+                        <div>
+                            <dt className="text-sm text-muted-foreground">
+                                {t('Name')}
+                            </dt>
+                            <dd
+                                className="text-lg font-semibold"
+                                data-test="card-name"
+                            >
+                                <bdi>{student.name}</bdi>
+                            </dd>
+                        </div>
+                    )}
+                    {student.number && (
+                        <div>
+                            <dt className="text-sm text-muted-foreground">
+                                {t('Number')}
+                            </dt>
+                            <dd className="text-lg">
+                                <bdi>{student.number}</bdi>
+                            </dd>
+                        </div>
+                    )}
+                </dl>
+            )}
 
             <div
                 className="overflow-x-auto"
@@ -80,7 +118,7 @@ export default function ResultCard({
                 aria-label={t('Result card')}
             >
                 <table
-                    className="w-full border-collapse border-2 border-grid-line text-sm"
+                    className="w-full border-collapse border-2 border-grid-line bg-sheet text-sm"
                     data-test="card-table"
                 >
                     <caption className="sr-only">{t('Result card')}</caption>
@@ -169,7 +207,7 @@ export default function ResultCard({
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
                 {t(
-                    'Each subject is out of 100; :mark is the pass mark. An absence counts as 0. No ranking.',
+                    'Each subject is out of 100; :mark is the pass mark. An absence counts as 0.',
                     {
                         mark: String(pass_mark),
                     },

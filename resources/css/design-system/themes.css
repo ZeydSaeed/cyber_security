@@ -49,6 +49,7 @@
     --highlight-soft: var(--palette-accent-100);
     --highlight-soft-end: color-mix(in oklch, var(--palette-accent-100) 50%, var(--palette-accent-200));
     --highlight-soft-border: var(--palette-accent-200);
+    --sheet: var(--palette-linen-50);
     --gradient-page: linear-gradient(180deg, var(--palette-linen-100), var(--palette-linen-200));
     --gradient-table-head: linear-gradient(90deg, var(--palette-accent-300), var(--palette-accent-200));
     --gradient-sidebar: linear-gradient(180deg, var(--palette-primary-800), var(--palette-primary-700));
@@ -105,6 +106,7 @@
     --highlight-soft: var(--palette-accent-950);
     --highlight-soft-end: var(--palette-accent-900);
     --highlight-soft-border: var(--palette-accent-800);
+    --sheet: var(--palette-primary-900);
     --gradient-page: none;
     --gradient-table-head: linear-gradient(90deg, var(--palette-accent-300), var(--palette-accent-200));
     --gradient-sidebar: none;

@@ -17,7 +17,7 @@ export default function PrintSection(sheet: ResultSheet) {
                 <ResultsTable sheet={sheet} />
                 <p className="mt-4 text-sm text-muted-foreground">
                     {t(
-                        'Each subject is out of 100; :mark is the pass mark. An absence counts as 0. No ranking.',
+                        'Each subject is out of 100; :mark is the pass mark. An absence counts as 0.',
                         { mark: String(sheet.pass_mark) },
                     )}
                 </p>
