@@ -21,7 +21,6 @@ use App\Platform\Audit\AuditLogger;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -158,7 +157,7 @@ class GradesAdminController
             ...$this->subjectRules(),
         ]);
 
-        DB::transaction(function () use ($request, $save, $subjects, $user): void {
+        $save->atomically(function () use ($request, $save, $subjects, $user): void {
             $teacher = $save->create(
                 $user,
                 (string) $request->string('name'),
@@ -185,7 +184,7 @@ class GradesAdminController
             ...$this->subjectRules(),
         ]);
 
-        DB::transaction(function () use ($request, $teacher, $save, $subjects, $user): void {
+        $save->atomically(function () use ($request, $teacher, $save, $subjects, $user): void {
             if ($request->has('name')) {
                 $save->rename($user, $teacher, (string) $request->string('name'));
             }

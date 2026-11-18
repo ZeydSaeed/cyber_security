@@ -10,6 +10,7 @@ use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
+use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -53,6 +54,21 @@ class SaveTeacher
 
             return $teacher;
         }, 3);
+    }
+
+    /**
+     * Runs a whole teacher form (details, subjects, their kinds) as one
+     * unit: either every change is kept or none is. The HTTP layer may not
+     * open transactions itself (deptrac, ADR-0004).
+     *
+     * @template T
+     *
+     * @param  Closure(): T  $work
+     * @return T
+     */
+    public function atomically(Closure $work): mixed
+    {
+        return DB::transaction($work);
     }
 
     public function rename(User $actor, Teacher $teacher, string $name): Teacher
