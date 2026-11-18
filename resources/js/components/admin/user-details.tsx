@@ -1,5 +1,8 @@
-import { ShieldCheck } from 'lucide-react';
-import ActivityTimeline, { roleLabel } from '@/components/activity-timeline';
+import { KeyRound, ShieldCheck } from 'lucide-react';
+import ActivityTimeline, {
+    permissionLabel,
+    roleLabel,
+} from '@/components/activity-timeline';
 import { useTranslations } from '@/hooks/use-translations';
 import type { TimelineEntry } from '@/types/table';
 
@@ -8,9 +11,9 @@ export type SelectedUser = {
     name: string;
     email: string;
     email_verified: boolean;
-    two_factor: boolean;
     created_at: string | null;
     roles: { role: string; since: string }[];
+    permissions: string[];
     is_viewer: boolean;
     timeline: TimelineEntry[] | null;
 };
@@ -31,8 +34,6 @@ export default function UserDetails({ user }: { user: SelectedUser }) {
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
                 <dt className="text-muted-foreground">{t('Email verified')}</dt>
                 <dd>{user.email_verified ? t('Yes') : t('No')}</dd>
-                <dt className="text-muted-foreground">{t('Two-factor')}</dt>
-                <dd>{user.two_factor ? t('Enabled') : t('Not enabled')}</dd>
                 <dt className="text-muted-foreground">{t('Joined')}</dt>
                 <dd>
                     {user.created_at && (
@@ -61,6 +62,30 @@ export default function UserDetails({ user }: { user: SelectedUser }) {
                                     aria-hidden
                                 />
                                 {roleLabel(t, role.role)}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+
+            <section aria-labelledby="user-permissions" className="space-y-2">
+                <h3 id="user-permissions" className="font-semibold">
+                    {t('Permissions granted directly')}
+                </h3>
+                {user.permissions.length === 0 ? (
+                    <p className="text-muted-foreground">{t('None')}</p>
+                ) : (
+                    <ul className="space-y-1">
+                        {user.permissions.map((permission) => (
+                            <li
+                                key={permission}
+                                className="flex items-center gap-2"
+                            >
+                                <KeyRound
+                                    className="size-4 text-primary"
+                                    aria-hidden
+                                />
+                                {permissionLabel(t, permission)}
                             </li>
                         ))}
                     </ul>

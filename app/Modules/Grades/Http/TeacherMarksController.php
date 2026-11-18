@@ -7,6 +7,7 @@ use App\Modules\Grades\Application\Queries\TeacherSheets;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -16,8 +17,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * A teacher's pages (ADR-0034): their subjects, and one section's sheet
- * to fill in. Another teacher's subject is a 404, not a 403, so subject
- * addresses cannot be probed.
+ * to fill in. A section another teacher teaches is a 404, not a 403, so
+ * subject addresses cannot be probed.
  */
 class TeacherMarksController
 {
@@ -73,10 +74,11 @@ class TeacherMarksController
         return $teacher;
     }
 
-    private function ensureOwn(Teacher $teacher, Subject $subject, ?string $section = null): void
+    private function ensureOwn(Teacher $teacher, Subject $subject, string $section): void
     {
-        // Another teacher's subject, or a section the stage does not have.
-        if ($subject->teacher_id !== $teacher->id || ($section !== null && ! $subject->stage->hasSection(Section::from($section)))) {
+        // A section the stage does not have, or one another teacher teaches.
+        $place = Section::from($section);
+        if (! $subject->stage->hasSection($place) || ! SubjectTeacher::teaches($teacher, $subject, $place)) {
             throw new NotFoundHttpException;
         }
     }

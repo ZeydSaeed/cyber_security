@@ -6,6 +6,7 @@ use App\Modules\Grades\Application\Actions\IssueStudentCodes;
 use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\StudentCodes;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
@@ -43,7 +44,7 @@ beforeEach(function () {
     $this->code = app(StudentCodes::class)->decrypt((string) $this->student->code_encrypted);
 
     GradesFixtures::openWindow();
-    app(SaveMarks::class)->handle($this->subject->teacher, $this->subject, Section::B, Period::Month1, [
+    app(SaveMarks::class)->handle(SubjectFactory::teacherOf($this->subject), $this->subject, Section::B, Period::Month1, [
         $this->student->uuid => Mark::of(82),
         $this->other->uuid => Mark::of(41),
     ]);

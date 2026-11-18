@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\Jobs\NotifySectionCompleted;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
@@ -32,7 +33,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     // The second stage: the one with sections.
     $this->subject = Subject::factory()->stage(Stage::Second)->create(['name' => 'Network Security']);
-    $this->teacher = $this->subject->teacher;
+    $this->teacher = SubjectFactory::teacherOf($this->subject);
     $this->students = Student::factory()->in(Stage::Second, Section::A)->count(3)->create()->pluck('uuid')->all();
     // Same stage, other section; and the other stage.
     $this->otherSection = Student::factory()->in(Stage::Second, Section::B)->create();
@@ -163,7 +164,7 @@ it('refuses a section the stage does not have (the first stage has none)', funct
     $first = Subject::factory()->create();
     $student = Student::factory()->create();
 
-    expect(fn () => app(SaveMarks::class)->handle($first->teacher, $first, Section::B, Period::Month1, [$student->uuid => Mark::of(50)]))
+    expect(fn () => app(SaveMarks::class)->handle(SubjectFactory::teacherOf($first), $first, Section::B, Period::Month1, [$student->uuid => Mark::of(50)]))
         ->toThrow(DomainRuleViolation::class, 'This stage has no such section.')
         ->and(GradeMark::query()->count())->toBe(0);
 });

@@ -4,6 +4,7 @@ use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
@@ -79,9 +80,9 @@ describe('set-up', function () {
             ->where('stages.1.divided', true)
             ->where('stages.1.students', ['A' => 0, 'B' => 0])
             ->where('stages.0.subjects.0.name', 'Cryptography')
-            ->where('stages.0.subjects.0.teacher', $subject->teacher?->name)
+            ->where('stages.0.subjects.0.teachers', ['A' => SubjectFactory::teacherOf($subject)?->name])
             ->where('stages.0.subjects.0.sections', ['A' => 0])
-            ->where('stages.1.subjects.0.teacher', null)
+            ->where('stages.1.subjects.0.teachers', ['A' => null, 'B' => null])
             ->where('teacherLink', route('grades.teacher.login'))
             ->where('studentLink', route('grades.student.login'))
             ->where('window.published', false)
@@ -126,21 +127,22 @@ describe('set-up', function () {
             ->post('/admin/subjects', ['stage' => 2, 'name' => 'Forensics', 'teacher' => $teacher->uuid])
             ->assertRedirect('/admin/subjects');
         $subject = Subject::query()->sole();
-        expect($subject->stage)->toBe(Stage::Second)->and($subject->teacher_id)->toBe($teacher->id);
+        expect($subject->stage)->toBe(Stage::Second)->and(SubjectFactory::teacherOf($subject)?->id)->toBe($teacher->id);
 
         $teacher->forceFill(['is_active' => false])->save();
         $this->get('/admin/subjects')->assertInertia(fn (Assert $page) => $page
-            ->where('stages.1.subjects.0.teacher', $teacher->uuid)
             // Teachers are chosen on the teachers' page now (2026-11-17).
+            ->missing('stages.1.subjects.0.teacher')
             ->missing('teachers'));
+        expect(SubjectFactory::teacherOf($subject, Section::B)?->id)->toBe($teacher->id);
 
         // The page sends both fields back; the stopped teacher stays.
         $this->put("/admin/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => $teacher->uuid]);
         expect($subject->fresh()?->name)->toBe('Digital Forensics')
-            ->and($subject->fresh()?->teacher_id)->toBe($teacher->id);
+            ->and(SubjectFactory::teacherOf($subject)?->id)->toBe($teacher->id);
 
         $this->put("/admin/subjects/{$subject->uuid}", ['name' => 'Digital Forensics', 'teacher' => '']);
-        expect($subject->fresh()?->teacher_id)->toBeNull();
+        expect(SubjectFactory::teacherOf($subject)?->id)->toBeNull();
     });
 });
 

@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ImportStudents;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -149,7 +150,7 @@ it('will not move a student with marks to the other stage', function () {
     GradePeriod::for(Period::Month1);
     (new GradeMark)->forceFill([
         'student_id' => $student->id, 'subject_id' => $subject->id, 'stage' => Stage::First,
-        'period' => Period::Month1, 'mark' => 80, 'entered_by_teacher_id' => $subject->teacher_id,
+        'period' => Period::Month1, 'mark' => 80, 'entered_by_teacher_id' => SubjectFactory::teacherOf($subject)?->id,
     ])->save();
     $file = importFile($this, [['name', 'stage', 'section', 'number'], ['Has Marks Already', '2', 'A', '77']]);
 

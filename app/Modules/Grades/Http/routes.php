@@ -117,9 +117,12 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
 Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(function () {
     Route::get('/', [TeacherSessionController::class, 'create'])->name('login');
     // Failed attempts are limited per address inside the controller (5 a
-    // minute, 20 an hour); this outer limit stops floods of any kind.
+    // minute, 20 an hour); this outer limit stops floods of any kind. It
+    // counts successful sign-ins too, and a school's teachers may share one
+    // address: 30 a minute refused the 31st teacher when an entry window
+    // opened (review load test, 2026-11-18), so it allows a whole staff.
     Route::post('/', [TeacherSessionController::class, 'store'])
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:300,1')
         ->name('login.store');
 
     Route::middleware(TeacherSession::class)->group(function () {
@@ -141,9 +144,11 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
 
 Route::middleware('web')->prefix('student')->name('grades.student.')->group(function () {
     Route::get('/', [StudentPortalController::class, 'create'])->name('login');
-    // Failed attempts are limited per address inside the controller.
+    // Failed attempts are limited per address inside the controller. This
+    // flood limit counts successful sign-ins too; a class checking results
+    // from the school's one address must not be refused (as for teachers).
     Route::post('/', [StudentPortalController::class, 'store'])
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:300,1')
         ->name('login.store');
 
     Route::middleware(StudentSession::class)->group(function () {

@@ -1,5 +1,12 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { Printer, UserPlus } from 'lucide-react';
+import {
+    KeyRound,
+    Pencil,
+    Printer,
+    RefreshCw,
+    Trash2,
+    UserPlus,
+} from 'lucide-react';
 import { useCallback, useState } from 'react';
 import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
 import ConfirmAction from '@/components/confirm-action';
@@ -38,6 +45,22 @@ type StudentRow = {
 };
 
 const TABLE_PROPS = ['students', 'state'];
+
+/**
+ * Row actions coloured by what they do (owner's request, 2026-11-18):
+ * edit = info, a first code = success, replacing a code = warning,
+ * delete = danger. Status tokens only (COLOR-DESIGN-SYSTEM); each button
+ * also carries an icon and its word, so colour is never the only cue.
+ */
+const actionTone = {
+    info: 'border-info/40 text-info-text hover:bg-info/10 hover:text-info-text',
+    success:
+        'border-success/40 text-success-text hover:bg-success/10 hover:text-success-text',
+    warning:
+        'border-warning/60 text-warning-text hover:bg-warning/15 hover:text-warning-text',
+    destructive:
+        'border-destructive/40 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text',
+} as const;
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
@@ -410,9 +433,11 @@ export default function GradesStudents({
                                       <Button
                                           variant="outline"
                                           size="sm"
+                                          className={actionTone.info}
                                           onClick={() => setDialog(student)}
                                           data-test="edit-student"
                                       >
+                                          <Pencil aria-hidden />
                                           {t('Edit')}
                                       </Button>
                                       {/* Asks first: the old code stops
@@ -422,8 +447,21 @@ export default function GradesStudents({
                                               <Button
                                                   variant="outline"
                                                   size="sm"
+                                                  // Replacing cancels a code
+                                                  // in use: a warning. A
+                                                  // first code: a success.
+                                                  className={
+                                                      student.has_code
+                                                          ? actionTone.warning
+                                                          : actionTone.success
+                                                  }
                                                   data-test="new-student-code"
                                               >
+                                                  {student.has_code ? (
+                                                      <RefreshCw aria-hidden />
+                                                  ) : (
+                                                      <KeyRound aria-hidden />
+                                                  )}
                                                   {student.has_code
                                                       ? t('New code')
                                                       : t('Give a code')}
@@ -446,9 +484,12 @@ export default function GradesStudents({
                                               <Button
                                                   variant="outline"
                                                   size="sm"
-                                                  className="text-destructive-text"
+                                                  className={
+                                                      actionTone.destructive
+                                                  }
                                                   data-test="delete-student"
                                               >
+                                                  <Trash2 aria-hidden />
                                                   {t('Delete')}
                                               </Button>
                                           }

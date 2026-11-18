@@ -6,9 +6,11 @@ use App\Models\User;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
+use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -52,6 +54,21 @@ class SaveTeacher
 
             return $teacher;
         }, 3);
+    }
+
+    /**
+     * Runs a whole teacher form (details, subjects, their kinds) as one
+     * unit: either every change is kept or none is. The HTTP layer may not
+     * open transactions itself (deptrac, ADR-0004).
+     *
+     * @template T
+     *
+     * @param  Closure(): T  $work
+     * @return T
+     */
+    public function atomically(Closure $work): mixed
+    {
+        return DB::transaction($work);
     }
 
     public function rename(User $actor, Teacher $teacher, string $name): Teacher
@@ -151,8 +168,8 @@ class SaveTeacher
                 throw new DomainRuleViolation(__('This teacher has entered marks and cannot be deleted. Stop their signing in instead.'), 'teacher');
             }
 
-            $subjects = Subject::query()->where('teacher_id', $locked->id)->pluck('name')->all();
-            Subject::query()->where('teacher_id', $locked->id)->update(['teacher_id' => null]);
+            $subjects = Subject::query()->whereIn('id', SubjectTeacher::query()->select('subject_id')->where('teacher_id', $locked->id))->pluck('name')->all();
+            SubjectTeacher::query()->where('teacher_id', $locked->id)->delete();
             $this->audit->record('grades.teacher_deleted', $locked, ['name' => $locked->name, 'subjects' => $subjects], actor: $actor);
             $locked->delete();
         });

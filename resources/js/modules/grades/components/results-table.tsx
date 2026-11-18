@@ -1,20 +1,74 @@
+import type { ReactNode } from 'react';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
+import { matchRanges } from '../name-search';
 import { placeLabel } from '../place';
 import type { MarkValue, ResultSheet } from '../types';
+
+/**
+ * The name with the searched parts marked in yellow (the palette's
+ * highlight pair). The current match is outlined too.
+ */
+function MarkedName({
+    name,
+    terms,
+    current,
+}: {
+    name: string;
+    terms: string[];
+    current: boolean;
+}) {
+    const ranges = matchRanges(name, terms);
+
+    if (ranges === null) {
+        return <bdi>{name}</bdi>;
+    }
+
+    const parts: ReactNode[] = [];
+    let at = 0;
+    for (const [start, end] of ranges) {
+        if (start > at) {
+            parts.push(name.slice(at, start));
+        }
+        parts.push(
+            <mark
+                key={start}
+                className={cn(
+                    'rounded-sm bg-highlight text-highlight-foreground',
+                    current && 'ring-2 ring-ring',
+                )}
+            >
+                {name.slice(start, end)}
+            </mark>,
+        );
+        at = end;
+    }
+    if (at < name.length) {
+        parts.push(name.slice(at));
+    }
+
+    return <bdi data-test="name-match">{parts}</bdi>;
+}
 
 /**
  * A section's results (ADR-0034): a row per student, a column per subject
  * of the stage, then the total, the percentage, subjects below the pass
  * mark and absences. A mark below the pass mark or an absence is marked
  * with words, not colour alone. Inner and outer grid lines (owner's
- * layout, 2026-11-16). Used on screen and in print.
+ * layout, 2026-11-16). Used on screen and in print. On screen, the parts
+ * of the names that match a search are marked (`terms`, from
+ * name-search.ts), and `current` names the match the page moved to.
  */
 export default function ResultsTable({
     sheet,
     action,
+    terms = [],
+    current = null,
 }: {
     sheet: ResultSheet;
     action?: (student: ResultSheet['students'][number]) => React.ReactNode;
+    terms?: string[];
+    current?: string | null;
 }) {
     const { t } = useTranslations();
 
@@ -105,6 +159,7 @@ export default function ResultsTable({
                             key={student.uuid}
                             className="border-b last:border-0"
                             data-test="result-row"
+                            data-student={student.uuid}
                         >
                             <td className="p-2 text-muted-foreground tabular-nums">
                                 {index + 1}
@@ -113,7 +168,11 @@ export default function ResultsTable({
                                 scope="row"
                                 className="sticky start-0 bg-card p-2 text-start font-medium"
                             >
-                                <bdi>{student.name}</bdi>
+                                <MarkedName
+                                    name={student.name}
+                                    terms={terms}
+                                    current={current === student.uuid}
+                                />
                             </th>
                             {student.marks.map((mark, i) => (
                                 <td

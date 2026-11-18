@@ -31,7 +31,9 @@ type Stop = { what: string; visible: boolean };
  */
 async function tabThrough(
     page: Page,
-    limit = 120,
+    // A bound, not a budget: /admin/users has five stops a row (select,
+    // password eye, View, Edit, Delete) × 25 rows since 2026-11-18.
+    limit = 250,
 ): Promise<{ stops: Stop[]; trapped: boolean }> {
     const stops: Stop[] = [];
     const seen = new Set<string>();

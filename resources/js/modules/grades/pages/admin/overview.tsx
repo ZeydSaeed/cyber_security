@@ -16,7 +16,8 @@ type Stage = {
     subjects: {
         uuid: string;
         name: string;
-        teacher: string | null;
+        /** Each section's teacher's name (null: none yet). */
+        teachers: Record<string, string | null>;
         sections: Record<string, number>;
     }[];
 };
@@ -291,15 +292,39 @@ export default function GradesOverview({
                                                     <bdi>{subject.name}</bdi>
                                                 </th>
                                                 <td className="p-2">
-                                                    {subject.teacher ? (
-                                                        <bdi>
-                                                            {subject.teacher}
-                                                        </bdi>
-                                                    ) : (
-                                                        <Badge variant="destructive">
-                                                            {t('No teacher')}
-                                                        </Badge>
-                                                    )}
+                                                    {/* One line per section:
+                                                        each may have its own
+                                                        teacher. */}
+                                                    {sections.map((section) => {
+                                                        const name =
+                                                            subject.teachers[
+                                                                section
+                                                            ] ?? null;
+
+                                                        return (
+                                                            <span
+                                                                key={section}
+                                                                className="block"
+                                                            >
+                                                                {stage.divided && (
+                                                                    <span className="text-muted-foreground">
+                                                                        {`${section}: `}
+                                                                    </span>
+                                                                )}
+                                                                {name ? (
+                                                                    <bdi>
+                                                                        {name}
+                                                                    </bdi>
+                                                                ) : (
+                                                                    <Badge variant="destructive">
+                                                                        {t(
+                                                                            'No teacher',
+                                                                        )}
+                                                                    </Badge>
+                                                                )}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </td>
                                                 {sections.map((section) => {
                                                     const total =

@@ -10,6 +10,7 @@ use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
@@ -20,8 +21,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Writes one section's marks in one subject (ADR-0034), in one transaction.
  *
- * - A teacher writes only their own subjects, only while active, and only
- *   while the period is open. The owner (grades.manage) may correct at any
+ * - A teacher writes only the sections they teach, only while active, and
+ *   only while the period is open. The owner (grades.manage) may correct at any
  *   time.
  * - The subject's row is locked for update (saves of one subject wait for
  *   each other) and the period's row for share (closing waits for saves in
@@ -52,11 +53,11 @@ class SaveMarks
             $subject = Subject::query()->whereKey($subject->id)->lockForUpdate()->firstOrFail();
             $window = GradePeriod::query()->where('period', $period->value)->sharedLock()->firstOrFail();
 
-            $this->authorise($author, $subject, $window->isOpen());
-
             if (! $subject->stage->hasSection($section)) {
                 throw new DomainRuleViolation(__('This stage has no such section.'), 'marks');
             }
+
+            $this->authorise($author, $subject, $section, $window->isOpen());
 
             $students = Student::query()
                 ->where('stage', $subject->stage->value)
@@ -79,6 +80,11 @@ class SaveMarks
 
             $completeBefore = $existing->count() === count($students);
             $changes = [];
+            $writes = [];
+            $removals = [];
+            $now = now();
+            // Students with a mark after this save: student id => true.
+            $held = array_fill_keys($existing->keys()->all(), true);
 
             foreach ($marks as $uuid => $mark) {
                 $studentId = $students[$uuid];
@@ -92,29 +98,47 @@ class SaveMarks
                 $changes[$uuid] = ['from' => $old?->toScalar(), 'to' => $mark?->toScalar()];
 
                 if ($mark === null) {
-                    $row->delete();
-                    $existing->forget($studentId);
+                    $removals[] = $row->id;
+                    unset($held[$studentId]);
 
                     continue;
                 }
 
-                $row ??= (new GradeMark)->forceFill([
+                $writes[] = [
                     'student_id' => $studentId,
                     'subject_id' => $subject->id,
-                    'stage' => $subject->stage,
-                    'period' => $period,
-                ]);
-
-                $row->forceFill([
+                    'stage' => $subject->stage->value,
+                    'period' => $period->value,
                     'mark' => $mark->value,
                     'is_absent' => $mark->absent,
                     'entered_by_teacher_id' => $author instanceof Teacher ? $author->id : null,
                     'entered_by_user_id' => $author instanceof User ? $author->id : null,
-                ])->save();
-                $existing->put($studentId, $row);
+                    // Kept on an existing row: created_at is not in the
+                    // columns the upsert updates.
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                $held[$studentId] = true;
             }
 
-            $complete = count($students) > 0 && $existing->count() === count($students);
+            // One statement for every write and one for every removal, not
+            // one per student (review load test, 2026-11-18: a section of
+            // 36 ran 36 statements while holding the subject's lock, which
+            // its other section's teacher waits on). Safe under the lock:
+            // nobody else writes this subject's marks meanwhile.
+            if ($writes !== []) {
+                GradeMark::query()->upsert(
+                    $writes,
+                    ['student_id', 'stage', 'subject_id', 'period'],
+                    ['mark', 'is_absent', 'entered_by_teacher_id', 'entered_by_user_id', 'updated_at'],
+                );
+            }
+
+            if ($removals !== []) {
+                GradeMark::query()->whereKey($removals)->delete();
+            }
+
+            $complete = count($students) > 0 && count($held) === count($students);
 
             if ($changes === []) {
                 return ['changed' => 0, 'complete' => $complete];
@@ -148,7 +172,7 @@ class SaveMarks
         }, 3);
     }
 
-    private function authorise(Teacher|User $author, Subject $subject, bool $open): void
+    private function authorise(Teacher|User $author, Subject $subject, Section $section, bool $open): void
     {
         if ($author instanceof User) {
             EnsureManager::check($author);
@@ -158,7 +182,7 @@ class SaveMarks
 
         $teacher = Teacher::query()->whereKey($author->id)->first();
 
-        if ($teacher === null || ! $teacher->is_active || $subject->teacher_id !== $teacher->id) {
+        if ($teacher === null || ! $teacher->is_active || ! SubjectTeacher::teaches($teacher, $subject, $section)) {
             throw new AuthorizationException;
         }
 

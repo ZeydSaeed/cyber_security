@@ -9,16 +9,16 @@ use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A subject of one stage, taught by one teacher (ADR-0034).
+ * A subject of one stage (ADR-0034), with a teacher for each of its
+ * stage's sections (SubjectTeacher, owner's request 2026-11-18).
  *
  * @property int $id
  * @property string $uuid
  * @property Stage $stage
  * @property string $name
- * @property int|null $teacher_id
  * @property int $sort_order
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -62,10 +62,12 @@ class Subject extends Model
     }
 
     /**
-     * @return BelongsTo<Teacher, $this>
+     * Who teaches each section, one row per section that has a teacher.
+     *
+     * @return HasMany<SubjectTeacher, $this>
      */
-    public function teacher(): BelongsTo
+    public function assignments(): HasMany
     {
-        return $this->belongsTo(Teacher::class, 'teacher_id');
+        return $this->hasMany(SubjectTeacher::class, 'subject_id');
     }
 }

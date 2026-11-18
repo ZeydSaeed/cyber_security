@@ -10,6 +10,7 @@ use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 
 /**
@@ -25,7 +26,7 @@ final class GradesBoard
      *     window: array{open: bool, published: bool, opened_at: string|null, closed_at: string|null},
      *     expected_subjects: int,
      *     teachers: int,
-     *     stages: list<array{stage: int, divided: bool, students: array<string, int>, subjects: list<array{uuid: string, name: string, teacher: string|null, sections: array<string, int>}>}>
+     *     stages: list<array{stage: int, divided: bool, students: array<string, int>, subjects: list<array{uuid: string, name: string, teachers: array<string, string|null>, sections: array<string, int>}>}>
      * }
      */
     public function show(Period $period = Period::Month1): array
@@ -43,9 +44,9 @@ final class GradesBoard
             ->groupBy('grade_marks.subject_id', 'grade_students.section')->get()
             ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => (int) $row->n]);
 
-        $subjects = Subject::query()->with('teacher:id,name')
+        $subjects = Subject::query()->with('assignments.teacher:id,name')
             ->orderBy('stage')->orderBy('sort_order')->orderBy('name')
-            ->get(['id', 'uuid', 'name', 'stage', 'teacher_id'])
+            ->get(['id', 'uuid', 'name', 'stage'])
             ->groupBy(fn (Subject $subject): int => $subject->stage->value);
 
         $stages = [];
@@ -64,7 +65,12 @@ final class GradesBoard
                 'subjects' => array_values($subjects->get($stage->value, collect())->map(fn (Subject $subject): array => [
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
-                    'teacher' => $subject->teacher?->name,
+                    // Each section's teacher (null: none yet).
+                    'teachers' => array_combine(
+                        $sectionValues,
+                        array_map(fn (string $section): ?string => $subject->assignments
+                            ->first(fn (SubjectTeacher $row): bool => $row->section->value === $section)?->teacher?->name, $sectionValues),
+                    ),
                     'sections' => array_combine(
                         $sectionValues,
                         array_map(fn (string $section): int => (int) ($entered[$subject->id.'|'.$section] ?? 0), $sectionValues),

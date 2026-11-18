@@ -14,6 +14,7 @@ use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Notifications\RoleChanged;
 use App\Platform\Access\RoleAssignment;
@@ -82,7 +83,10 @@ class BrowserTestSeeder extends Seeder
         $teacher->forceFill(['name' => 'Teacher Test', 'code_digest' => app(TeacherCodes::class)->digest(self::TEACHER_CODE)])->save();
         foreach ([Stage::First->value => 'Network Security', Stage::Second->value => 'Cryptography'] as $stage => $name) {
             $subject = new Subject;
-            $subject->forceFill(['stage' => $stage, 'name' => $name, 'teacher_id' => $teacher->id, 'sort_order' => 1])->save();
+            $subject->forceFill(['stage' => $stage, 'name' => $name, 'sort_order' => 1])->save();
+            foreach (Stage::from($stage)->sections() as $section) {
+                (new SubjectTeacher)->forceFill(['subject_id' => $subject->id, 'section' => $section, 'teacher_id' => $teacher->id])->save();
+            }
         }
         $codes = app(StudentCodes::class);
         $studentCode = null;

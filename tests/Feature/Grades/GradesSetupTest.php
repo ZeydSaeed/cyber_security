@@ -5,6 +5,7 @@ use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\WindowStatus;
@@ -94,7 +95,7 @@ describe('subjects', function () {
         app(SaveSubject::class)->create($owner, Stage::Second, 'Network Security');
 
         expect([$first->sort_order, $second->sort_order])->toBe([1, 2])
-            ->and($second->teacher_id)->toBeNull()
+            ->and(SubjectFactory::teacherOf($second)?->id)->toBeNull()
             ->and(fn () => app(SaveSubject::class)->create($owner, Stage::First, 'Network Security'))
             ->toThrow(DomainRuleViolation::class, 'This stage already has a subject with this name.');
     });
@@ -102,14 +103,14 @@ describe('subjects', function () {
     it('assigns and changes the teacher, recording who was replaced', function () {
         $owner = GradesFixtures::owner();
         $subject = Subject::factory()->create();
-        $old = $subject->teacher;
+        $old = SubjectFactory::teacherOf($subject);
         $new = Teacher::factory()->create(['name' => 'New Teacher']);
 
         app(SaveSubject::class)->assign($owner, $subject, $new);
         app(SaveSubject::class)->assign($owner, $subject, $new);
 
         $audit = AuditEvent::query()->where('action', 'grades.subject_assigned')->sole();
-        expect($subject->fresh()?->teacher_id)->toBe($new->id)
+        expect(SubjectFactory::teacherOf($subject)?->id)->toBe($new->id)
             ->and($audit->changes)->toEqual(['teacher' => ['from' => $old?->name, 'to' => 'New Teacher']]);
     });
 });

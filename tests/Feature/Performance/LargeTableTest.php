@@ -65,6 +65,6 @@ it('serves a 10,000-user table within its budgets', function (string $query) {
     'first page' => ['per_page=25'],
     'sorted by email, descending' => ['sort=email&direction=desc&per_page=100'],
     'search' => ['search=person-99&per_page=25'],
-    'filter, no second factor' => ['filter[two_factor]=disabled&per_page=50'],
+    'filter, no role' => ['filter[role]=none&per_page=50'],
     'last page' => ['per_page=25&page=401'],
 ]);

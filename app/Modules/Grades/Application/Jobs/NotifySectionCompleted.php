@@ -6,6 +6,7 @@ use App\Access\Permission;
 use App\Models\User;
 use App\Modules\Grades\Application\Notifications\GradesNotification;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Platform\Access\AccessCatalog;
 use App\Platform\Access\RoleAssignment;
 use App\Platform\Outbox\OutboxJob;
@@ -20,7 +21,7 @@ class NotifySectionCompleted extends OutboxJob
 {
     protected function process(array $payload): void
     {
-        $subject = Subject::query()->with('teacher')->where('uuid', (string) ($payload['subject'] ?? ''))->first();
+        $subject = Subject::query()->where('uuid', (string) ($payload['subject'] ?? ''))->first();
 
         if ($subject === null) {
             return;
@@ -42,7 +43,9 @@ class NotifySectionCompleted extends OutboxJob
             'subject' => $subject->name,
             'stage' => (string) $subject->stage->value,
             'section' => (string) ($payload['section'] ?? ''),
-            'teacher' => (string) $subject->teacher?->name,
+            'teacher' => (string) SubjectTeacher::query()->with('teacher:id,name')
+                ->where('subject_id', $subject->id)->where('section', (string) ($payload['section'] ?? ''))
+                ->first()?->teacher?->name,
         ]));
     }
 }

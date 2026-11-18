@@ -1,14 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\UserInvitationController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Tables\SavedViewController;
 use App\Http\Controllers\Tables\TableColumnsController;
-use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -55,11 +53,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:roles.manage')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::post('users/roles', UserRoleController::class)->name('users.roles');
-        Route::get('users/invite', [UserInvitationController::class, 'create'])->name('users.invite');
-        // Throttled before precognition: each step's check counts too.
-        Route::post('users/invite', [UserInvitationController::class, 'store'])
-            ->middleware(['throttle:30,1', HandlePrecognitiveRequests::class])
-            ->name('users.invite.store');
+        Route::post('users', [UserController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('users.store');
+        Route::put('users/{user}', [UserController::class, 'update'])
+            ->middleware('throttle:30,1')
+            ->whereNumber('user')
+            ->name('users.update');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])
+            ->middleware('throttle:30,1')
+            ->whereNumber('user')
+            ->name('users.destroy');
+        // Showing a password: audited, and limited so it cannot be scraped.
+        Route::post('users/{user}/password', [UserController::class, 'password'])
+            ->middleware('throttle:60,1')
+            ->whereNumber('user')
+            ->name('users.password');
     });
 });
 

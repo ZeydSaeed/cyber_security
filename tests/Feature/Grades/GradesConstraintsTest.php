@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Models\Student;
@@ -40,7 +41,10 @@ function insertMark(object $test, array $overrides = []): void
         'period' => 'month_1',
         'mark' => 70,
         'is_absent' => false,
-        'entered_by_teacher_id' => $test->subject->teacher_id,
+        // The section's teacher (teachers are per section since 2026-11-18;
+        // subjects no longer carry one, so this was null and every case
+        // failed on the author check first, on PostgreSQL only).
+        'entered_by_teacher_id' => SubjectFactory::teacherOf($test->subject)?->id,
         'entered_by_user_id' => null,
         'created_at' => now(),
         'updated_at' => now(),
@@ -134,5 +138,5 @@ it('keeps the first stage in one group, codes in pairs, and publication to close
 });
 
 it('will not delete a teacher who has subjects', function () {
-    expect(fn () => inSavepoint(fn () => Teacher::query()->whereKey($this->subject->teacher_id)->delete()))->toThrow(QueryException::class, 'grade_subjects_teacher_id_foreign');
+    expect(fn () => inSavepoint(fn () => Teacher::query()->whereKey(SubjectFactory::teacherOf($this->subject)?->id)->delete()))->toThrow(QueryException::class, 'grade_subject_teachers_teacher_id_foreign');
 });

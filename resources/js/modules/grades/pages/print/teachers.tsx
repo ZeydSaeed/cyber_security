@@ -14,6 +14,10 @@ type TeacherSlip = {
         stage: number;
         divided: boolean;
         sections: string[];
+        /** "theory", "practical", or null: ticked by hand. */
+        kind: 'theory' | 'practical' | null;
+        /** The assistant's name, or null: written by hand. */
+        assistant: string | null;
     }[];
 };
 
@@ -27,6 +31,11 @@ type TeacherSlip = {
  * "Subject taught" left blank, the Practical and Theoretical boxes under
  * it, the stage and the section on one line, far apart, and under them
  * "Assistant teacher name" left blank.
+ *
+ * Filled in from the teacher's form (owner's request, 2026-11-18): the box
+ * of the type chosen is ticked and the assistant's name written; what was
+ * not chosen stays blank for the pen. Sections taught the same way share
+ * one block, so a block may name one section of a subject.
  *
  * On paper (owner's requests, 2026-11-17): as many slips as fit on each A4
  * sheet, in two columns, with roomy margins and no page header. The list
@@ -100,7 +109,7 @@ export default function PrintTeachers({
                                             <div
                                                 key={
                                                     subject
-                                                        ? `${subject.name}-${subject.stage}`
+                                                        ? `${subject.name}-${subject.stage}-${subject.sections.join('')}`
                                                         : 'none'
                                                 }
                                                 className="mt-1 grid gap-1 border-t border-dashed border-print-ink pt-1"
@@ -112,9 +121,17 @@ export default function PrintTeachers({
                                                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
                                                     <Tick
                                                         label={t('Practical')}
+                                                        ticked={
+                                                            subject?.kind ===
+                                                            'practical'
+                                                        }
                                                     />
                                                     <Tick
                                                         label={t('Theoretical')}
+                                                        ticked={
+                                                            subject?.kind ===
+                                                            'theory'
+                                                        }
                                                     />
                                                 </div>
                                                 <div className="flex flex-wrap gap-x-32 gap-y-1">
@@ -138,7 +155,13 @@ export default function PrintTeachers({
                                                     label={t(
                                                         'Assistant teacher name',
                                                     )}
-                                                />
+                                                >
+                                                    {subject?.assistant && (
+                                                        <bdi data-test="slip-assistant">
+                                                            {subject.assistant}
+                                                        </bdi>
+                                                    )}
+                                                </Field>
                                             </div>
                                         ))}
                                     </div>
@@ -194,15 +217,24 @@ function Field({ label, children }: { label: string; children?: ReactNode }) {
     );
 }
 
-/** An empty box, ticked by hand on paper. */
-function Tick({ label }: { label: string }) {
+/**
+ * A box, ticked when the type was chosen in the teacher's form, otherwise
+ * left empty to tick by hand on paper.
+ */
+function Tick({ label, ticked }: { label: string; ticked: boolean }) {
     return (
-        <span className="inline-flex items-center gap-1">
+        <span
+            className="inline-flex items-center gap-1"
+            data-test={ticked ? 'slip-ticked' : undefined}
+        >
             <span
-                className="inline-block size-4 rounded-sm border-2 border-print-ink"
+                className="inline-flex size-4 items-center justify-center rounded-sm border-2 border-print-ink text-xs leading-none font-bold"
                 aria-hidden
-            />
+            >
+                {ticked ? '✓' : ''}
+            </span>
             {label}
+            {ticked && <span className="sr-only">(✓)</span>}
         </span>
     );
 }
