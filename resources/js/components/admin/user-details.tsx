@@ -1,8 +1,6 @@
 import { KeyRound, ShieldCheck } from 'lucide-react';
-import ActivityTimeline, {
-    permissionLabel,
-    roleLabel,
-} from '@/components/activity-timeline';
+import ActivityTimeline from '@/components/activity-timeline';
+import { permissionLabel, roleLabel } from '@/lib/access-labels';
 import { useTranslations } from '@/hooks/use-translations';
 import type { TimelineEntry } from '@/types/table';
 

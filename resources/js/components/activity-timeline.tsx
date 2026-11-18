@@ -1,37 +1,10 @@
 import { History } from 'lucide-react';
 import EmptyState from '@/components/empty-state';
+import { permissionLabel, roleLabel } from '@/lib/access-labels';
 import { useTranslations } from '@/hooks/use-translations';
 import type { TimelineEntry } from '@/types/table';
 
 type Translate = ReturnType<typeof useTranslations>['t'];
-
-/** A role as people read it. */
-export function roleLabel(t: Translate, role: string): string {
-    switch (role) {
-        case 'administrator':
-            return t('Administrator');
-        case 'auditor':
-            return t('Auditor');
-        default:
-            return role;
-    }
-}
-
-/** A permission as people read it. */
-export function permissionLabel(t: Translate, permission: string): string {
-    switch (permission) {
-        case 'roles.manage':
-            return t('Manage users and their access');
-        case 'audit.view':
-            return t('Read the audit trail');
-        case 'grades.manage':
-            return t('Manage grades');
-        case 'grades.view_results':
-            return t('View results');
-        default:
-            return permission;
-    }
-}
 
 /**
  * Audit actions as people read them; others show their code. Literal t()

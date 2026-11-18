@@ -12,7 +12,7 @@ import UserController from '@/actions/App/Http/Controllers/Admin/UserController'
 import UserRoleController from '@/actions/App/Http/Controllers/Admin/UserRoleController';
 import SavedViewController from '@/actions/App/Http/Controllers/Tables/SavedViewController';
 import TableColumnsController from '@/actions/App/Http/Controllers/Tables/TableColumnsController';
-import { roleLabel } from '@/components/activity-timeline';
+import { roleLabel } from '@/lib/access-labels';
 import PasswordCell from '@/components/admin/password-cell';
 import type { PasswordState } from '@/components/admin/password-cell';
 import type { SelectedUser } from '@/components/admin/user-details';
@@ -28,7 +28,6 @@ import type { ColumnDef } from '@/components/data-table/data-table';
 import SavedViews from '@/components/data-table/saved-views';
 import TablePagination from '@/components/data-table/table-pagination';
 import TableToolbar from '@/components/data-table/table-toolbar';
-import Drawer from '@/components/drawer';
 import Heading from '@/components/heading';
 import { SkeletonText } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
@@ -65,6 +64,7 @@ type Props = {
 const TABLE_PROPS = ['users', 'state'];
 
 // Used only after a click: loaded then, to keep the list page small.
+const Drawer = lazy(() => import('@/components/drawer'));
 const UserDetails = lazy(() => import('@/components/admin/user-details'));
 const UserFormDialog = lazy(
     () => import('@/components/admin/user-form-dialog'),
@@ -96,6 +96,14 @@ export default function UsersIndex({
     const [result, setResult] = useState<BulkResult | null>(null);
     const [bulk, setBulk] = useState<'assign' | 'revoke' | null>(null);
     const [openingId, setOpeningId] = useState<number | null>(null);
+    // The drawer loads on its first opening and then stays mounted, so it
+    // still animates closed.
+    const drawerOpen = selected !== null || openingId !== null;
+    const [drawerUsed, setDrawerUsed] = useState(drawerOpen);
+
+    if (drawerOpen && !drawerUsed) {
+        setDrawerUsed(true);
+    }
     const [editing, setEditing] = useState<UserRow | 'new' | null>(null);
 
     const columnDefs: ColumnDef<UserRow>[] = [
@@ -394,24 +402,28 @@ export default function UsersIndex({
                 />
             </div>
 
-            <Drawer
-                open={selected !== null || openingId !== null}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        openUser(null);
-                    }
-                }}
-                title={selected?.name ?? t('Loading')}
-                description={selected?.email}
-            >
-                {selected === null ? (
-                    <SkeletonText lines={6} />
-                ) : (
-                    <Suspense fallback={<SkeletonText lines={6} />}>
-                        <UserDetails user={selected} />
-                    </Suspense>
-                )}
-            </Drawer>
+            {drawerUsed && (
+                <Suspense fallback={null}>
+                    <Drawer
+                        open={drawerOpen}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                openUser(null);
+                            }
+                        }}
+                        title={selected?.name ?? t('Loading')}
+                        description={selected?.email}
+                    >
+                        {selected === null ? (
+                            <SkeletonText lines={6} />
+                        ) : (
+                            <Suspense fallback={<SkeletonText lines={6} />}>
+                                <UserDetails user={selected} />
+                            </Suspense>
+                        )}
+                    </Drawer>
+                </Suspense>
+            )}
 
             {editing !== null && (
                 <Suspense fallback={null}>

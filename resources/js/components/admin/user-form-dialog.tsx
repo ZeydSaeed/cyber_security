@@ -1,6 +1,6 @@
 import { Form } from '@inertiajs/react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
-import { permissionLabel, roleLabel } from '@/components/activity-timeline';
+import { permissionLabel, roleLabel } from '@/lib/access-labels';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';

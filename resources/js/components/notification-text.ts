@@ -1,4 +1,4 @@
-import { roleLabel } from '@/components/activity-timeline';
+import { roleLabel } from '@/lib/access-labels';
 import type { useTranslations } from '@/hooks/use-translations';
 
 type Translate = ReturnType<typeof useTranslations>['t'];

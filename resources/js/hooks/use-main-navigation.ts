@@ -7,9 +7,16 @@ import {
     UserRound,
     Users,
 } from 'lucide-react';
-import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
-import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
-import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
+// Named imports, not the controllers' default objects: every page loads
+// this file, and a default object brings all of a controller's routes into
+// the base bundle (ADR-0024 budget).
+import {
+    overview as gradesOverview,
+    subjects as gradesSubjects,
+    teachers as gradesTeachers,
+} from '@/actions/App/Modules/Grades/Http/GradesAdminController';
+import { index as resultsIndex } from '@/actions/App/Modules/Grades/Http/ResultsController';
+import { index as studentsIndex } from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { NavItem } from '@/types';
 
@@ -27,7 +34,7 @@ export function useMainNavigation(): NavItem[] {
     const items: (NavItem & { permission?: string })[] = [
         {
             title: 'First-month marks',
-            href: GradesAdminController.overview(),
+            href: gradesOverview(),
             icon: ClipboardList,
             permission: 'grades.view_results',
         },
@@ -35,25 +42,25 @@ export function useMainNavigation(): NavItem[] {
         // (owner's request, 2026-11-16).
         {
             title: 'Teachers',
-            href: GradesAdminController.teachers(),
+            href: gradesTeachers(),
             icon: UserRound,
             permission: 'grades.manage',
         },
         {
             title: 'Students',
-            href: StudentsAdminController.index(),
+            href: studentsIndex(),
             icon: GraduationCap,
             permission: 'grades.view_results',
         },
         {
             title: 'Subjects',
-            href: GradesAdminController.subjects(),
+            href: gradesSubjects(),
             icon: BookOpen,
             permission: 'grades.manage',
         },
         {
             title: 'Results',
-            href: ResultsController.index(),
+            href: resultsIndex(),
             icon: FileSpreadsheet,
             permission: 'grades.view_results',
         },
