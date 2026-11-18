@@ -1,6 +1,7 @@
 import { Form, Head, router } from '@inertiajs/react';
 import { Printer, UserPlus } from 'lucide-react';
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useCallback, useId, useState } from 'react';
+import type { ReactNode } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ConfirmAction from '@/components/confirm-action';
 import TableToolbar from '@/components/data-table/table-toolbar';
@@ -37,13 +38,180 @@ type Subject = {
     stage: number;
     divided: boolean;
     sections: string[];
-    teacher: string | null;
+    /** Each section's teacher (a teacher's UUID, or null for none). */
+    teachers: Record<string, string | null>;
+    /** How each section is taught: "theory", "practical" or not said. */
+    kinds: Record<string, 'theory' | 'practical' | null>;
+    /** Each section's assistant teacher (a teacher's UUID), if any. */
+    assistants: Record<string, string | null>;
 };
+
+const selectClass =
+    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
+
+/** The sections of a subject this teacher teaches. */
+const ownSections = (subject: Subject, uuid: string) =>
+    subject.sections.filter((section) => subject.teachers[section] === uuid);
+
+/**
+ * One subject in the teacher's form. A subject of an undivided stage is
+ * one box; a divided stage's subject has a box per section, since each
+ * section may have its own teacher. Each box sends "<subject>:<section>".
+ */
+function SubjectChoice({
+    subject,
+    teacher,
+    teachers,
+    nameOf,
+}: {
+    subject: Subject;
+    teacher: Teacher | null;
+    teachers: Teacher[];
+    nameOf: (uuid: string | null) => string | null;
+}) {
+    const { t } = useTranslations();
+
+    if (!subject.divided) {
+        return (
+            <SectionChoice
+                subject={subject}
+                section={subject.sections[0]}
+                label={<bdi>{subject.name}</bdi>}
+                teacher={teacher}
+                teachers={teachers}
+                nameOf={nameOf}
+            />
+        );
+    }
+
+    return (
+        <div
+            role="group"
+            aria-label={subject.name}
+            className="grid gap-2 rounded-md border border-grid-line p-2"
+        >
+            <p className="text-sm font-medium">
+                <bdi>{subject.name}</bdi>
+            </p>
+            {subject.sections.map((section) => (
+                <SectionChoice
+                    key={section}
+                    subject={subject}
+                    section={section}
+                    label={t('Section :section', { section })}
+                    teacher={teacher}
+                    teachers={teachers}
+                    nameOf={nameOf}
+                />
+            ))}
+        </div>
+    );
+}
+
+/**
+ * One section's box and, once ticked, how it is taught (theoretical or
+ * practical) and the teacher's assistant, another teacher (owner's
+ * request, 2026-11-18). Both are optional; an unticked box sends neither.
+ */
+function SectionChoice({
+    subject,
+    section,
+    label,
+    teacher,
+    teachers,
+    nameOf,
+}: {
+    subject: Subject;
+    section: string;
+    label: ReactNode;
+    teacher: Teacher | null;
+    teachers: Teacher[];
+    nameOf: (uuid: string | null) => string | null;
+}) {
+    const { t } = useTranslations();
+    const id = useId();
+    const own = teacher !== null && subject.teachers[section] === teacher.uuid;
+    const [checked, setChecked] = useState(own);
+    const holder = subject.teachers[section] ?? null;
+    const taughtBy =
+        holder !== null && holder !== teacher?.uuid ? nameOf(holder) : null;
+    const key = `details[${subject.uuid}:${section}]`;
+
+    return (
+        <div className="grid gap-2" data-test="subject-section">
+            <label className="flex items-start gap-2 text-sm">
+                <input
+                    type="checkbox"
+                    name="subjects[]"
+                    value={`${subject.uuid}:${section}`}
+                    checked={checked}
+                    onChange={(event) => setChecked(event.target.checked)}
+                    className="mt-1 size-4 accent-primary"
+                />
+                <span>
+                    {label}
+                    {taughtBy && (
+                        <span className="block text-muted-foreground">
+                            {t('Now taught by :name', { name: taughtBy })}
+                        </span>
+                    )}
+                </span>
+            </label>
+            {checked && (
+                <div className="grid gap-2 ps-6" data-test="section-details">
+                    <div className="grid gap-1">
+                        <Label htmlFor={`${id}-kind`} className="text-xs">
+                            {t('Type')}
+                        </Label>
+                        <select
+                            id={`${id}-kind`}
+                            name={`${key}[kind]`}
+                            // Kept only for the teacher who had the section.
+                            defaultValue={
+                                own ? (subject.kinds[section] ?? '') : ''
+                            }
+                            className={selectClass}
+                            data-test="section-kind"
+                        >
+                            <option value="">{t('Not stated')}</option>
+                            <option value="theory">{t('Theoretical')}</option>
+                            <option value="practical">{t('Practical')}</option>
+                        </select>
+                    </div>
+                    <div className="grid gap-1">
+                        <Label htmlFor={`${id}-assistant`} className="text-xs">
+                            {t('Assistant teacher name')}
+                        </Label>
+                        <select
+                            id={`${id}-assistant`}
+                            name={`${key}[assistant]`}
+                            defaultValue={
+                                own ? (subject.assistants[section] ?? '') : ''
+                            }
+                            className={selectClass}
+                            data-test="section-assistant"
+                        >
+                            <option value="">{t('No assistant')}</option>
+                            {teachers
+                                .filter((other) => other.uuid !== teacher?.uuid)
+                                .map((other) => (
+                                    <option key={other.uuid} value={other.uuid}>
+                                        {other.name}
+                                    </option>
+                                ))}
+                        </select>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 /**
  * Adding a teacher, or changing one: name, employee number and the
- * subjects they teach. A subject chosen here moves to this teacher from
- * whoever had it.
+ * subjects they teach, with the sections of a divided stage (owner's
+ * request, 2026-11-18). A section chosen here moves to this teacher from
+ * whoever had it; the teacher then sees that section's students.
  */
 function TeacherDialog({
     teacher,
@@ -141,56 +309,15 @@ function TeacherDialog({
                                                     (subject) =>
                                                         subject.stage === stage,
                                                 )
-                                                .map((subject) => {
-                                                    const other =
-                                                        subject.teacher !==
-                                                            null &&
-                                                        subject.teacher !==
-                                                            teacher?.uuid
-                                                            ? nameOf(
-                                                                  subject.teacher,
-                                                              )
-                                                            : null;
-
-                                                    return (
-                                                        <label
-                                                            key={subject.uuid}
-                                                            className="flex items-start gap-2 text-sm"
-                                                        >
-                                                            <input
-                                                                type="checkbox"
-                                                                name="subjects[]"
-                                                                value={
-                                                                    subject.uuid
-                                                                }
-                                                                defaultChecked={
-                                                                    teacher !==
-                                                                        null &&
-                                                                    subject.teacher ===
-                                                                        teacher.uuid
-                                                                }
-                                                                className="mt-1 size-4 accent-primary"
-                                                            />
-                                                            <span>
-                                                                <bdi>
-                                                                    {
-                                                                        subject.name
-                                                                    }
-                                                                </bdi>
-                                                                {other && (
-                                                                    <span className="block text-muted-foreground">
-                                                                        {t(
-                                                                            'Now taught by :name',
-                                                                            {
-                                                                                name: other,
-                                                                            },
-                                                                        )}
-                                                                    </span>
-                                                                )}
-                                                            </span>
-                                                        </label>
-                                                    );
-                                                })}
+                                                .map((subject) => (
+                                                    <SubjectChoice
+                                                        key={subject.uuid}
+                                                        subject={subject}
+                                                        teacher={teacher}
+                                                        teachers={teachers}
+                                                        nameOf={nameOf}
+                                                    />
+                                                ))}
                                         </div>
                                     </div>
                                 ))}
@@ -260,25 +387,33 @@ export default function GradesTeachers({
                     .toLowerCase()
                     .includes(needle)),
     );
-    const list = new Intl.ListFormat(locale === 'ar' ? 'ar' : 'en', {
-        type: 'conjunction',
-    });
     const taught = (teacher: Teacher) =>
-        subjects.filter((subject) => subject.teacher === teacher.uuid);
-    // One line per subject, so the subject, stage and section line up.
-    const lines = (teacher: Teacher, line: (subject: Subject) => string) => {
+        subjects.flatMap((subject) =>
+            ownSections(subject, teacher.uuid).map((section) => ({
+                subject,
+                section,
+            })),
+        );
+    // One line per section taught, so the subject, stage, section, type
+    // and assistant line up.
+    const lines = (
+        teacher: Teacher,
+        line: (subject: Subject, section: string) => string,
+    ) => {
         const own = taught(teacher);
 
         return own.length === 0
             ? null
-            : own.map((subject) => (
-                  <Fragment key={subject.uuid}>
+            : own.map(({ subject, section }) => (
+                  <Fragment key={`${subject.uuid}:${section}`}>
                       <bdi className="block min-h-5 whitespace-nowrap">
-                          {line(subject)}
+                          {line(subject, section)}
                       </bdi>
                   </Fragment>
               ));
     };
+    const nameOf = (uuid: string | null) =>
+        teachers.find((other) => other.uuid === uuid)?.name ?? '';
 
     return (
         <>
@@ -367,7 +502,7 @@ export default function GradesTeachers({
                         aria-label={t('Teachers')}
                     >
                         <table
-                            className="w-full min-w-[48rem] border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line"
+                            className="w-full min-w-[60rem] border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line"
                             data-test="teachers"
                         >
                             <caption className="sr-only">
@@ -416,6 +551,18 @@ export default function GradesTeachers({
                                         className="px-4 py-3 text-center"
                                     >
                                         {t('Section')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center"
+                                    >
+                                        {t('Type')}
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-start"
+                                    >
+                                        {t('Assistant teacher')}
                                     </th>
                                     <th
                                         scope="col"
@@ -482,12 +629,45 @@ export default function GradesTeachers({
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-center align-top">
-                                            {lines(teacher, (subject) =>
-                                                subject.divided
-                                                    ? list.format(
-                                                          subject.sections,
-                                                      )
-                                                    : '',
+                                            {lines(
+                                                teacher,
+                                                (subject, section) =>
+                                                    subject.divided
+                                                        ? section
+                                                        : '',
+                                            )}
+                                        </td>
+                                        <td
+                                            className="px-4 py-3 text-center align-top"
+                                            data-test="teacher-kinds"
+                                        >
+                                            {lines(
+                                                teacher,
+                                                (subject, section) => {
+                                                    const kind =
+                                                        subject.kinds[section];
+
+                                                    return kind === 'theory'
+                                                        ? t('Theoretical')
+                                                        : kind === 'practical'
+                                                          ? t('Practical')
+                                                          : '';
+                                                },
+                                            )}
+                                        </td>
+                                        <td
+                                            className="px-4 py-3 align-top"
+                                            data-test="teacher-assistants"
+                                        >
+                                            {/* Shown only when there is one. */}
+                                            {lines(
+                                                teacher,
+                                                (subject, section) =>
+                                                    nameOf(
+                                                        subject.assistants[
+                                                            section
+                                                        ] ?? null,
+                                                    ),
                                             )}
                                         </td>
                                         <td className="px-4 py-3 align-top">

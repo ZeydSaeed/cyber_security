@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Models\Student;
@@ -134,5 +135,5 @@ it('keeps the first stage in one group, codes in pairs, and publication to close
 });
 
 it('will not delete a teacher who has subjects', function () {
-    expect(fn () => inSavepoint(fn () => Teacher::query()->whereKey($this->subject->teacher_id)->delete()))->toThrow(QueryException::class, 'grade_subjects_teacher_id_foreign');
+    expect(fn () => inSavepoint(fn () => Teacher::query()->whereKey(SubjectFactory::teacherOf($this->subject)?->id)->delete()))->toThrow(QueryException::class, 'grade_subject_teachers_teacher_id_foreign');
 });

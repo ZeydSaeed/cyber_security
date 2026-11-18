@@ -97,10 +97,12 @@ class Teacher extends Model implements Authenticatable
     }
 
     /**
-     * @return HasMany<Subject, $this>
+     * The sections of subjects the teacher teaches, one row each.
+     *
+     * @return HasMany<SubjectTeacher, $this>
      */
-    public function subjects(): HasMany
+    public function assignments(): HasMany
     {
-        return $this->hasMany(Subject::class, 'teacher_id');
+        return $this->hasMany(SubjectTeacher::class, 'teacher_id');
     }
 }

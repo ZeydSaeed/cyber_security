@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Grades\Contracts\GradesOverview;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -28,7 +29,7 @@ it('counts entered and expected marks, students, subjects and active teachers', 
     GradesFixtures::openWindow();
     (new GradeMark)->forceFill([
         'student_id' => $first[0]->id, 'subject_id' => $subjects[0]->id, 'stage' => Stage::First,
-        'period' => Period::Month1, 'mark' => 90, 'entered_by_teacher_id' => $subjects[0]->teacher_id,
+        'period' => Period::Month1, 'mark' => 90, 'entered_by_teacher_id' => SubjectFactory::teacherOf($subjects[0])?->id,
     ])->save();
 
     expect(app(GradesOverview::class)->progress())->toBe([

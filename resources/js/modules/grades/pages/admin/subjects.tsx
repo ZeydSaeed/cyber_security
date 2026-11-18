@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { useTranslations } from '@/hooks/use-translations';
 import { stageLabel } from '../../place';
 
-type Subject = { uuid: string; name: string; teacher: string | null };
+type Subject = { uuid: string; name: string };
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';

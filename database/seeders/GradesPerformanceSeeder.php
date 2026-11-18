@@ -11,6 +11,7 @@ use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
@@ -52,7 +53,10 @@ class GradesPerformanceSeeder extends Seeder
                 $teacher->forceFill(['name' => "Perf Teacher {$stage->value}.{$n}", 'code_digest' => $codes->digest($code)])->save();
 
                 $subject = new Subject;
-                $subject->forceFill(['stage' => $stage, 'name' => "Perf Subject {$stage->value}.{$n}", 'teacher_id' => $teacher->id, 'sort_order' => $n])->save();
+                $subject->forceFill(['stage' => $stage, 'name' => "Perf Subject {$stage->value}.{$n}", 'sort_order' => $n])->save();
+                foreach ($stage->sections() as $section) {
+                    (new SubjectTeacher)->forceFill(['subject_id' => $subject->id, 'section' => $section, 'teacher_id' => $teacher->id])->save();
+                }
                 $csv[] = "{$code},{$subject->uuid}";
             }
 

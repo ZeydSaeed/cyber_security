@@ -3,6 +3,7 @@
 use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\GradeMark;
@@ -142,7 +143,7 @@ it('saves a section once when a teacher sends the same marks four times at once'
     $marks = (string) json_encode(array_fill_keys($students, '75'));
 
     // Four, not six: the owner role's CONNECTION LIMIT 10 (see below).
-    $results = Parallel::run('save-marks', array_fill(0, 4, [$subject->teacher_id, $subject->id, 'A', $marks]));
+    $results = Parallel::run('save-marks', array_fill(0, 4, [SubjectFactory::teacherOf($subject)?->id, $subject->id, 'A', $marks]));
 
     expect(array_values(array_filter($results, fn (array $result): bool => ! $result['ok'])))->toBe([])
         ->and(array_sum(array_column($results, 'changed')))->toBe(5)
@@ -157,8 +158,8 @@ it('keeps both of two saves of different students at the same moment', function 
         [$subject, $students] = sectionWithOpenWindow();
 
         $results = Parallel::run('save-marks', [
-            [$subject->teacher_id, $subject->id, 'A', (string) json_encode([$students[0] => '60', $students[1] => '61'])],
-            [$subject->teacher_id, $subject->id, 'A', (string) json_encode([$students[2] => '62', $students[3] => 'absent'])],
+            [SubjectFactory::teacherOf($subject)?->id, $subject->id, 'A', (string) json_encode([$students[0] => '60', $students[1] => '61'])],
+            [SubjectFactory::teacherOf($subject)?->id, $subject->id, 'A', (string) json_encode([$students[2] => '62', $students[3] => 'absent'])],
         ]);
 
         expect(array_column($results, 'ok'))->toBe([true, true], "round {$round}")
@@ -173,7 +174,7 @@ it('either saves before the window closes or refuses, never after', function () 
         [$subject, $students] = sectionWithOpenWindow();
 
         $results = Parallel::run('save-or-close', [
-            ['save', $subject->teacher_id, $subject->id, 'A', (string) json_encode(array_fill_keys($students, '90'))],
+            ['save', SubjectFactory::teacherOf($subject)?->id, $subject->id, 'A', (string) json_encode(array_fill_keys($students, '90'))],
             ['close', $admin->id],
         ]);
         $save = $results[0];

@@ -9,11 +9,12 @@ use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 
 /**
  * What a teacher's pages show (ADR-0034), as plain values: their subjects
- * with each section's progress, and one section's sheet. A fixed number of
+ * with the progress of each section they teach (and no other), and one section's sheet. A fixed number of
  * queries whatever the number of students (GradesTeacherPagesTest).
  */
 final class TeacherSheets
@@ -23,8 +24,14 @@ final class TeacherSheets
      */
     public function subjects(Teacher $teacher, Period $period = Period::Month1): array
     {
-        $subjects = Subject::query()
+        $own = SubjectTeacher::query()->toBase()
             ->where('teacher_id', $teacher->id)
+            ->get(['subject_id', 'section'])
+            ->groupBy('subject_id')
+            ->map(fn ($rows): array => $rows->pluck('section')->all());
+
+        $subjects = Subject::query()
+            ->whereIn('id', $own->keys())
             ->orderBy('stage')->orderBy('sort_order')->orderBy('name')
             ->get(['id', 'uuid', 'name', 'stage']);
 
@@ -58,7 +65,10 @@ final class TeacherSheets
                     'section' => $section->value,
                     'students' => (int) ($students[$subject->stage->value.'|'.$section->value] ?? 0),
                     'entered' => (int) ($entered[$subject->id.'|'.$section->value] ?? 0),
-                ], $subject->stage->sections()),
+                ], array_values(array_filter(
+                    $subject->stage->sections(),
+                    fn (Section $section): bool => in_array($section->value, $own->get($subject->id, []), true),
+                ))),
             ])->all()),
         ];
     }

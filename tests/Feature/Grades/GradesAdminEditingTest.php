@@ -3,6 +3,7 @@
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
@@ -39,7 +40,7 @@ describe('teachers', function () {
         $teacher = Teacher::query()->sole();
         $code = app(TeacherCodes::class)->decrypt((string) $teacher->code_encrypted);
         expect($teacher->specialty)->toBe('Electricity')
-            ->and($subject->refresh()->teacher_id)->toBe($teacher->id)
+            ->and(SubjectFactory::teacherOf($subject)?->id)->toBe($teacher->id)
             ->and($teacher->code_digest)->toBe(app(TeacherCodes::class)->digest($code));
 
         $this->get('/admin/teachers')->assertInertia(fn (Assert $page) => $page
@@ -49,14 +50,15 @@ describe('teachers', function () {
             ->where('subjects.0.name', 'Networks')
             ->where('subjects.0.stage', 2)
             ->where('subjects.0.sections', ['A', 'B'])
-            ->where('subjects.0.teacher', $teacher->uuid));
+            // A subject chosen without a section: every section of its stage.
+            ->where('subjects.0.teachers', ['A' => $teacher->uuid, 'B' => $teacher->uuid]));
         expect(AuditEvent::query()->where('action', 'grades.teacher_codes_viewed')->count())->toBe(1);
 
         $this->put("/admin/teachers/{$teacher->uuid}", ['name' => 'Huda K.', 'specialty' => '', 'subjects' => ['']]);
         $teacher->refresh();
         expect($teacher->name)->toBe('Huda K.')
             ->and($teacher->specialty)->toBeNull()
-            ->and($subject->refresh()->teacher_id)->toBeNull();
+            ->and(SubjectFactory::teacherOf($subject)?->id)->toBeNull();
     });
 
     it('makes teacher codes in the student shape, always starting with T, and student codes never with T', function () {
@@ -126,11 +128,11 @@ describe('teachers', function () {
         $other = Teacher::factory()->withCode('other-code-1')->create();
 
         $this->actingAs($this->owner)->put("/admin/teachers/{$other->uuid}", ['subjects' => ['', $subject->uuid]]);
-        expect($subject->refresh()->teacher_id)->toBe($other->id);
+        expect(SubjectFactory::teacherOf($subject)?->id)->toBe($other->id);
 
         // A form without the subjects field leaves them as they are.
         $this->put("/admin/teachers/{$other->uuid}", ['name' => 'Renamed Teacher']);
-        expect($subject->refresh()->teacher_id)->toBe($other->id);
+        expect(SubjectFactory::teacherOf($subject)?->id)->toBe($other->id);
     });
 
     it('keeps a copy when an old teacher\'s code is set to the same again', function () {
@@ -143,12 +145,12 @@ describe('teachers', function () {
 
     it('deletes a teacher without marks and leaves their subjects without a teacher', function () {
         $subject = Subject::factory()->create();
-        $teacher = $subject->teacher;
+        $teacher = SubjectFactory::teacherOf($subject);
 
         $this->actingAs($this->owner)->delete("/admin/teachers/{$teacher->uuid}")->assertRedirect('/admin/teachers');
 
         expect(Teacher::query()->count())->toBe(0)
-            ->and($subject->refresh()->teacher_id)->toBeNull()
+            ->and(SubjectFactory::teacherOf($subject)?->id)->toBeNull()
             ->and(AuditEvent::query()->where('action', 'grades.teacher_deleted')->exists())->toBeTrue();
     });
 
@@ -156,10 +158,10 @@ describe('teachers', function () {
         GradesFixtures::openWindow();
         $subject = Subject::factory()->create();
         $student = Student::factory()->create();
-        app(SaveMarks::class)->handle($subject->teacher, $subject, Section::A, Period::Month1, [$student->uuid => Mark::of(80)]);
+        app(SaveMarks::class)->handle(SubjectFactory::teacherOf($subject), $subject, Section::A, Period::Month1, [$student->uuid => Mark::of(80)]);
 
         $this->actingAs($this->owner)->from('/admin/teachers')
-            ->delete("/admin/teachers/{$subject->teacher->uuid}")
+            ->delete('/admin/teachers/'.SubjectFactory::teacherOf($subject)?->uuid)
             ->assertSessionHasErrors('teacher');
         expect(Teacher::query()->count())->toBe(1);
     });
@@ -171,7 +173,7 @@ describe('subjects', function () {
 
         $this->actingAs($this->owner)->put("/admin/subjects/{$subject->uuid}", ['name' => 'Networks', 'stage' => 2, 'teacher' => ''])
             ->assertRedirect('/admin/subjects');
-        expect($subject->refresh()->stage)->toBe(Stage::Second)->and($subject->teacher_id)->toBeNull();
+        expect($subject->refresh()->stage)->toBe(Stage::Second)->and(SubjectFactory::teacherOf($subject)?->id)->toBeNull();
 
         $this->delete("/admin/subjects/{$subject->uuid}")->assertRedirect('/admin/subjects');
         expect(Subject::query()->count())->toBe(0);

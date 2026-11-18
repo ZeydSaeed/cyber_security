@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Grades\Database\Factories\SubjectFactory;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -30,7 +31,7 @@ it('exports the Grades module\'s metrics through its source', function () {
     foreach ($students as $student) {
         (new GradeMark)->forceFill([
             'student_id' => $student->id, 'subject_id' => $subjects[0]->id, 'stage' => Stage::First,
-            'period' => Period::Month1, 'mark' => 70, 'entered_by_teacher_id' => $subjects[0]->teacher_id,
+            'period' => Period::Month1, 'mark' => 70, 'entered_by_teacher_id' => SubjectFactory::teacherOf($subjects[0])?->id,
         ])->save();
     }
 

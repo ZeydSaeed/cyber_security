@@ -12,8 +12,10 @@ use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\TeachingKind;
 use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -21,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -72,14 +75,16 @@ class GradesAdminController
 
     /**
      * Teachers in one table (owner's request, 2026-11-16): name, employee
-     * number, and the subjects each teaches with their stage. Every subject
-     * is listed too, so a teacher's subjects can be chosen in their form.
-     * The page shows the employee numbers, so each visit is audited.
+     * number, and the subjects each teaches with their stage and sections.
+     * Every subject is listed too, with each section's teacher, so a
+     * teacher's subjects and sections can be chosen in their form (owner's
+     * request, 2026-11-18). The page shows the employee numbers, so each
+     * visit is audited.
      */
     public function teachers(TeacherCodes $codes, AuditLogger $audit, #[CurrentUser] User $user): Response
     {
         $teachers = Teacher::query()->orderBy('name')->get();
-        $subjects = Subject::query()->with('teacher:id,uuid')
+        $subjects = Subject::query()->with(['assignments.teacher:id,uuid', 'assignments.assistant:id,uuid'])
             ->orderBy('stage')->orderBy('sort_order')->orderBy('name')->get();
 
         if ($teachers->isNotEmpty()) {
@@ -95,27 +100,39 @@ class GradesAdminController
                 'active' => $teacher->is_active,
                 'last_seen_at' => $teacher->last_seen_at?->toIso8601String(),
             ])->all()),
-            'subjects' => array_values($subjects->map(fn (Subject $subject): array => [
-                'uuid' => $subject->uuid,
-                'name' => $subject->name,
-                'stage' => $subject->stage->value,
-                'divided' => $subject->stage->isDivided(),
-                'sections' => array_map(fn (Section $section): string => $section->value, $subject->stage->sections()),
-                'teacher' => $subject->teacher?->uuid,
-            ])->all()),
+            'subjects' => array_values($subjects->map(function (Subject $subject): array {
+                $sections = array_map(fn (Section $section): string => $section->value, $subject->stage->sections());
+                // One value per section of the stage, from its row (null: no teacher).
+                $each = fn (callable $value): array => array_combine($sections, array_map(
+                    fn (string $section): mixed => ($row = $subject->assignments->first(fn (SubjectTeacher $row): bool => $row->section->value === $section)) === null ? null : $value($row),
+                    $sections,
+                ));
+
+                return [
+                    'uuid' => $subject->uuid,
+                    'name' => $subject->name,
+                    'stage' => $subject->stage->value,
+                    'divided' => $subject->stage->isDivided(),
+                    'sections' => $sections,
+                    // Each section's teacher, how it is taught and the
+                    // teacher's assistant (owner's request, 2026-11-18).
+                    'teachers' => $each(fn (SubjectTeacher $row): ?string => $row->teacher?->uuid),
+                    'kinds' => $each(fn (SubjectTeacher $row): ?string => $row->kind?->value),
+                    'assistants' => $each(fn (SubjectTeacher $row): ?string => $row->assistant?->uuid),
+                ];
+            })->all()),
         ]);
     }
 
     /**
      * Every teacher on a slip to print and hand out (owner's request,
      * 2026-11-16), like the students' code slips: name, specialty, each
-     * subject with its stage and sections, the link and the code. Showing
-     * the codes is audited.
+     * subject with its stage and the sections they teach, the link and the
+     * code. Showing the codes is audited.
      */
     public function printTeachers(TeacherCodes $codes, AuditLogger $audit, #[CurrentUser] User $user): Response
     {
-        $teachers = Teacher::query()->with(['subjects' => fn ($query) => $query->orderBy('stage')->orderBy('sort_order')->orderBy('name')])
-            ->orderBy('name')->get();
+        $teachers = Teacher::query()->with(['assignments.subject', 'assignments.assistant:id,name'])->orderBy('name')->get();
 
         $audit->record('grades.teacher_codes_viewed', null, ['printed' => true], actor: $user);
 
@@ -126,12 +143,7 @@ class GradesAdminController
                 'name' => $teacher->name,
                 'specialty' => $teacher->specialty,
                 'code' => $teacher->code_encrypted === null ? null : $codes->decrypt($teacher->code_encrypted),
-                'subjects' => array_values($teacher->subjects->map(fn (Subject $subject): array => [
-                    'name' => $subject->name,
-                    'stage' => $subject->stage->value,
-                    'divided' => $subject->stage->isDivided(),
-                    'sections' => array_map(fn (Section $section): string => $section->value, $subject->stage->sections()),
-                ])->all()),
+                'subjects' => $this->taught($teacher),
             ])->all()),
         ]);
     }
@@ -154,8 +166,9 @@ class GradesAdminController
                 $request->filled('specialty') ? (string) $request->string('specialty') : null,
             );
             if ($request->has('subjects')) {
-                $this->assignSubjects($user, $teacher, $this->subjectUuids($request), $subjects);
+                $this->assignSubjects($user, $teacher, $this->subjectChoices($request), $subjects);
             }
+            $this->describeSubjects($user, $teacher, $request, $subjects);
         });
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Teacher added. Send them the link and their code.')]);
 
@@ -186,8 +199,9 @@ class GradesAdminController
                 $save->setActive($user, $teacher, $request->boolean('active'));
             }
             if ($request->has('subjects')) {
-                $this->assignSubjects($user, $teacher, $this->subjectUuids($request), $subjects);
+                $this->assignSubjects($user, $teacher, $this->subjectChoices($request), $subjects);
             }
+            $this->describeSubjects($user, $teacher, $request, $subjects);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Changes saved.')]);
@@ -196,42 +210,136 @@ class GradesAdminController
     }
 
     /**
+     * The teacher's subjects in stage order, with only the sections they
+     * teach; sections taught the same way share one entry.
+     *
+     * @return list<array{name: string, stage: int, divided: bool, sections: list<string>, kind: string|null, assistant: string|null}>
+     */
+    private function taught(Teacher $teacher): array
+    {
+        // Sections of a subject taught the same way (type and assistant)
+        // share one block on the slip (owner's request, 2026-11-18).
+        $groups = $teacher->assignments->groupBy(
+            fn (SubjectTeacher $row): string => $row->subject_id.'|'.($row->kind->value ?? '').'|'.($row->assistant_id ?? ''),
+        );
+
+        $subjects = [];
+        foreach ($groups as $rows) {
+            $first = $rows->first();
+            $subject = $first?->subject;
+            if ($first === null || $subject === null) {
+                continue;
+            }
+            $own = $rows->map(fn (SubjectTeacher $row): Section => $row->section)->all();
+            $sections = array_values(array_filter($subject->stage->sections(), fn (Section $section): bool => in_array($section, $own, true)));
+            $subjects[] = [[$subject->stage->value, $subject->sort_order, $subject->name, $sections[0]->value ?? ''], [
+                'name' => $subject->name,
+                'stage' => $subject->stage->value,
+                'divided' => $subject->stage->isDivided(),
+                'sections' => array_map(fn (Section $section): string => $section->value, $sections),
+                // Null: not stated, left blank to fill in by hand.
+                'kind' => $first->kind?->value,
+                'assistant' => $first->assistant?->name,
+            ]];
+        }
+
+        usort($subjects, fn (array $a, array $b): int => $a[0] <=> $b[0]);
+
+        return array_map(fn (array $pair): array => $pair[1], $subjects);
+    }
+
+    /**
      * A form sends `subjects[]` with an empty first value, so choosing none
-     * still says "no subjects" rather than "not changed".
+     * still says "no subjects" rather than "not changed". Each value is a
+     * subject's UUID and one section ("<uuid>:B"), or the UUID alone for
+     * every section of its stage (owner's request, 2026-11-18).
      *
      * @return array<string, list<mixed>>
      */
     private function subjectRules(): array
     {
         return [
-            'subjects' => ['sometimes', 'array', 'max:100'],
-            'subjects.*' => ['nullable', 'uuid', Rule::exists('grade_subjects', 'uuid')],
+            'subjects' => ['sometimes', 'array', 'max:200'],
+            'subjects.*' => ['nullable', 'string', 'regex:/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(:[AB])?$/i'],
+            // How each chosen section is taught, keyed "<uuid>:<section>"
+            // (owner's request, 2026-11-18).
+            'details' => ['sometimes', 'array', 'max:200'],
+            'details.*' => ['array:kind,assistant'],
+            'details.*.kind' => ['nullable', Rule::enum(TeachingKind::class)],
+            'details.*.assistant' => ['nullable', 'uuid', Rule::exists('grade_teachers', 'uuid')],
         ];
     }
 
     /**
-     * @return list<string>
+     * Sets the type and the assistant of each section the teacher now
+     * teaches that the form describes; a section they do not teach is
+     * ignored (its fields are not sent once its box is unticked).
      */
-    private function subjectUuids(Request $request): array
+    private function describeSubjects(User $user, Teacher $teacher, Request $request, SaveSubject $subjects): void
     {
-        return array_values(array_filter((array) $request->input('subjects', []), fn (mixed $uuid): bool => is_string($uuid) && $uuid !== ''));
+        $details = (array) $request->input('details', []);
+        if ($details === []) {
+            return;
+        }
+
+        $assistants = Teacher::query()
+            ->whereIn('uuid', array_filter(array_map(fn (mixed $detail): mixed => is_array($detail) ? ($detail['assistant'] ?? null) : null, $details), 'is_string'))
+            ->get()->keyBy('uuid');
+
+        foreach (SubjectTeacher::query()->with('subject')->where('teacher_id', $teacher->id)->get() as $row) {
+            $detail = $details[$row->subject?->uuid.':'.$row->section->value] ?? null;
+            if ($row->subject === null || ! is_array($detail)) {
+                continue;
+            }
+
+            $kind = is_string($detail['kind'] ?? null) && $detail['kind'] !== '' ? TeachingKind::from($detail['kind']) : null;
+            $assistant = is_string($detail['assistant'] ?? null) ? $assistants->get($detail['assistant']) : null;
+            $subjects->describe($user, $row->subject, $row->section, $kind, $assistant);
+        }
     }
 
     /**
-     * The teacher teaches exactly these subjects: each chosen one is given
+     * @return list<array{0: string, 1: Section|null}>
+     */
+    private function subjectChoices(Request $request): array
+    {
+        $choices = [];
+        foreach ((array) $request->input('subjects', []) as $value) {
+            if (is_string($value) && $value !== '') {
+                $parts = explode(':', $value, 2);
+                $choices[] = [strtolower($parts[0]), isset($parts[1]) ? Section::from(strtoupper($parts[1])) : null];
+            }
+        }
+
+        return $choices;
+    }
+
+    /**
+     * The teacher teaches exactly these sections: each chosen one is given
      * to them (from whoever had it), the others they had are left without
      * a teacher. Each change is SaveSubject::assign, audited.
      *
-     * @param  list<string>  $uuids
+     * @param  list<array{0: string, 1: Section|null}>  $choices
      */
-    private function assignSubjects(User $user, Teacher $teacher, array $uuids, SaveSubject $subjects): void
+    private function assignSubjects(User $user, Teacher $teacher, array $choices, SaveSubject $subjects): void
     {
-        foreach (Subject::query()->whereIn('uuid', $uuids)->get() as $subject) {
-            $subjects->assign($user, $subject, $teacher);
+        $found = Subject::query()->whereIn('uuid', array_unique(array_column($choices, 0)))->get()->keyBy('uuid');
+
+        $wanted = [];
+        foreach ($choices as [$uuid, $section]) {
+            $subject = $found->get($uuid)
+                ?? throw ValidationException::withMessages(['subjects' => __('A chosen subject no longer exists. Reload the page.')]);
+
+            foreach ($section === null ? $subject->stage->sections() : [$section] as $each) {
+                $subjects->assign($user, $subject, $teacher, $each);
+                $wanted[$subject->id.'|'.$each->value] = true;
+            }
         }
 
-        foreach (Subject::query()->where('teacher_id', $teacher->id)->whereNotIn('uuid', $uuids)->get() as $subject) {
-            $subjects->assign($user, $subject, null);
+        foreach (SubjectTeacher::query()->with('subject')->where('teacher_id', $teacher->id)->get() as $row) {
+            if ($row->subject !== null && ! isset($wanted[$row->subject_id.'|'.$row->section->value])) {
+                $subjects->assign($user, $row->subject, null, $row->section);
+            }
         }
     }
 
@@ -257,7 +365,7 @@ class GradesAdminController
 
     public function subjects(): Response
     {
-        $subjects = Subject::query()->with('teacher:id,uuid,name')
+        $subjects = Subject::query()
             ->orderBy('stage')->orderBy('sort_order')->orderBy('name')->get();
 
         return Inertia::render('modules/grades/pages/admin/subjects', [
@@ -266,7 +374,6 @@ class GradesAdminController
                 'subjects' => array_values($subjects->filter(fn (Subject $s): bool => $s->stage === $stage)->map(fn (Subject $subject): array => [
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
-                    'teacher' => $subject->teacher?->uuid,
                 ])->all()),
             ], Stage::cases()),
             // No teachers here: a teacher's subjects are chosen on the

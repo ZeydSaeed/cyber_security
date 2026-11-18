@@ -1,11 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
-import { FileSpreadsheet, Printer } from 'lucide-react';
+import { FileSpreadsheet, Printer, Search } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
 import EmptyState from '@/components/empty-state';
-import PageToolbar from '@/components/page-toolbar';
+import PageToolbar, { toolbarControls } from '@/components/page-toolbar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useTranslations } from '@/hooks/use-translations';
 import ResultsTable from '../../components/results-table';
+import { matchRanges, searchTerms } from '../../name-search';
 import { placeLabel } from '../../place';
 import type { ResultSheet } from '../../types';
 
@@ -20,7 +23,10 @@ function query(stage: number, section: string): string {
  * section of the second, the others a click away; the printable sheet,
  * each student's result card and the Excel file. The title is in the top
  * toolbar; the groups' buttons, printing and the Excel file come first on
- * the page (owner's layout, 2026-11-16).
+ * the page (owner's layout, 2026-11-16). A search in the toolbar marks
+ * the matching names in yellow as each letter is typed, in the browser
+ * (owner's request, 2026-11-18): Enter moves to the next match, Shift+Enter
+ * to the one before, Escape clears.
  */
 export default function GradesResults({
     places,
@@ -28,11 +34,100 @@ export default function GradesResults({
 }: ResultSheet & { places: Place[] }) {
     const { t } = useTranslations();
     const here = query(sheet.stage, sheet.section);
+    const searchId = useId();
+    const [search, setSearch] = useState('');
+    const [index, setIndex] = useState(0);
+    const terms = useMemo(() => searchTerms(search), [search]);
+    const matches = useMemo(
+        () =>
+            sheet.students
+                .filter((student) => matchRanges(student.name, terms) !== null)
+                .map((student) => student.uuid),
+        [sheet.students, terms],
+    );
+    const current =
+        matches.length === 0 ? null : matches[index % matches.length];
+
+    // Brings the current match into view (the table scrolls sideways and
+    // the page down).
+    useEffect(() => {
+        if (current !== null) {
+            document
+                .querySelector(`[data-student="${current}"]`)
+                ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+    }, [current]);
 
     return (
         <>
             <Head title={t('Results')} />
-            <PageToolbar title={t('Results')} />
+            <PageToolbar title={t('Results')}>
+                <div className="flex items-center gap-2" role="search">
+                    <label htmlFor={searchId} className="sr-only">
+                        {t('Search by student name')}
+                    </label>
+                    {/* The field takes the page's colours back; the count
+                        beside it keeps the toolbar's. */}
+                    <div className={`relative ${toolbarControls}`}>
+                        <Search
+                            className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden
+                        />
+                        <Input
+                            id={searchId}
+                            type="search"
+                            value={search}
+                            onChange={(event) => {
+                                setSearch(event.target.value);
+                                setIndex(0);
+                            }}
+                            onKeyDown={(event) => {
+                                if (
+                                    event.key === 'Enter' &&
+                                    matches.length > 0
+                                ) {
+                                    event.preventDefault();
+                                    setIndex(
+                                        (at) =>
+                                            (at +
+                                                (event.shiftKey
+                                                    ? matches.length - 1
+                                                    : 1)) %
+                                            matches.length,
+                                    );
+                                } else if (event.key === 'Escape') {
+                                    setSearch('');
+                                    setIndex(0);
+                                }
+                            }}
+                            placeholder={t('Search by student name')}
+                            className="h-8 w-56 bg-card ps-8 sm:w-72"
+                            autoComplete="off"
+                            dir="auto"
+                            data-test="results-search"
+                            // "/" moves focus here (keyboard shortcuts, #17).
+                            data-shortcut-search
+                        />
+                    </div>
+                    {/* Read out as it changes; empty until something is typed. */}
+                    <span
+                        role="status"
+                        className="text-sm whitespace-nowrap tabular-nums"
+                        data-test="results-search-count"
+                    >
+                        {terms.length === 0
+                            ? ''
+                            : matches.length === 0
+                              ? t('No student matches')
+                              : t(':current of :count', {
+                                    current: String(
+                                        (index % matches.length) + 1,
+                                    ),
+                                    count: String(matches.length),
+                                })}
+                    </span>
+                </div>
+            </PageToolbar>
             <div className="flex flex-col gap-6 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <nav
@@ -109,6 +204,8 @@ export default function GradesResults({
                 ) : (
                     <ResultsTable
                         sheet={sheet}
+                        terms={terms}
+                        current={current}
                         action={(student) => (
                             <a
                                 href={ResultsController.printStudent.url(

@@ -10,6 +10,7 @@ use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
@@ -20,8 +21,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Writes one section's marks in one subject (ADR-0034), in one transaction.
  *
- * - A teacher writes only their own subjects, only while active, and only
- *   while the period is open. The owner (grades.manage) may correct at any
+ * - A teacher writes only the sections they teach, only while active, and
+ *   only while the period is open. The owner (grades.manage) may correct at any
  *   time.
  * - The subject's row is locked for update (saves of one subject wait for
  *   each other) and the period's row for share (closing waits for saves in
@@ -52,11 +53,11 @@ class SaveMarks
             $subject = Subject::query()->whereKey($subject->id)->lockForUpdate()->firstOrFail();
             $window = GradePeriod::query()->where('period', $period->value)->sharedLock()->firstOrFail();
 
-            $this->authorise($author, $subject, $window->isOpen());
-
             if (! $subject->stage->hasSection($section)) {
                 throw new DomainRuleViolation(__('This stage has no such section.'), 'marks');
             }
+
+            $this->authorise($author, $subject, $section, $window->isOpen());
 
             $students = Student::query()
                 ->where('stage', $subject->stage->value)
@@ -148,7 +149,7 @@ class SaveMarks
         }, 3);
     }
 
-    private function authorise(Teacher|User $author, Subject $subject, bool $open): void
+    private function authorise(Teacher|User $author, Subject $subject, Section $section, bool $open): void
     {
         if ($author instanceof User) {
             EnsureManager::check($author);
@@ -158,7 +159,7 @@ class SaveMarks
 
         $teacher = Teacher::query()->whereKey($author->id)->first();
 
-        if ($teacher === null || ! $teacher->is_active || $subject->teacher_id !== $teacher->id) {
+        if ($teacher === null || ! $teacher->is_active || ! SubjectTeacher::teaches($teacher, $subject, $section)) {
             throw new AuthorizationException;
         }
 

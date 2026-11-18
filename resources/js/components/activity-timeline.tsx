@@ -79,6 +79,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Subject renamed');
         case 'grades.subject_assigned':
             return t('Subject teacher changed');
+        case 'grades.subject_teaching_changed':
+            return t('Subject type or assistant changed');
         case 'grades.subject_stage_changed':
             return t('Subject stage changed');
         case 'grades.subject_deleted':

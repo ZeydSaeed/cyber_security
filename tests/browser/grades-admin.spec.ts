@@ -119,6 +119,118 @@ test.describe('grades owner flow', () => {
         });
     }
 
+    // A search in the toolbar marks matching names in yellow as each letter
+    // is typed (owner's request, 2026-11-18). The seeder's second stage has
+    // "Student 2A1" to "Student 2A6" in section A.
+    for (const { locale, dir, count, next, none } of [
+        {
+            locale: 'en',
+            dir: 'ltr',
+            count: '1 of 6',
+            next: '2 of 6',
+            none: 'No student matches',
+        },
+        {
+            locale: 'ar',
+            dir: 'rtl',
+            count: '1 من 6',
+            next: '2 من 6',
+            none: 'لا يوجد طالب بهذا الاسم',
+        },
+    ]) {
+        test(`marks the names a search finds (${locale})`, async ({ page }) => {
+            await open(page, '/admin/results?stage=2&section=A', locale);
+            const search = page.locator('[data-test="results-search"]');
+            const status = page.locator('[data-test="results-search-count"]');
+            const marks = page.locator('[data-test="result-row"] mark');
+
+            // Part of a name, any case, words in any order.
+            await search.fill('  2a3   STUD ');
+            await expect(marks).toHaveText(['Stud', '2A3']);
+            await expect(status).toHaveText(
+                locale === 'ar' ? '1 من 1' : '1 of 1',
+            );
+
+            await search.fill('student');
+            await expect(
+                page.locator(
+                    '[data-test="result-row"] [data-test="name-match"]',
+                ),
+            ).toHaveCount(6);
+            await expect(status).toHaveText(count);
+            await search.press('Enter');
+            await expect(status).toHaveText(next);
+            await search.press('Shift+Enter');
+            await expect(status).toHaveText(count);
+
+            // The marked names keep their contrast (axe), in both directions.
+            await check(page, `results search (${locale})`, dir);
+            await page.screenshot({
+                path: `storage/framework/screenshots/grades-results-search-${locale}.png`,
+                fullPage: true,
+            });
+
+            await search.fill('zzz');
+            await expect(marks).toHaveCount(0);
+            await expect(status).toHaveText(none);
+
+            await search.press('Escape');
+            await expect(search).toHaveValue('');
+            await expect(status).toHaveText('');
+        });
+    }
+
+    // In the teacher's form each ticked section takes a type and an
+    // assistant, shown in the teachers' table (owner's request,
+    // 2026-11-18). The seeder's "Teacher Test" teaches Network Security
+    // (first stage), then Cryptography (second stage, A and B).
+    test('gives a section its type and an assistant teacher', async ({
+        page,
+    }) => {
+        await open(page, '/admin/teachers', 'en');
+
+        await page.click('[data-test="add-teacher"]');
+        const adding = page.locator('[data-test="teacher-dialog"]');
+        await adding.locator('input[name="name"]').fill('Assistant Test');
+        await adding.locator('[data-test="save-teacher"]').click();
+        await expect(adding).toBeHidden();
+
+        const row = page.locator('[data-test="teacher-row"]', {
+            hasText: 'Teacher Test',
+        });
+        await row.locator('[data-test="edit-teacher"]').click();
+        const dialog = page.locator('[data-test="teacher-dialog"]');
+        const details = dialog.locator('[data-test="section-details"]');
+        await expect(details).toHaveCount(3);
+        await check(page, 'the teacher form with section details', 'ltr');
+
+        await details
+            .first()
+            .locator('[data-test="section-kind"]')
+            .selectOption('practical');
+        await details
+            .first()
+            .locator('[data-test="section-assistant"]')
+            .selectOption({ label: 'Assistant Test' });
+        await page.screenshot({
+            path: 'storage/framework/screenshots/grades-teacher-form-details-en.png',
+        });
+        await dialog.locator('[data-test="save-teacher"]').click();
+        await expect(dialog).toBeHidden();
+
+        // One line per section: only the first has a type and an assistant.
+        await expect(row.locator('[data-test="teacher-kinds"] bdi')).toHaveText(
+            ['Practical', '', ''],
+        );
+        await expect(
+            row.locator('[data-test="teacher-assistants"] bdi'),
+        ).toHaveText(['Assistant Test', '', '']);
+        await page.screenshot({
+            path: 'storage/framework/screenshots/grades-teachers-details-en.png',
+            fullPage: true,
+        });
+    });
+
     // The import card left the students page on 2026-11-16 (the owner adds
     // students one by one); the import itself keeps its feature tests.
     test('prints a result card', async ({ page }) => {

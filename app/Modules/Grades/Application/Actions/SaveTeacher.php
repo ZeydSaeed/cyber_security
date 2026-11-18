@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
@@ -151,8 +152,8 @@ class SaveTeacher
                 throw new DomainRuleViolation(__('This teacher has entered marks and cannot be deleted. Stop their signing in instead.'), 'teacher');
             }
 
-            $subjects = Subject::query()->where('teacher_id', $locked->id)->pluck('name')->all();
-            Subject::query()->where('teacher_id', $locked->id)->update(['teacher_id' => null]);
+            $subjects = Subject::query()->whereIn('id', SubjectTeacher::query()->select('subject_id')->where('teacher_id', $locked->id))->pluck('name')->all();
+            SubjectTeacher::query()->where('teacher_id', $locked->id)->delete();
             $this->audit->record('grades.teacher_deleted', $locked, ['name' => $locked->name, 'subjects' => $subjects], actor: $actor);
             $locked->delete();
         });
