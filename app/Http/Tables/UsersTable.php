@@ -24,9 +24,8 @@ class UsersTable extends TableDefinition
         return [
             'name' => ['sortable' => true, 'hideable' => false],
             'email' => ['sortable' => true, 'hideable' => true],
-            'roles' => ['sortable' => false, 'hideable' => true],
-            'two_factor' => ['sortable' => false, 'hideable' => true],
-            'created_at' => ['sortable' => true, 'hideable' => true],
+            // The eye that shows the password an administrator set.
+            'password' => ['sortable' => false, 'hideable' => true],
         ];
     }
 
@@ -34,7 +33,6 @@ class UsersTable extends TableDefinition
     {
         return [
             'role' => [...array_map(fn (Role $role): string => $role->value, Role::cases()), 'none'],
-            'two_factor' => ['enabled', 'disabled'],
         ];
     }
 
@@ -54,9 +52,6 @@ class UsersTable extends TableDefinition
             'role' => $value === 'none'
                 ? $query->whereDoesntHave('roleAssignments')
                 : $query->whereHas('roleAssignments', fn (Builder $assignment) => $assignment->where('role', $value)),
-            'two_factor' => $value === 'enabled'
-                ? $query->whereNotNull('two_factor_confirmed_at')
-                : $query->whereNull('two_factor_confirmed_at'),
             default => null,
         };
     }

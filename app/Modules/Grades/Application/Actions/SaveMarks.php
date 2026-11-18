@@ -80,6 +80,11 @@ class SaveMarks
 
             $completeBefore = $existing->count() === count($students);
             $changes = [];
+            $writes = [];
+            $removals = [];
+            $now = now();
+            // Students with a mark after this save: student id => true.
+            $held = array_fill_keys($existing->keys()->all(), true);
 
             foreach ($marks as $uuid => $mark) {
                 $studentId = $students[$uuid];
@@ -93,29 +98,47 @@ class SaveMarks
                 $changes[$uuid] = ['from' => $old?->toScalar(), 'to' => $mark?->toScalar()];
 
                 if ($mark === null) {
-                    $row->delete();
-                    $existing->forget($studentId);
+                    $removals[] = $row->id;
+                    unset($held[$studentId]);
 
                     continue;
                 }
 
-                $row ??= (new GradeMark)->forceFill([
+                $writes[] = [
                     'student_id' => $studentId,
                     'subject_id' => $subject->id,
-                    'stage' => $subject->stage,
-                    'period' => $period,
-                ]);
-
-                $row->forceFill([
+                    'stage' => $subject->stage->value,
+                    'period' => $period->value,
                     'mark' => $mark->value,
                     'is_absent' => $mark->absent,
                     'entered_by_teacher_id' => $author instanceof Teacher ? $author->id : null,
                     'entered_by_user_id' => $author instanceof User ? $author->id : null,
-                ])->save();
-                $existing->put($studentId, $row);
+                    // Kept on an existing row: created_at is not in the
+                    // columns the upsert updates.
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                $held[$studentId] = true;
             }
 
-            $complete = count($students) > 0 && $existing->count() === count($students);
+            // One statement for every write and one for every removal, not
+            // one per student (review load test, 2026-11-18: a section of
+            // 36 ran 36 statements while holding the subject's lock, which
+            // its other section's teacher waits on). Safe under the lock:
+            // nobody else writes this subject's marks meanwhile.
+            if ($writes !== []) {
+                GradeMark::query()->upsert(
+                    $writes,
+                    ['student_id', 'stage', 'subject_id', 'period'],
+                    ['mark', 'is_absent', 'entered_by_teacher_id', 'entered_by_user_id', 'updated_at'],
+                );
+            }
+
+            if ($removals !== []) {
+                GradeMark::query()->whereKey($removals)->delete();
+            }
+
+            $complete = count($students) > 0 && count($held) === count($students);
 
             if ($changes === []) {
                 return ['changed' => 0, 'complete' => $complete];

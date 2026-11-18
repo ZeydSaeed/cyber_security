@@ -162,71 +162,100 @@ for (const locale of ['ar', 'en']) {
         });
     });
 
-    test.describe(`invitation (${locale})`, () => {
-        test('goes step by step, checked by the server, and invites', async ({
+    test.describe(`managing users (${locale})`, () => {
+        test('adds, shows the password, edits and deletes a person', async ({
             page,
         }) => {
-            // Unique per run: a repeated run must not meet its own invitee.
-            const email = `invited-${locale}-${Date.now()}@example.test`;
-            await open(page, locale, '/admin/users/invite');
+            // Unique per run: a repeated run must not meet its own person.
+            const email = `added-${locale}-${Date.now()}@example.test`;
+            const secret = 'Str0ng!Passw0rd-x';
+            await open(page, locale, '/admin/users');
 
-            const current = page.locator('[aria-current="step"]');
-            await expect(current).toHaveAttribute('data-step', 'details');
+            await page.locator('[data-test="add-user"]').click();
+            const dialog = page.locator('[data-test="user-dialog"]');
+            await expect(dialog).toBeVisible();
 
-            // Nothing filled in: the server's rules keep the step.
-            await page.locator('[data-test="step-next"]').click();
-            await expect(page.locator('input[name="email"]')).toHaveAttribute(
-                'aria-invalid',
-                'true',
-            );
-            await expect(current).toHaveAttribute('data-step', 'details');
-
-            // An address already in use.
-            await page.locator('input[name="name"]').fill('Invited Person');
-            await page
+            await dialog.locator('input[name="name"]').fill('Added Person');
+            await dialog
                 .locator('input[name="email"]')
                 .fill('person-01@example.test');
-            await page.locator('[data-test="step-next"]').click();
-            await expect(page.locator('input[name="email"]')).toHaveAttribute(
-                'aria-invalid',
-                'true',
-            );
-            await expect(current).toHaveAttribute('data-step', 'details');
 
-            await page.locator('input[name="email"]').fill(email);
-            await page.locator('[data-test="step-next"]').click();
-            await expect(current).toHaveAttribute('data-step', 'role');
-            await expect(page.locator('#step-role')).toBeFocused();
-
-            await page
-                .getByRole('radio', {
-                    name: locale === 'ar' ? 'مدقق' : 'Auditor',
+            // The eye shows and hides the password while typing it.
+            const password = dialog.locator('input[name="password"]');
+            await password.fill(secret);
+            await expect(password).toHaveAttribute('type', 'password');
+            await dialog
+                .getByRole('button', {
+                    name:
+                        locale === 'ar' ? 'إظهار كلمة المرور' : 'Show password',
                 })
+                .click();
+            await expect(password).toHaveAttribute('type', 'text');
+            await dialog
+                .getByRole('button', {
+                    name:
+                        locale === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password',
+                })
+                .click();
+            await expect(password).toHaveAttribute('type', 'password');
+
+            // Roles and permissions are ticked from the full list.
+            await dialog.locator('[data-test="role-auditor"]').check();
+            await dialog
+                .locator('[data-test="permission-grades.view_results"]')
                 .check();
-            await page.locator('[data-test="step-next"]').click();
-            await expect(current).toHaveAttribute('data-step', 'review');
-            await expect(
-                page.locator('[data-slot="invite-review"]'),
-            ).toContainText(email);
 
-            await page.locator('[data-test="step-back"]').click();
-            await expect(current).toHaveAttribute('data-step', 'role');
-            await page.locator('[data-test="step-next"]').click();
+            // An address already in use: the server refuses, the dialog stays.
+            await dialog.locator('[data-test="save-user"]').click();
+            await expect(dialog).toContainText(
+                locale === 'ar' ? 'مستخدمة من قبل' : 'already been taken',
+            );
 
-            await expect(current).toHaveAttribute('data-step', 'review');
-            await page.locator('[data-test="step-submit"]').click();
-            // Creating the account and sending the email: allow a moment.
-            await expect(page).toHaveURL(/\/admin\/users$/, {
-                timeout: 15_000,
-            });
+            await dialog.locator('input[name="email"]').fill(email);
+            await password.fill(secret);
+            await dialog.locator('[data-test="save-user"]').click();
+            await expect(dialog).toBeHidden();
 
             await page.locator('[data-test="table-search"]').fill(email);
+            const row = page.locator('[data-slot="data-table"] tbody tr');
+            await expect(row).toHaveCount(1);
+
+            // The password in the table: hidden, shown, hidden again.
+            const value = row.locator('[data-test="password-value"]');
+            await expect(value).not.toContainText(secret);
+            await row.locator('[data-test="toggle-password"]').click();
+            await expect(value).toHaveText(secret);
+            await row.locator('[data-test="toggle-password"]').click();
+            await expect(value).not.toContainText(secret);
+
+            // Editing keeps the ticks and changes the password.
+            await row.locator('[data-test="edit-user"]').click();
+            await expect(dialog).toBeVisible();
             await expect(
-                page.locator('[data-slot="data-table"] tbody tr'),
-            ).toHaveCount(1);
+                dialog.locator('[data-test="role-auditor"]'),
+            ).toBeChecked();
             await expect(
-                page.locator('[data-slot="data-table"] tbody tr'),
-            ).toContainText(locale === 'ar' ? 'مدقق' : 'Auditor');
+                dialog.locator('[data-test="permission-grades.view_results"]'),
+            ).toBeChecked();
+            await dialog
+                .locator('input[name="password"]')
+                .fill('N3w!Passw0rd-zz');
+            await dialog.locator('[data-test="save-user"]').click();
+            await expect(dialog).toBeHidden();
+            await row.locator('[data-test="toggle-password"]').click();
+            await expect(value).toHaveText('N3w!Passw0rd-zz');
+
+            // Deleting asks first.
+            await row.locator('[data-test="delete-user"]').click();
+            const confirm = page.locator('[data-slot="confirm-action"]');
+            await expect(confirm).toBeVisible();
+            await confirm
+                .locator('[data-test="confirm-action-button"]')
+                .click();
+            await expect(confirm).toBeHidden();
+            await expect(
+                page.locator('[data-slot="data-table"]'),
+            ).not.toContainText(email);
         });
     });
 }

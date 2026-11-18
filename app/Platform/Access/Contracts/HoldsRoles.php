@@ -18,5 +18,12 @@ interface HoldsRoles
 
     public function hasPermission(BackedEnum|string $permission): bool;
 
+    /**
+     * Every permission held, through roles or granted directly, sorted.
+     *
+     * @return list<string>
+     */
+    public function permissionValues(): array;
+
     public function flushRoles(): void;
 }

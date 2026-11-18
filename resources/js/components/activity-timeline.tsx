@@ -17,14 +17,49 @@ export function roleLabel(t: Translate, role: string): string {
     }
 }
 
+/** A permission as people read it. */
+export function permissionLabel(t: Translate, permission: string): string {
+    switch (permission) {
+        case 'roles.manage':
+            return t('Manage users and their access');
+        case 'audit.view':
+            return t('Read the audit trail');
+        case 'grades.manage':
+            return t('Manage grades');
+        case 'grades.view_results':
+            return t('View results');
+        default:
+            return permission;
+    }
+}
+
 /**
  * Audit actions as people read them; others show their code. Literal t()
  * calls, so TranslationsTest checks each has an Arabic translation.
  */
 function actionLabel(t: Translate, entry: TimelineEntry): string {
-    const role = entry.details.role ? roleLabel(t, entry.details.role) : '';
+    // One role, or several written "a, b" (user.created).
+    const role = entry.details.role
+        ? entry.details.role
+              .split(', ')
+              .map((value) => roleLabel(t, value))
+              .join('، ')
+        : '';
+    const permission = entry.details.permission
+        ? permissionLabel(t, entry.details.permission)
+        : '';
 
     switch (entry.action) {
+        case 'access.permission_granted':
+            return t('Permission granted: :permission', { permission });
+        case 'access.permission_revoked':
+            return t('Permission removed: :permission', { permission });
+        case 'user.updated':
+            return t('Account details changed');
+        case 'user.deleted':
+            return t('Account deleted');
+        case 'user.password_viewed':
+            return t('Password shown to an administrator');
         case 'access.role_assigned':
             return t('Role granted: :role', { role });
         case 'access.role_revoked':
@@ -127,6 +162,11 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Student sign-in paused after too many attempts');
         case 'grades.teacher_lockout':
             return t('Teacher sign-in paused after too many attempts');
+        case 'user.created':
+            return role
+                ? t('Added as :role', { role })
+                : t('Added to the application');
+        // Invitations were removed (2026-11-18); older entries still read.
         case 'user.invited':
             return role
                 ? t('Invited as :role', { role })

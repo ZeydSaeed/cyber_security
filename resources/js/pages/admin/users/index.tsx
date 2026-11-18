@@ -1,11 +1,23 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ShieldMinus, ShieldPlus, UserPlus } from 'lucide-react';
+import { Head, router, usePage } from '@inertiajs/react';
+import {
+    Eye,
+    Pencil,
+    ShieldMinus,
+    ShieldPlus,
+    Trash2,
+    UserPlus,
+} from 'lucide-react';
 import { lazy, Suspense, useCallback, useState } from 'react';
+import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import UserRoleController from '@/actions/App/Http/Controllers/Admin/UserRoleController';
 import SavedViewController from '@/actions/App/Http/Controllers/Tables/SavedViewController';
 import TableColumnsController from '@/actions/App/Http/Controllers/Tables/TableColumnsController';
 import { roleLabel } from '@/components/activity-timeline';
+import PasswordCell from '@/components/admin/password-cell';
+import type { PasswordState } from '@/components/admin/password-cell';
 import type { SelectedUser } from '@/components/admin/user-details';
+import type { EditableUser } from '@/components/admin/user-form-dialog';
+import ConfirmAction from '@/components/confirm-action';
 import {
     BulkActionBar,
     BulkResultPanel,
@@ -19,11 +31,10 @@ import TableToolbar from '@/components/data-table/table-toolbar';
 import Drawer from '@/components/drawer';
 import Heading from '@/components/heading';
 import { SkeletonText } from '@/components/skeletons';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTableNavigation } from '@/hooks/use-table-navigation';
 import { useTranslations } from '@/hooks/use-translations';
-import { invite, index as usersIndex } from '@/routes/admin/users';
+import { index as usersIndex } from '@/routes/admin/users';
 import type {
     BulkResult,
     ColumnPrefs,
@@ -32,13 +43,10 @@ import type {
     TableState,
 } from '@/types/table';
 
-type UserRow = {
-    id: number;
-    name: string;
-    email: string;
-    roles: string[];
-    two_factor: boolean;
-    created_at: string | null;
+type UserRow = EditableUser & {
+    password_state: PasswordState;
+    /** Changes whenever an administrator sets a new password. */
+    password_set_at: string | null;
 };
 
 type Props = {
@@ -47,6 +55,9 @@ type Props = {
     columns: ColumnPrefs;
     filterOptions: Record<string, string[]>;
     roles: string[];
+    rolePermissions: Record<string, string[]>;
+    permissions: string[];
+    viewerId: number;
     views: SavedViewItem[];
     selected: SelectedUser | null;
 };
@@ -55,33 +66,42 @@ const TABLE_PROPS = ['users', 'state'];
 
 // Used only after a click: loaded then, to keep the list page small.
 const UserDetails = lazy(() => import('@/components/admin/user-details'));
+const UserFormDialog = lazy(
+    () => import('@/components/admin/user-form-dialog'),
+);
 const BulkRoleDialog = lazy(
     () => import('@/components/admin/bulk-role-dialog'),
 );
 
+/**
+ * Users (owner's request, 2026-11-18): username, email address, password
+ * (shown with the eye, one at a time) and the actions View, Edit and
+ * Delete; adding a person with their roles and permissions.
+ */
 export default function UsersIndex({
     users,
     state,
     columns,
     roles,
+    rolePermissions,
+    permissions,
+    viewerId,
     views,
     selected,
 }: Props) {
-    const { t, locale } = useTranslations();
+    const { t } = useTranslations();
     const { url } = usePage();
     const { visit, busy } = useTableNavigation(state, TABLE_PROPS);
     const [selection, setSelection] = useState<number[]>([]);
     const [result, setResult] = useState<BulkResult | null>(null);
     const [bulk, setBulk] = useState<'assign' | 'revoke' | null>(null);
     const [openingId, setOpeningId] = useState<number | null>(null);
-    const dates = new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
-        dateStyle: 'medium',
-    });
+    const [editing, setEditing] = useState<UserRow | 'new' | null>(null);
 
     const columnDefs: ColumnDef<UserRow>[] = [
         {
             key: 'name',
-            header: t('Name'),
+            header: t('Username'),
             sortable: true,
             cell: (user) => user.name,
         },
@@ -92,39 +112,19 @@ export default function UsersIndex({
             cell: (user) => <span dir="ltr">{user.email}</span>,
         },
         {
-            key: 'roles',
-            header: t('Roles'),
-            cell: (user) =>
-                user.roles.length === 0 ? (
-                    <span className="text-muted-foreground">{t('None')}</span>
-                ) : (
-                    <span className="flex flex-wrap gap-1">
-                        {user.roles.map((role) => (
-                            <Badge key={role} variant="secondary">
-                                {roleLabel(t, role)}
-                            </Badge>
-                        ))}
-                    </span>
-                ),
-        },
-        {
-            key: 'two_factor',
-            header: t('Two-factor'),
-            cell: (user) => (user.two_factor ? t('Enabled') : t('Not enabled')),
-        },
-        {
-            key: 'created_at',
-            header: t('Joined'),
-            sortable: true,
-            cell: (user) =>
-                user.created_at ? (
-                    <time dateTime={user.created_at}>
-                        {dates.format(new Date(user.created_at))}
-                    </time>
-                ) : null,
+            key: 'password',
+            header: t('Password'),
+            cell: (user) => (
+                <PasswordCell
+                    key={`${user.id}:${user.password_state}:${user.password_set_at}`}
+                    userId={user.id}
+                    userName={user.name}
+                    state={user.password_state}
+                />
+            ),
         },
     ];
-    const hideable = new Set(['email', 'roles', 'two_factor', 'created_at']);
+    const hideable = new Set(['email', 'password']);
 
     const onSearch = useCallback(
         (search: string) => visit({ search }),
@@ -183,14 +183,15 @@ export default function UsersIndex({
                     <Heading
                         title={t('Users')}
                         description={t(
-                            'People who can sign in, and their roles.',
+                            'People who can sign in, and their permissions.',
                         )}
                     />
-                    <Button asChild>
-                        <Link href={invite()} data-test="invite-user">
-                            <UserPlus aria-hidden />
-                            {t('Invite a person')}
-                        </Link>
+                    <Button
+                        onClick={() => setEditing('new')}
+                        data-test="add-user"
+                    >
+                        <UserPlus aria-hidden />
+                        {t('Add a user')}
                     </Button>
                 </div>
 
@@ -207,14 +208,6 @@ export default function UsersIndex({
                                     label: roleLabel(t, role),
                                 })),
                                 { value: 'none', label: t('No role') },
-                            ],
-                        },
-                        {
-                            key: 'two_factor',
-                            label: t('Two-factor'),
-                            options: [
-                                { value: 'enabled', label: t('Enabled') },
-                                { value: 'disabled', label: t('Not enabled') },
                             ],
                         },
                     ]}
@@ -336,18 +329,60 @@ export default function UsersIndex({
                     }
                     selected={selection}
                     onSelectedChange={setSelection}
+                    actionsLabel={t('Actions')}
                     rowAction={(user) => (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openUser(user.id)}
-                            aria-label={t('Details of :name', {
-                                name: user.name,
-                            })}
-                            data-test="open-user"
-                        >
-                            {t('Details')}
-                        </Button>
+                        <span className="inline-flex gap-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openUser(user.id)}
+                                aria-label={t('View :name', {
+                                    name: user.name,
+                                })}
+                                data-test="open-user"
+                            >
+                                <Eye aria-hidden />
+                                {t('View')}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditing(user)}
+                                aria-label={t('Edit :name', {
+                                    name: user.name,
+                                })}
+                                data-test="edit-user"
+                            >
+                                <Pencil aria-hidden />
+                                {t('Edit')}
+                            </Button>
+                            {user.id !== viewerId && (
+                                <ConfirmAction
+                                    trigger={
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive-text"
+                                            aria-label={t('Delete :name', {
+                                                name: user.name,
+                                            })}
+                                            data-test="delete-user"
+                                        >
+                                            <Trash2 aria-hidden />
+                                            {t('Delete')}
+                                        </Button>
+                                    }
+                                    title={t('Delete :name?', {
+                                        name: user.name,
+                                    })}
+                                    description={t(
+                                        'The account and its access are removed. The audit trail keeps what they did.',
+                                    )}
+                                    confirmLabel={t('Delete')}
+                                    form={UserController.destroy.form(user.id)}
+                                />
+                            )}
+                        </span>
                     )}
                 />
 
@@ -377,6 +412,20 @@ export default function UsersIndex({
                     </Suspense>
                 )}
             </Drawer>
+
+            {editing !== null && (
+                <Suspense fallback={null}>
+                    <UserFormDialog
+                        key={editing === 'new' ? 'new' : editing.id}
+                        user={editing === 'new' ? null : editing}
+                        roles={roles}
+                        permissions={permissions}
+                        rolePermissions={rolePermissions}
+                        isViewer={editing !== 'new' && editing.id === viewerId}
+                        onClose={() => setEditing(null)}
+                    />
+                </Suspense>
+            )}
 
             {bulk !== null && (
                 <Suspense fallback={null}>

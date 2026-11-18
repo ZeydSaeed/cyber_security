@@ -53,9 +53,10 @@ it('keeps each page within its query budget', function (string $page, bool $sign
     'login form' => ['login', false, 0],
     // Every signed-in page: the person's roles (auth.permissions, ADR-0026,
     // Phase 7 batch 2) and the unread notification count (ADR-0029, batch
-    // 4b), both on indexes.
+    // 4b), both on indexes; and, since 2026-11-18, the permissions granted
+    // directly (permission_grants, on its unique index): +1 on purpose.
     // (The dashboard was removed by the owner, 2026-11-15.)
-    'profile settings' => ['profile.edit', true, 2],
+    'profile settings' => ['profile.edit', true, 3],
     // And the passkey list.
-    'security settings' => ['security.edit', true, 3],
+    'security settings' => ['security.edit', true, 4],
 ]);

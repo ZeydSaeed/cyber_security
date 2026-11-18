@@ -28,19 +28,19 @@ describe('columns', function () {
         $admin = tableAdmin();
 
         $this->actingAs($admin)->put('/tables/users/columns', [
-            'order' => ['created_at', 'unknown', 'email', 'name'],
+            'order' => ['password', 'unknown', 'email', 'name'],
             // name may not be hidden; unknown is not a column.
-            'hidden' => ['roles', 'name', 'unknown'],
+            'hidden' => ['password', 'name', 'unknown'],
         ])->assertRedirect();
 
         expect(UserPreference::read($admin->id, 'table:users:columns'))->toBe([
-            'order' => ['created_at', 'email', 'name', 'roles', 'two_factor'],
-            'hidden' => ['roles'],
+            'order' => ['password', 'email', 'name'],
+            'hidden' => ['password'],
         ]);
 
         $this->actingAs($admin)
             ->get('/admin/users')
-            ->assertInertia(fn (Assert $page) => $page->where('columns.hidden', ['roles']));
+            ->assertInertia(fn (Assert $page) => $page->where('columns.hidden', ['password']));
     });
 
     it('refuses a table the person may not see, and an unknown table', function () {
@@ -60,7 +60,7 @@ describe('saved views', function () {
         $payload = fn (string $sort) => [
             'name' => 'Auditors',
             'state' => ['search' => 'x', 'filters' => ['role' => 'auditor', 'evil' => '1'], 'sort' => $sort, 'direction' => 'desc', 'per_page' => 50],
-            'columns' => ['order' => ['email'], 'hidden' => ['created_at']],
+            'columns' => ['order' => ['email'], 'hidden' => ['password']],
         ];
 
         $this->actingAs($admin)->post('/tables/users/views', $payload('password'))->assertRedirect();
@@ -70,7 +70,7 @@ describe('saved views', function () {
         expect($views)->toHaveCount(1)
             ->and($views[0]->state['filters'])->toBe(['role' => 'auditor'])
             ->and($views[0]->state['sort'])->toBe('email')
-            ->and($views[0]->state['columns']['hidden'])->toBe(['created_at']);
+            ->and($views[0]->state['columns']['hidden'])->toBe(['password']);
     });
 
     it('keeps at most 20 views per table', function () {

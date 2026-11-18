@@ -41,7 +41,10 @@ function insertMark(object $test, array $overrides = []): void
         'period' => 'month_1',
         'mark' => 70,
         'is_absent' => false,
-        'entered_by_teacher_id' => $test->subject->teacher_id,
+        // The section's teacher (teachers are per section since 2026-11-18;
+        // subjects no longer carry one, so this was null and every case
+        // failed on the author check first, on PostgreSQL only).
+        'entered_by_teacher_id' => SubjectFactory::teacherOf($test->subject)?->id,
         'entered_by_user_id' => null,
         'created_at' => now(),
         'updated_at' => now(),

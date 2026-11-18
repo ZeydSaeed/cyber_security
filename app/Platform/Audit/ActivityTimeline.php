@@ -15,7 +15,7 @@ use LogicException;
 final class ActivityTimeline
 {
     /** Metadata keys a timeline may show. */
-    public const SHOWN_METADATA = ['role'];
+    public const SHOWN_METADATA = ['role', 'permission'];
 
     /**
      * @return list<array{id: int, action: string, occurred_at: string, actor: string|null, subject_is_record: bool, details: array<string, string>}>

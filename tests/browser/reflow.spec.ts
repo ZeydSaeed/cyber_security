@@ -21,7 +21,6 @@ const userPages = [
     '/settings/documents',
     '/notifications',
     '/admin/users',
-    '/admin/users/invite',
     '/admin/reports',
     // The Grades module (ADR-0034).
     '/admin',

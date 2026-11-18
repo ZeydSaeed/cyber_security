@@ -99,17 +99,7 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        $permissions = [];
-
-        foreach ($user->roles() as $role) {
-            foreach ($role->permissions() as $permission) {
-                $permissions[] = (string) $permission->value;
-            }
-        }
-
-        $permissions = array_values(array_unique($permissions));
-        sort($permissions);
-
-        return $permissions;
+        // Through roles and granted directly (2026-11-18).
+        return $user->permissionValues();
     }
 }

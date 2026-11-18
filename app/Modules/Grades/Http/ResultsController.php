@@ -83,7 +83,9 @@ class ResultsController
         [$stage, $section] = $this->place($request);
         $sheet = $this->sheets->section($stage, $section);
         $path = storage_path('app/private/exports/results-'.bin2hex(random_bytes(8)).'.xlsx');
-        @mkdir(dirname($path), 0700, true);
+        // Explicit, not @mkdir: a suppressed warning hides real failures
+        // (and still surfaced as an error under tinker, review 2026-11-18).
+        is_dir(dirname($path)) || mkdir(dirname($path), 0700, true);
 
         $workbook->write($path, $sheet, [
             'title' => $stage->isDivided()

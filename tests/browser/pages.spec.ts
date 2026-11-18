@@ -33,7 +33,6 @@ const userPages = [
     '/settings/appearance',
     '/ui',
     '/admin/users',
-    '/admin/users/invite',
     '/settings/documents',
     '/notifications',
     '/admin/reports',

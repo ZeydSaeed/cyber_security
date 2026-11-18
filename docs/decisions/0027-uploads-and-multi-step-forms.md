@@ -50,6 +50,13 @@ own documents, and an administrator inviting a person.
 
 **Invitations** (`InviteUser`, `UserInvitationController`)
 
+> **Superseded 2026-11-18 (owner's request).** Invitations were removed.
+> Administrators now add a person directly from `/admin/users` (`CreateUser`,
+> `UserController@store`): name, address, a password they choose and an
+> optional role. The address is taken as verified, no email is sent,
+> `user.created` is audited (without the password), and the person still
+> sets up a second factor on first sign-in. The text below is kept as history.
+
 - Administrators only (roles.manage), throttled to 30 requests a minute
   (step checks included). The account starts with a random 64-character
   password nobody knows and an unverified address; a role is granted

@@ -77,7 +77,7 @@ describe('table', function () {
             ->assertInertia(fn (Assert $page) => $page->where('users.total', 1));
     });
 
-    it('filters by role, by no role and by second factor', function (string $query, int $total) {
+    it('filters by role and by no role', function (string $query, int $total) {
         $this->actingAs($this->admin)
             ->get("/admin/users?{$query}")
             ->assertInertia(fn (Assert $page) => $page->where('users.total', $total));
@@ -86,7 +86,6 @@ describe('table', function () {
         ['filter[role]=auditor', 1],
         ['filter[role]=none', 2],
         ['filter[role]=superuser', 4],
-        ['filter[two_factor]=enabled', 4],
     ]);
 
     it('allows only the declared page sizes', function () {

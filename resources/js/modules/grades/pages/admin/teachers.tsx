@@ -1,5 +1,13 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { Printer, UserPlus } from 'lucide-react';
+import {
+    KeyRound,
+    Lock,
+    LockOpen,
+    Pencil,
+    Printer,
+    Trash2,
+    UserPlus,
+} from 'lucide-react';
 import { Fragment, useCallback, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
@@ -671,25 +679,41 @@ export default function GradesTeachers({
                                             )}
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            <div className="flex flex-wrap gap-2">
+                                            {/* Icon-only actions; the label is
+                                                the accessible name and the
+                                                hover hint. Each has its own
+                                                token colour. */}
+                                            <div className="flex flex-wrap gap-1.5">
                                                 <Button
                                                     variant="outline"
-                                                    size="sm"
+                                                    size="icon"
+                                                    className="size-8 text-primary"
+                                                    aria-label={t('Edit')}
+                                                    title={t('Edit')}
                                                     onClick={() =>
                                                         setDialog(teacher)
                                                     }
                                                     data-test="edit-teacher"
                                                 >
-                                                    {t('Edit')}
+                                                    <Pencil aria-hidden />
                                                 </Button>
                                                 <ConfirmAction
                                                     trigger={
                                                         <Button
                                                             variant="outline"
-                                                            size="sm"
+                                                            size="icon"
+                                                            className="size-8 text-info-text"
+                                                            aria-label={t(
+                                                                'New code',
+                                                            )}
+                                                            title={t(
+                                                                'New code',
+                                                            )}
                                                             data-test="new-teacher-code"
                                                         >
-                                                            {t('New code')}
+                                                            <KeyRound
+                                                                aria-hidden
+                                                            />
                                                         </Button>
                                                     }
                                                     title={t(
@@ -707,9 +731,36 @@ export default function GradesTeachers({
                                                         teacher.uuid,
                                                     )}
                                                 />
+                                                {/* Shows the current state: an open
+                                                    lock (green) while signing in
+                                                    is allowed, a closed lock
+                                                    (amber) once it is stopped. */}
                                                 <Button
                                                     variant="outline"
-                                                    size="sm"
+                                                    size="icon"
+                                                    className={`size-8 ${
+                                                        teacher.active
+                                                            ? 'text-success-text'
+                                                            : 'text-warning-text'
+                                                    }`}
+                                                    aria-label={
+                                                        teacher.active
+                                                            ? t(
+                                                                  'Stop signing in',
+                                                              )
+                                                            : t(
+                                                                  'Allow signing in',
+                                                              )
+                                                    }
+                                                    title={
+                                                        teacher.active
+                                                            ? t(
+                                                                  'Stop signing in',
+                                                              )
+                                                            : t(
+                                                                  'Allow signing in',
+                                                              )
+                                                    }
                                                     onClick={() =>
                                                         router.put(
                                                             GradesAdminController.updateTeacher.url(
@@ -725,19 +776,27 @@ export default function GradesTeachers({
                                                     }
                                                     data-test="toggle-teacher"
                                                 >
-                                                    {teacher.active
-                                                        ? t('Stop signing in')
-                                                        : t('Allow signing in')}
+                                                    {teacher.active ? (
+                                                        <LockOpen aria-hidden />
+                                                    ) : (
+                                                        <Lock aria-hidden />
+                                                    )}
                                                 </Button>
                                                 <ConfirmAction
                                                     trigger={
                                                         <Button
                                                             variant="outline"
-                                                            size="sm"
-                                                            className="text-destructive-text"
+                                                            size="icon"
+                                                            className="size-8 text-destructive-text"
+                                                            aria-label={t(
+                                                                'Delete',
+                                                            )}
+                                                            title={t('Delete')}
                                                             data-test="delete-teacher"
                                                         >
-                                                            {t('Delete')}
+                                                            <Trash2
+                                                                aria-hidden
+                                                            />
                                                         </Button>
                                                     }
                                                     title={t('Delete :name?', {
