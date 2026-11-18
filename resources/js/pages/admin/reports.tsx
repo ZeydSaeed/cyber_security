@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { roleLabel } from '@/components/activity-timeline';
+import { roleLabel } from '@/lib/access-labels';
 import BarChart from '@/components/bar-chart';
 import Heading from '@/components/heading';
 import { useTranslations } from '@/hooks/use-translations';

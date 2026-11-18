@@ -12,7 +12,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
+import { overview as gradesOverview } from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { useMainNavigation } from '@/hooks/use-main-navigation';
 import type { NavItem } from '@/types';
 
@@ -31,10 +31,7 @@ export function AppSidebar() {
                             className="h-auto py-2"
                             asChild
                         >
-                            <Link
-                                href={GradesAdminController.overview()}
-                                prefetch
-                            >
+                            <Link href={gradesOverview()} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

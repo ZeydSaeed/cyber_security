@@ -1,6 +1,6 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { DirectionProvider } from '@radix-ui/react-direction';
-import { Toaster } from '@/components/ui/sonner';
+import DeferredToaster from '@/components/deferred-toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 // Listens from the start: dialogs in lazy chunks need the click that
@@ -64,7 +64,7 @@ void createInertiaApp({
             <DirectionProvider dir={direction}>
                 <TooltipProvider delayDuration={0}>
                     {app}
-                    <Toaster
+                    <DeferredToaster
                         dir={direction}
                         position={
                             direction === 'rtl' ? 'bottom-left' : 'bottom-right'

@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, House } from 'lucide-react';
-import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
+import { overview as gradesOverview } from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageToolbarSlot, toolButton } from '@/components/page-toolbar';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ export function AppSidebarHeader({
                     asChild
                 >
                     <Link
-                        href={GradesAdminController.overview()}
+                        href={gradesOverview()}
                         aria-label={t('Home')}
                         title={t('Home')}
                         data-test="home"

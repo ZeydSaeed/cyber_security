@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { roleLabel } from '@/components/activity-timeline';
+import { roleLabel } from '@/lib/access-labels';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
