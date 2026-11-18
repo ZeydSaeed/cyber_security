@@ -46,7 +46,7 @@ for header in content-security-policy strict-transport-security x-frame-options 
     grep -qi "^$header:" "$HEADERS" || fail "/login without $header"
 done
 
-SCRIPT=$(grep -o '/build/assets/app-[A-Za-z0-9_-]*\.js' <<< "$PAGE" | head -n 1)
+SCRIPT=$(grep -o '/build/assets/app-[A-Za-z0-9_-]*\.js' <<< "$PAGE" | sed -n 1p)
 [ -n "$SCRIPT" ] || fail "/login names no application script"
 [ "$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$URL$SCRIPT")" = 200 ] || fail "$SCRIPT is not served"
 
