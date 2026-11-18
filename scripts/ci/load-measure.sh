@@ -64,7 +64,7 @@ k6() { # script, extra -e arguments...
         -e BASE_URL=https://template.test -e USERS_CSV=/out/users.csv "$@" "/scripts/$script.js" \
         > "$OUT/$script.log" 2>&1 || {
         # Failed checks (with their share), crossed thresholds and errors.
-        grep -E '✗|↳|level=(error|warning)' "$OUT/$script.log" | head -n 20 \
+        grep -E '✗|↳|level=(error|warning)' "$OUT/$script.log" | sed -n 1,20p \
             | while IFS= read -r line; do echo "::error title=k6 $script ($LABEL)::$line"; done
         echo "::error title=k6 $script ($LABEL)::thresholds crossed or run failed"
         failures=$((failures + 1))

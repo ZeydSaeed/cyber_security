@@ -63,7 +63,9 @@ if ! apt-cache show "php$PHP-fpm" > /dev/null 2>&1; then
     retry sudo add-apt-repository -y ppa:ondrej/php > /dev/null
     retry sudo apt-get update -qq
 fi
-apt-cache policy "php$PHP-fpm" | head -3
+# sed, not head: head stops reading after three lines, apt-cache then fails
+# writing the rest (exit 100), and pipefail stopped the setup there.
+apt-cache policy "php$PHP-fpm" | sed -n 1,3p
 sudo apt-get install -y -qq --no-install-recommends nginx "php$PHP-fpm" \
     "php$PHP-cli" "php$PHP-sqlite3" "php$PHP-mbstring" "php$PHP-xml" \
     "php$PHP-intl" "php$PHP-curl" "php$PHP-bcmath" "php$PHP-zip"
