@@ -196,9 +196,9 @@ export default function MarkSheet({
                                         !absent &&
                                         value.trim() !== '' &&
                                         !isMark(value, max);
-                                    const fieldId = `mark-${student.uuid}`;
-                                    const absentId = `absent-${student.uuid}`;
-                                    const errorId = `error-${student.uuid}`;
+                                    const fieldId = `mark-${subject.uuid}-${student.uuid}`;
+                                    const absentId = `absent-${subject.uuid}-${student.uuid}`;
+                                    const errorId = `error-${subject.uuid}-${student.uuid}`;
                                     const cell = 'border border-grid-line p-2';
 
                                     return (

@@ -286,8 +286,12 @@ export default function ResultCard({
                                         className="border border-grid-line p-2 text-center tabular-nums"
                                         data-test="card-total"
                                     >
+                                        {/* The maximum only when the owner
+                                            shows it, as on each subject. */}
                                         {options.total
-                                            ? `${student.total} / ${student.maximum}`
+                                            ? options.max_mark
+                                                ? `${student.total} / ${student.maximum}`
+                                                : student.total
                                             : '—'}
                                     </td>
                                     <td

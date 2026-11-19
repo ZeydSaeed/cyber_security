@@ -189,7 +189,12 @@ export default function GradesOverview({
                                 ) : (
                                     <Button
                                         className="self-start"
-                                        disabled={window.published}
+                                        // A section published on its own also
+                                        // keeps entry closed (ChangeEntryWindow).
+                                        disabled={
+                                            window.published ||
+                                            window.sections_published.length > 0
+                                        }
                                         onClick={() =>
                                             put(
                                                 GradesAdminController.window.url(),
@@ -201,6 +206,19 @@ export default function GradesOverview({
                                         {t('Open mark entry')}
                                     </Button>
                                 ))}
+                            {canManage &&
+                                !window.open &&
+                                (window.published ||
+                                    window.sections_published.length > 0) && (
+                                    <p
+                                        className="text-sm text-muted-foreground"
+                                        data-test="open-window-hint"
+                                    >
+                                        {t(
+                                            'Hide the published results before opening mark entry again.',
+                                        )}
+                                    </p>
+                                )}
                         </div>
 
                         <div

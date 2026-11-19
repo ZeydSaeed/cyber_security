@@ -184,11 +184,13 @@ export default function AccessNotice({
                 >
                     {({ errors, processing }) => (
                         <>
-                            <Label htmlFor={`edit-reason-${section}`}>
+                            <Label
+                                htmlFor={`edit-reason-${subject}-${section}`}
+                            >
                                 {t('Ask the department to change marks')}
                             </Label>
                             <Textarea
-                                id={`edit-reason-${section}`}
+                                id={`edit-reason-${subject}-${section}`}
                                 name="reason"
                                 required
                                 minLength={5}

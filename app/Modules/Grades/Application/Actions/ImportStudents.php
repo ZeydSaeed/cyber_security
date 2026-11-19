@@ -25,6 +25,7 @@ class ImportStudents
         private readonly StudentImportPlanner $planner,
         private readonly AuditLogger $audit,
         private readonly IssueStudentCodes $codes,
+        private readonly ApproveSection $approvals,
     ) {}
 
     public function preview(User $actor, string $path, string $extension): StudentImportPlan
@@ -62,10 +63,15 @@ class ImportStudents
                 ])->save();
                 // Every new student gets the code to see their result.
                 $this->codes->give($student);
+                $this->approvals->releaseForNewcomer($actor, $student);
             }
 
             foreach ($plan->updates as $update) {
-                Student::query()->whereKey($update['id'])->firstOrFail()->forceFill($update['set'])->save();
+                $student = Student::query()->whereKey($update['id'])->firstOrFail();
+                $student->forceFill($update['set'])->save();
+                if (array_key_exists('stage', $update['set']) || array_key_exists('section', $update['set'])) {
+                    $this->approvals->releaseForNewcomer($actor, $student);
+                }
             }
 
             $this->audit->record('grades.students_imported', null, [

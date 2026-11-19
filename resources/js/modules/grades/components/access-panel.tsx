@@ -1,4 +1,4 @@
-import { Form, router } from '@inertiajs/react';
+import { Form, Link, router } from '@inertiajs/react';
 import { Check, KeyRound, ShieldCheck, X } from 'lucide-react';
 import { useState } from 'react';
 import AccessController from '@/actions/App/Modules/Grades/Http/AccessController';
@@ -147,6 +147,11 @@ export type AccessBoardProps = {
         divided: boolean;
         subject: string | null;
         subject_uuid: string | null;
+        /** The appealed mark: a number, "absent", or null once removed. */
+        mark: number | 'absent' | null;
+        max: number | null;
+        /** The section's sheet, where the owner corrects the mark. */
+        sheet: string | null;
         reason: string;
         created_at: string;
     }[];
@@ -728,6 +733,30 @@ function AppealRow({
                             appeal.divided,
                         )}
                     </span>
+                )}
+            </p>
+            <p className="text-sm" data-test="appeal-mark">
+                <span className="text-muted-foreground">
+                    {t('Appealed mark')}:{' '}
+                </span>
+                <span className="font-semibold tabular-nums">
+                    {appeal.mark === null
+                        ? t('Not entered yet')
+                        : appeal.mark === 'absent'
+                          ? t('Absent')
+                          : `${appeal.mark} / ${appeal.max ?? 100}`}
+                </span>
+                {appeal.sheet !== null && (
+                    <>
+                        {' · '}
+                        <Link
+                            href={appeal.sheet}
+                            className="underline underline-offset-4"
+                            data-test="appeal-sheet"
+                        >
+                            {t('Open the subject sheet')}
+                        </Link>
+                    </>
                 )}
             </p>
             <p className="text-sm whitespace-pre-line" dir="auto">

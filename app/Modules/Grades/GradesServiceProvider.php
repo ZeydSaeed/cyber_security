@@ -92,6 +92,20 @@ class GradesServiceProvider extends ServiceProvider
         RateLimiter::for('grades-teacher-save', fn (Request $request): Limit => Limit::perMinute(60)
             ->by('grades-teacher:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
 
+        // Approving a section and asking to change marks: 10 a minute, and
+        // answering appeals: 30 a minute, for each teacher. Per address, a
+        // school's staff on one network shared 10 approvals a minute: the
+        // fourth teacher of the full-size audit (2026-11-20) was refused.
+        RateLimiter::for('grades-teacher-action', fn (Request $request): Limit => Limit::perMinute(10)
+            ->by('grades-teacher-action:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
+        RateLimiter::for('grades-teacher-appeal', fn (Request $request): Limit => Limit::perMinute(30)
+            ->by('grades-teacher-appeal:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
+
+        // Appealing: 10 a minute for each student, not for a whole class
+        // on the school's one address (the route sits behind StudentSession).
+        RateLimiter::for('grades-student-appeal', fn (Request $request): Limit => Limit::perMinute(10)
+            ->by('grades-student-appeal:'.(Auth::guard(Student::GUARD)->id() ?? $request->ip())));
+
         // Stable names in audit records instead of class names.
         Relation::morphMap([
             Teacher::MORPH => Teacher::class,

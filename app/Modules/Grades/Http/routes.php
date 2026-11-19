@@ -208,17 +208,17 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
             ->whereIn('section', ['A', 'B'])
             ->name('section.save');
         Route::post('subjects/{subject}/{section}/approve', [TeacherMarksController::class, 'approve'])
-            ->middleware('throttle:10,1')
+            ->middleware('throttle:grades-teacher-action')
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.approve');
         // Answering an appeal, when the owner allows it (ADR-0044).
         Route::put('appeals/{appeal}', [TeacherMarksController::class, 'answerAppeal'])
-            ->middleware('throttle:30,1')
+            ->middleware('throttle:grades-teacher-appeal')
             ->whereUuid('appeal')
             ->name('appeals.answer');
         Route::post('subjects/{subject}/{section}/request', [TeacherMarksController::class, 'requestEdit'])
-            ->middleware('throttle:10,1')
+            ->middleware('throttle:grades-teacher-action')
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.request');
@@ -238,6 +238,7 @@ Route::middleware('web')->prefix('student')->name('grades.student.')->group(func
         Route::post('logout', [StudentPortalController::class, 'destroy'])->name('logout');
         Route::get('result', [StudentPortalController::class, 'result'])->name('result');
         // Appealing a mark (ADR-0042).
-        Route::post('appeals', [AppealsController::class, 'store'])->middleware('throttle:10,1')->name('appeals.store');
+        // Per student, not per address: a class may share the school's one.
+        Route::post('appeals', [AppealsController::class, 'store'])->middleware('throttle:grades-student-appeal')->name('appeals.store');
     });
 });

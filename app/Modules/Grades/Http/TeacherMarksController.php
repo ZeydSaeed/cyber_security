@@ -38,10 +38,29 @@ class TeacherMarksController
     public function subjects(Request $request): Response
     {
         $teacher = $this->teacher();
+        $settings = TeacherSession::settings($request);
+        $list = $this->sheets->subjects($teacher, Period::Month1, $settings);
+        $window = GradePeriod::for(Period::Month1);
+
+        // Each subject's students straight away, under its card (owner's
+        // request, 2026-11-20): no click on the subject first.
+        $sheets = [];
+        $models = Subject::query()->whereIn('uuid', array_column($list['subjects'], 'uuid'))->get()->keyBy('uuid');
+        foreach ($list['subjects'] as $item) {
+            $subject = $models->get($item['uuid']);
+            $sections = $subject === null ? [] : $this->sheetsOf($teacher, $subject, $settings, $window);
+            if ($subject !== null && $sections !== []) {
+                $sheets[$subject->uuid] = [
+                    'subject' => $sections[0]['subject'],
+                    'sections' => array_map(fn (array $sheet): array => array_diff_key($sheet, ['subject' => true, 'open' => true]), $sections),
+                ];
+            }
+        }
 
         return Inertia::render('modules/grades/pages/teacher/subjects', [
             'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],
-            ...$this->sheets->subjects($teacher, Period::Month1, TeacherSession::settings($request)),
+            ...$list,
+            'sheets' => (object) $sheets,
         ]);
     }
 
@@ -53,30 +72,11 @@ class TeacherMarksController
     public function subject(Request $request, Subject $subject, MarkHistory $history): Response
     {
         $teacher = $this->teacher();
-        $settings = TeacherSession::settings($request);
-        $window = GradePeriod::for(Period::Month1);
-
-        $rows = SubjectTeacher::query()
-            ->where('subject_id', $subject->id)
-            ->where('teacher_id', $teacher->id)
-            ->get()
-            ->reject(fn (SubjectTeacher $row): bool => ! $subject->stage->hasSection($row->section) || SectionAccess::hidden($teacher, $row, $settings))
-            ->keyBy(fn (SubjectTeacher $row): string => $row->section->value);
+        $sections = $this->sheetsOf($teacher, $subject, TeacherSession::settings($request), GradePeriod::for(Period::Month1));
 
         // Not this teacher's subject: a 404, as for a section (ADR-0034).
-        if ($rows->isEmpty()) {
+        if ($sections === []) {
             throw new NotFoundHttpException;
-        }
-
-        $sections = [];
-        foreach ($subject->stage->sections() as $place) {
-            $row = $rows->get($place->value);
-            if ($row === null) {
-                continue;
-            }
-            $approval = SectionApproval::find($subject, $place, Period::Month1);
-            $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approval !== null, $window->publishedFor($subject->stage, $place));
-            $sections[] = $this->sheets->section($subject, $place, Period::Month1, $policy, $teacher, $approval, $settings->teacher_appeal_replies);
         }
 
         return Inertia::render('modules/grades/pages/teacher/subject', [
@@ -177,16 +177,49 @@ class TeacherMarksController
     }
 
     /**
-     * Back to the page the teacher acted from: the whole subject's page
-     * (owner's request, 2026-11-19), or the single section's sheet.
+     * Back to the page the teacher acted from: the subjects list with every
+     * sheet (owner's request, 2026-11-20), the whole subject's page
+     * (2026-11-19), or the single section's sheet.
      */
     private function backTo(Subject $subject, string $section): RedirectResponse
     {
-        $page = route('grades.teacher.subject', ['subject' => $subject->uuid]);
+        $previous = url()->previous();
+        foreach ([route('grades.teacher.subjects'), route('grades.teacher.subject', ['subject' => $subject->uuid])] as $page) {
+            if ($previous === $page) {
+                return redirect()->to($page);
+            }
+        }
 
-        return url()->previous() === $page
-            ? redirect()->to($page)
-            : to_route('grades.teacher.section', ['subject' => $subject->uuid, 'section' => $section]);
+        return to_route('grades.teacher.section', ['subject' => $subject->uuid, 'section' => $section]);
+    }
+
+    /**
+     * The sheets of every section of one subject the teacher teaches, in
+     * order, section A's then B's; empty when none is theirs.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function sheetsOf(Teacher $teacher, Subject $subject, GradeSettings $settings, GradePeriod $window): array
+    {
+        $rows = SubjectTeacher::query()
+            ->where('subject_id', $subject->id)
+            ->where('teacher_id', $teacher->id)
+            ->get()
+            ->reject(fn (SubjectTeacher $row): bool => ! $subject->stage->hasSection($row->section) || SectionAccess::hidden($teacher, $row, $settings))
+            ->keyBy(fn (SubjectTeacher $row): string => $row->section->value);
+
+        $sections = [];
+        foreach ($subject->stage->sections() as $place) {
+            $row = $rows->get($place->value);
+            if ($row === null) {
+                continue;
+            }
+            $approval = SectionApproval::find($subject, $place, Period::Month1);
+            $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approval !== null, $window->publishedFor($subject->stage, $place));
+            $sections[] = $this->sheets->section($subject, $place, Period::Month1, $policy, $teacher, $approval, $settings->teacher_appeal_replies);
+        }
+
+        return $sections;
     }
 
     private function teacher(): Teacher

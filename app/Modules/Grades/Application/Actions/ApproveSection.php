@@ -79,6 +79,38 @@ class ApproveSection
         }, 3);
     }
 
+    /**
+     * A student who joins a section (added, imported or moved there) has
+     * no mark in it yet, so the section's approvals of the subjects they
+     * lack a mark in no longer say "every student has a mark": they are
+     * withdrawn, and the teacher approves again once the mark is in
+     * (audit of 2026-11-20). Runs inside the caller's transaction.
+     */
+    public function releaseForNewcomer(User $actor, Student $student): void
+    {
+        $approvals = SectionApproval::query()
+            ->where('section', $student->section->value)
+            ->whereIn('subject_id', Subject::query()->select('id')->where('stage', $student->stage->value))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')
+                ->from('grade_marks')
+                ->whereColumn('grade_marks.subject_id', 'grade_section_approvals.subject_id')
+                ->whereColumn('grade_marks.period', 'grade_section_approvals.period')
+                ->where('grade_marks.student_id', $student->id))
+            ->get();
+
+        foreach ($approvals as $approval) {
+            $subject = Subject::query()->whereKey($approval->subject_id)->first();
+            $approval->delete();
+            if ($subject !== null) {
+                $this->audit->record('grades.section_approval_cleared', $subject, [
+                    'section' => $student->section->value,
+                    'reason' => 'student_joined',
+                    'student_name' => $student->full_name,
+                ], actor: $actor);
+            }
+        }
+    }
+
     /** The owner reopens approved marks to their teacher. */
     public function withdraw(User $actor, Subject $subject, Section $section, Period $period): void
     {

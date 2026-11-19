@@ -32,6 +32,7 @@ class SaveStudent
         private readonly AuditLogger $audit,
         private readonly IssueStudentCodes $issue,
         private readonly StudentCodes $codes,
+        private readonly ApproveSection $approvals,
     ) {}
 
     public function create(User $actor, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null): Student
@@ -51,6 +52,7 @@ class SaveStudent
                 'status' => $status,
             ])->save();
             $this->issue->give($student);
+            $this->approvals->releaseForNewcomer($actor, $student);
 
             $this->audit->record('grades.student_created', $student, [
                 'name' => $name, 'stage' => $stage->value, 'section' => $section->value, 'status' => $status?->value,
@@ -109,6 +111,9 @@ class SaveStudent
             }
 
             $locked->forceFill($fields)->save();
+            if (isset($changes['stage']) || isset($changes['section'])) {
+                $this->approvals->releaseForNewcomer($actor, $locked);
+            }
 
             if ($changes !== []) {
                 $this->audit->record('grades.student_updated', $locked, [], $changes, actor: $actor);

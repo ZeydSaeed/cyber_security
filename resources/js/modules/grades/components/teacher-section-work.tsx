@@ -200,11 +200,11 @@ export default function TeacherSectionWork({
             {appeals.length > 0 && (
                 <section
                     className="mt-6 grid gap-2"
-                    aria-labelledby={`section-appeals-${section}`}
+                    aria-labelledby={`section-appeals-${subject.uuid}-${section}`}
                     data-test="section-appeals"
                 >
                     <h2
-                        id={`section-appeals-${section}`}
+                        id={`section-appeals-${subject.uuid}-${section}`}
                         className="font-semibold"
                     >
                         {t("Students' appeals")}

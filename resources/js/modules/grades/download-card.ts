@@ -219,7 +219,9 @@ export async function downloadResultCard(
                       cells: [
                           t('Total'),
                           options.total
-                              ? `${student.total} / ${student.maximum}`
+                              ? options.max_mark
+                                  ? `${student.total} / ${student.maximum}`
+                                  : String(student.total)
                               : '—',
                           !student.complete
                               ? t('Incomplete (:missing missing)', {

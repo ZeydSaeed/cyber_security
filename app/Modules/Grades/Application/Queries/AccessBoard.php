@@ -6,6 +6,7 @@ use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\EditRequestStatus;
 use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeEditRequest;
+use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Teacher;
@@ -62,23 +63,41 @@ final class AccessBoard
 
         // Students' appeals waiting for an answer (ADR-0042).
         $appeals = GradeAppeal::query()
-            ->with(['student:id,full_name,stage,section', 'subject:id,uuid,name'])
+            ->with(['student:id,full_name,stage,section', 'subject:id,uuid,name,max_mark'])
             ->where('status', AppealStatus::Pending->value)
             ->orderBy('created_at')
             ->get();
 
+        // The mark each appeal is about, so the owner decides with it in
+        // view and corrects it on its sheet (audit of 2026-11-20): one query.
+        $marks = $appeals->isEmpty() ? collect() : GradeMark::query()
+            ->whereIn('student_id', $appeals->pluck('student_id')->unique())
+            ->whereIn('subject_id', $appeals->pluck('subject_id')->unique())
+            ->get(['student_id', 'subject_id', 'period', 'mark', 'is_absent'])
+            ->keyBy(fn (GradeMark $mark): string => "{$mark->student_id}|{$mark->subject_id}|{$mark->period->value}");
+
         return [
-            'appeals' => array_values($appeals->map(fn (GradeAppeal $appeal): array => [
-                'uuid' => $appeal->uuid,
-                'student' => $appeal->student?->full_name,
-                'stage' => $appeal->student?->stage->value,
-                'section' => $appeal->student?->section->value,
-                'divided' => $appeal->student?->stage->isDivided() ?? false,
-                'subject' => $appeal->subject?->name,
-                'subject_uuid' => $appeal->subject?->uuid,
-                'reason' => $appeal->reason,
-                'created_at' => $appeal->created_at->toIso8601String(),
-            ])->all()),
+            'appeals' => array_values($appeals->map(function (GradeAppeal $appeal) use ($marks): array {
+                $mark = $marks->get("{$appeal->student_id}|{$appeal->subject_id}|{$appeal->period->value}");
+
+                return [
+                    'uuid' => $appeal->uuid,
+                    'student' => $appeal->student?->full_name,
+                    'stage' => $appeal->student?->stage->value,
+                    'section' => $appeal->student?->section->value,
+                    'divided' => $appeal->student?->stage->isDivided() ?? false,
+                    'subject' => $appeal->subject?->name,
+                    'subject_uuid' => $appeal->subject?->uuid,
+                    // "absent", a number, or null once the mark is gone.
+                    'mark' => $mark === null ? null : ($mark->is_absent ? 'absent' : $mark->mark),
+                    'max' => $appeal->subject?->max_mark,
+                    'sheet' => $appeal->subject !== null && $appeal->student !== null
+                        ? route('grades.admin.sheet', ['subject' => $appeal->subject->uuid, 'section' => $appeal->student->section->value])
+                        : null,
+                    'reason' => $appeal->reason,
+                    'created_at' => $appeal->created_at->toIso8601String(),
+                ];
+            })->all()),
             'settings' => [
                 'teacher_attempts_per_minute' => $settings->teacher_attempts_per_minute,
                 'teacher_attempts_per_hour' => $settings->teacher_attempts_per_hour,

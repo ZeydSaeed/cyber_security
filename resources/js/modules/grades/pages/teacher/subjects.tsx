@@ -5,6 +5,8 @@ import TeacherResultsController from '@/actions/App/Modules/Grades/Http/TeacherR
 import EmptyState from '@/components/empty-state';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAccessLabel } from '../../components/access-notice';
+import TeacherSectionWork from '../../components/teacher-section-work';
+import type { TeacherSectionData } from '../../components/teacher-section-work';
 import TeacherSummary from '../../components/teacher-summary';
 import WindowNotice from '../../components/window-notice';
 import { sectionLabel, stageLabel } from '../../place';
@@ -12,14 +14,31 @@ import type { TeacherSubject } from '../../types';
 
 /**
  * A teacher's subjects (ADR-0034), each with its sections and how many
- * students already have a mark; a subject opens on all its students.
+ * students already have a mark, and under each, its students' sheets
+ * straight away (owner's request, 2026-11-20). The card still opens the
+ * subject's own page, with the marks' history.
  */
 export default function TeacherSubjects({
     open,
     subjects,
+    sheets = {},
 }: {
     open: boolean;
     subjects: TeacherSubject[];
+    /** Each subject's sections, by the subject's uuid. */
+    sheets?: Record<
+        string,
+        {
+            subject: {
+                uuid: string;
+                name: string;
+                stage: number;
+                divided: boolean;
+                max: number;
+            };
+            sections: TeacherSectionData[];
+        }
+    >;
 }) {
     const { t } = useTranslations();
     const accessLabel = useAccessLabel();
@@ -55,7 +74,7 @@ export default function TeacherSubjects({
                 />
             ) : (
                 <ul
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-10"
                     data-test="teacher-subjects"
                 >
                     {subjects.map((subject) => (
@@ -146,6 +165,32 @@ export default function TeacherSubjects({
                                     aria-hidden
                                 />
                             </Link>
+                            {sheets[subject.uuid] && (
+                                <div className="mt-6 flex flex-col gap-10">
+                                    {sheets[subject.uuid].sections.map(
+                                        (data) => (
+                                            <section
+                                                key={data.section}
+                                                aria-label={`${subject.name} · ${sectionLabel(
+                                                    t,
+                                                    data.section,
+                                                    subject.divided,
+                                                )}`}
+                                                data-test={`subject-section-${data.section}`}
+                                            >
+                                                <TeacherSectionWork
+                                                    {...data}
+                                                    subject={
+                                                        sheets[subject.uuid]
+                                                            .subject
+                                                    }
+                                                    within
+                                                />
+                                            </section>
+                                        ),
+                                    )}
+                                </div>
+                            )}
                         </li>
                     ))}
                 </ul>
