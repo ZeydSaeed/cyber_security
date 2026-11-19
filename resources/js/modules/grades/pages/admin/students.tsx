@@ -3,6 +3,7 @@ import {
     KeyRound,
     Lock,
     LockOpen,
+    MonitorX,
     Pencil,
     Printer,
     RefreshCw,
@@ -49,6 +50,8 @@ type StudentRow = {
     logins: number;
     last_login_at: string | null;
     blocked: boolean;
+    /** Remembered devices not expired (ADR-0038). */
+    devices: number;
 };
 
 const TABLE_PROPS = ['students', 'state'];
@@ -502,6 +505,25 @@ export default function GradesStudents({
                                               student.uuid,
                                           )}
                                       />
+                                      {student.devices > 0 && (
+                                          <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className={actionTone.warning}
+                                              onClick={() =>
+                                                  router.delete(
+                                                      AccessController.forgetStudentDevices.url(
+                                                          student.uuid,
+                                                      ),
+                                                      { preserveScroll: true },
+                                                  )
+                                              }
+                                              data-test="forget-student-devices"
+                                          >
+                                              <MonitorX aria-hidden />
+                                              {t('Forget the devices')}
+                                          </Button>
+                                      )}
                                       <Button
                                           variant="outline"
                                           size="sm"

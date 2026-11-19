@@ -4,6 +4,7 @@ namespace App\Modules\Grades\Http;
 
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ManageAccess;
+use App\Modules\Grades\Application\RememberedDevices;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\StudentAccess;
 use App\Modules\Grades\Domain\TeacherAccess;
@@ -40,6 +41,8 @@ class AccessController
             'teacher_mode' => ['required', Rule::enum(TeacherAccess::class)],
             'teacher_edit_hours' => ['nullable', 'integer', 'min:1', 'max:'.ManageAccess::MAX_HOURS],
             'student_access' => ['required', Rule::enum(StudentAccess::class)],
+            // Days a device stays remembered (ADR-0038); 0 turns it off.
+            'remember_days' => ['required', 'integer', 'min:0', 'max:365'],
         ]);
 
         $this->access->settings($user, [
@@ -52,6 +55,7 @@ class AccessController
             'teacher_mode' => TeacherAccess::from((string) $request->string('teacher_mode')),
             'teacher_edit_hours' => $this->optional($request, 'teacher_edit_hours'),
             'student_access' => StudentAccess::from((string) $request->string('student_access')),
+            'remember_days' => $request->integer('remember_days'),
         ]);
 
         return $this->done(__('Access settings saved.'));
@@ -132,6 +136,22 @@ class AccessController
         $this->access->decide($user, $editRequest, $approve, $approve ? $request->integer('hours') : null);
 
         return $this->done($approve ? __('Request approved. The teacher can change the marks now.') : __('Request rejected.'));
+    }
+
+    /** Forgets every remembered device of a teacher (ADR-0038). */
+    public function forgetTeacherDevices(Teacher $teacher, RememberedDevices $devices, #[CurrentUser] User $user): RedirectResponse
+    {
+        $devices->forgetAll($user, $teacher);
+
+        return $this->done(__('The remembered devices were forgotten. A new sign-in needs the code.'));
+    }
+
+    /** Forgets every remembered device of a student (ADR-0038). */
+    public function forgetStudentDevices(Student $student, RememberedDevices $devices, #[CurrentUser] User $user): RedirectResponse
+    {
+        $devices->forgetAll($user, $student);
+
+        return $this->done(__('The remembered devices were forgotten. A new sign-in needs the code.'));
     }
 
     private function optional(Request $request, string $field): ?int

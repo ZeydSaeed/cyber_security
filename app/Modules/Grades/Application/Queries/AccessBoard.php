@@ -27,6 +27,7 @@ final class AccessBoard
         $since = now()->subDay();
 
         $teachers = Teacher::query()
+            ->withCount(['devices' => fn ($query) => $query->where('expires_at', '>', now())])
             ->with(['assignments' => fn ($query) => $query->with('subject:id,uuid,name,stage,sort_order')])
             ->orderBy('name')
             ->get();
@@ -68,6 +69,7 @@ final class AccessBoard
                 'teacher_mode' => $settings->teacher_mode->value,
                 'teacher_edit_hours' => $settings->teacher_edit_hours,
                 'student_access' => $settings->student_access->value,
+                'remember_days' => $settings->remember_days,
             ],
             'teachers' => array_values($teachers->map(fn (Teacher $teacher): array => [
                 'uuid' => $teacher->uuid,
@@ -80,6 +82,8 @@ final class AccessBoard
                 'logins' => $teacher->login_count,
                 'last_login_at' => $teacher->last_login_at?->toIso8601String(),
                 'refused' => (int) ($refused[(string) $teacher->id] ?? 0),
+                // Remembered devices not expired (ADR-0038).
+                'devices' => (int) $teacher->getAttribute('devices_count'),
                 'sections' => $this->sections($teacher),
             ])->all()),
             'requests' => array_values($requests->map(fn (GradeEditRequest $request): array => [

@@ -2,7 +2,9 @@
 
 namespace App\Modules\Grades\Http;
 
+use App\Modules\Grades\Application\RememberedDevices;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Teacher;
@@ -35,20 +37,46 @@ class TeacherSessionController
 
     public const PER_HOUR = 20;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(private readonly AuditLogger $audit, private readonly RememberedDevices $devices) {}
 
+    /**
+     * The code page; a remembered device (ADR-0038) goes straight in.
+     */
     public function create(Request $request): Response|RedirectResponse
     {
         if (Auth::guard(Teacher::GUARD)->check()) {
             return to_route('grades.teacher.subjects');
         }
 
-        return Inertia::render('modules/grades/pages/teacher/login');
+        $settings = GradeSettings::current();
+        $token = DeviceCookie::read($request, DeviceHolder::Teacher);
+
+        if ($token !== null) {
+            $found = $this->devices->consume(DeviceHolder::Teacher, $token, $settings);
+
+            if ($found !== null && $found[0] instanceof Teacher) {
+                [$teacher, $next] = $found;
+                DeviceCookie::put(DeviceHolder::Teacher, $next, $settings->remember_days);
+                $this->signIn($request, $teacher, remembered: true);
+
+                return to_route('grades.teacher.subjects');
+            }
+
+            DeviceCookie::forget(DeviceHolder::Teacher);
+        }
+
+        return Inertia::render('modules/grades/pages/teacher/login', [
+            // 0: the option is off.
+            'rememberDays' => $settings->remember_days,
+        ]);
     }
 
     public function store(Request $request, TeacherCodes $codes): RedirectResponse
     {
-        $request->validate(['code' => ['required', 'string', 'max:'.TeacherCodes::MAX_LENGTH * 4]]);
+        $request->validate([
+            'code' => ['required', 'string', 'max:'.TeacherCodes::MAX_LENGTH * 4],
+            'remember' => ['sometimes', 'boolean'],
+        ]);
 
         $settings = GradeSettings::current();
 
@@ -86,12 +114,21 @@ class TeacherSessionController
             throw ValidationException::withMessages(['code' => __('This code was not recognised.')]);
         }
 
+        if ($request->boolean('remember') && $settings->remember_days > 0) {
+            DeviceCookie::put(DeviceHolder::Teacher, $this->devices->remember($teacher, $settings->remember_days, $request->userAgent()), $settings->remember_days);
+        }
+
+        $this->signIn($request, $teacher, remembered: false);
+
+        return to_route('grades.teacher.subjects');
+    }
+
+    private function signIn(Request $request, Teacher $teacher, bool $remembered): void
+    {
         TeacherSession::start($request, $teacher);
         // Counted in the database: two sign-ins at once both count.
         Teacher::query()->whereKey($teacher->id)->increment('login_count', 1, ['last_seen_at' => now(), 'last_login_at' => now()]);
-        $this->audit->record('grades.teacher_login', $teacher, ['teacher_name' => $teacher->name], withoutActor: true);
-
-        return to_route('grades.teacher.subjects');
+        $this->audit->record('grades.teacher_login', $teacher, ['teacher_name' => $teacher->name, ...($remembered ? ['remembered' => true] : [])], withoutActor: true);
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -100,6 +137,13 @@ class TeacherSessionController
 
         if ($teacher instanceof Teacher) {
             $this->audit->record('grades.teacher_logout', $teacher, withoutActor: true);
+        }
+
+        // Signing out also forgets this device (ADR-0038).
+        $token = DeviceCookie::read($request, DeviceHolder::Teacher);
+        if ($token !== null) {
+            $this->devices->forget(DeviceHolder::Teacher, $token);
+            DeviceCookie::forget(DeviceHolder::Teacher);
         }
 
         TeacherSession::end($request);

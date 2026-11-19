@@ -3,6 +3,7 @@ import TeacherSessionController from '@/actions/App/Modules/Grades/Http/TeacherS
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
@@ -11,7 +12,12 @@ import { useTranslations } from '@/hooks/use-translations';
  * The link the owner sends to every teacher (ADR-0034): one field, the
  * teacher's code. The answer to a wrong code never says why.
  */
-export default function TeacherLogin() {
+export default function TeacherLogin({
+    rememberDays = 0,
+}: {
+    /** Days a device stays remembered (ADR-0038); 0: not offered. */
+    rememberDays?: number;
+}) {
     const { t } = useTranslations();
 
     return (
@@ -40,6 +46,39 @@ export default function TeacherLogin() {
                             />
                             <InputError message={errors.code} />
                         </div>
+
+                        {/* Opt-in, never on by default: a shared
+                            computer must not keep anyone signed in. */}
+                        {rememberDays > 0 && (
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id="remember"
+                                    name="remember"
+                                    value="1"
+                                    className="mt-0.5"
+                                    aria-describedby="remember-hint"
+                                    data-test="teacher-remember"
+                                />
+                                <div className="grid gap-1">
+                                    <Label htmlFor="remember">
+                                        {t(
+                                            'Remember this device for :days days',
+                                            {
+                                                days: String(rememberDays),
+                                            },
+                                        )}
+                                    </Label>
+                                    <p
+                                        id="remember-hint"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        {t(
+                                            'Next time you go straight in, until your code changes. Do not use it on a shared computer.',
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         <Button
                             type="submit"

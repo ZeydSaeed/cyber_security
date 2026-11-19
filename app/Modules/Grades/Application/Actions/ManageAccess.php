@@ -37,7 +37,7 @@ class ManageAccess
      *     student_attempts_per_minute: int, student_attempts_per_hour: int,
      *     teacher_max_logins: int|null, student_max_logins: int|null,
      *     teacher_mode: TeacherAccess, teacher_edit_hours: int|null,
-     *     student_access: StudentAccess
+     *     student_access: StudentAccess, remember_days: int
      * }  $values
      */
     public function settings(User $actor, array $values): GradeSettings

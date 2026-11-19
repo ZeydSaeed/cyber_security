@@ -29,6 +29,8 @@ export type AccessSettings = {
     teacher_mode: TeacherMode;
     teacher_edit_hours: number | null;
     student_access: 'allowed' | 'blocked';
+    /** Days a device stays remembered (ADR-0038); 0: off. */
+    remember_days: number;
 };
 
 type AccessSection = {
@@ -53,6 +55,8 @@ type AccessTeacher = {
     logins: number;
     last_login_at: string | null;
     refused: number;
+    /** Remembered devices not expired. */
+    devices: number;
     sections: AccessSection[];
 };
 
@@ -293,6 +297,20 @@ function SettingsForm({ settings }: { settings: AccessSettings }) {
                                 <InputError message={errors.student_access} />
                             </div>
                         </fieldset>
+                    </div>
+                    <div className="max-w-sm">
+                        <NumberField
+                            id="remember-days"
+                            name="remember_days"
+                            label={t('Remember a device for (days)')}
+                            value={settings.remember_days}
+                            min={0}
+                            max={365}
+                            hint={t(
+                                'Teachers and students who tick "Remember this device" go straight in for this many days, until their code changes. 0 turns it off.',
+                            )}
+                            error={errors.remember_days}
+                        />
                     </div>
                     <Button
                         className="self-start"
@@ -541,6 +559,31 @@ function TeacherAccessDialog({
                         data-test="reset-teacher-logins"
                     >
                         {t('Count from zero')}
+                    </Button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+                    <p className="text-sm text-muted-foreground">
+                        {t(':count remembered devices.', {
+                            count: String(teacher.devices),
+                        })}
+                    </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={teacher.devices === 0}
+                        onClick={() =>
+                            router.delete(
+                                AccessController.forgetTeacherDevices.url(
+                                    teacher.uuid,
+                                ),
+                                { preserveScroll: true },
+                            )
+                        }
+                        data-test="forget-teacher-devices"
+                    >
+                        {t('Forget the devices')}
                     </Button>
                 </div>
             </DialogContent>

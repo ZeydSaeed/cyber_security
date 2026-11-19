@@ -71,6 +71,7 @@ function accessSettings(object $test, array $changes): GradeSettings
         'teacher_mode' => $settings->teacher_mode,
         'teacher_edit_hours' => $settings->teacher_edit_hours,
         'student_access' => $settings->student_access,
+        'remember_days' => $settings->remember_days,
         ...$changes,
     ]);
 }
@@ -371,6 +372,7 @@ describe('the owner\'s page', function () {
             'student_attempts_per_hour' => 20,
             'teacher_mode' => 'timed',
             'student_access' => 'allowed',
+            'remember_days' => 30,
         ])->assertSessionHasErrors(['teacher_attempts_per_hour']);
 
         $this->actingAs($this->owner)->put('/admin/access', [
@@ -380,6 +382,7 @@ describe('the owner\'s page', function () {
             'student_attempts_per_hour' => 20,
             'teacher_mode' => 'timed',
             'student_access' => 'allowed',
+            'remember_days' => 30,
         ])->assertSessionHasErrors(['teacher_edit_hours' => 'Give the editing time in hours for the timed mode.']);
 
         $this->actingAs($this->owner)->put('/admin/access', [
@@ -391,6 +394,7 @@ describe('the owner\'s page', function () {
             'teacher_mode' => 'timed',
             'teacher_edit_hours' => 48,
             'student_access' => 'allowed',
+            'remember_days' => 30,
         ])->assertSessionHasNoErrors();
 
         $settings = GradeSettings::current();

@@ -55,6 +55,14 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->middleware('throttle:30,1')
             ->whereUuid('teacher')
             ->name('access.teacher.reset');
+        Route::delete('access/teachers/{teacher}/devices', [AccessController::class, 'forgetTeacherDevices'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('teacher')
+            ->name('access.teacher.devices');
+        Route::delete('access/students/{student}/devices', [AccessController::class, 'forgetStudentDevices'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('student')
+            ->name('access.student.devices');
         Route::put('access/sections/{subject}/{section}', [AccessController::class, 'section'])
             ->middleware('throttle:60,1')
             ->whereUuid('subject')

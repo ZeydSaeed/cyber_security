@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Database\Factories\StudentFactory;
+use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\StudentAccess;
@@ -96,6 +97,16 @@ class Student extends Model implements Authenticatable
         return $settings->student_access === StudentAccess::Allowed
             && ! $this->access_blocked
             && ($settings->student_max_logins === null || $this->login_count < $settings->student_max_logins);
+    }
+
+    /**
+     * The browsers this student asked to be remembered on (ADR-0038).
+     *
+     * @return HasMany<RememberedDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(RememberedDevice::class, 'holder_id')->where('holder', DeviceHolder::Student->value);
     }
 
     /**

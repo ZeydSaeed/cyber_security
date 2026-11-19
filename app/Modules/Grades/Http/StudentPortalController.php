@@ -3,7 +3,9 @@
 namespace App\Modules\Grades\Http;
 
 use App\Modules\Grades\Application\Queries\ResultSheets;
+use App\Modules\Grades\Application\RememberedDevices;
 use App\Modules\Grades\Application\StudentCodes;
+use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\StudentAccess;
 use App\Modules\Grades\Models\GradePeriod;
@@ -33,20 +35,48 @@ class StudentPortalController
 
     public const PER_HOUR = 20;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(private readonly AuditLogger $audit, private readonly RememberedDevices $devices) {}
 
-    public function create(): Response|RedirectResponse
+    /**
+     * The code page; a remembered device (ADR-0038) goes straight in.
+     */
+    public function create(Request $request): Response|RedirectResponse
     {
         if (Auth::guard(Student::GUARD)->check()) {
             return to_route('grades.student.result');
         }
 
-        return Inertia::render('modules/grades/pages/student/login');
+        $settings = GradeSettings::current();
+        $token = DeviceCookie::read($request, DeviceHolder::Student);
+
+        if ($token !== null) {
+            $found = $settings->student_access === StudentAccess::Allowed
+                ? $this->devices->consume(DeviceHolder::Student, $token, $settings)
+                : null;
+
+            if ($found !== null && $found[0] instanceof Student) {
+                [$student, $next] = $found;
+                DeviceCookie::put(DeviceHolder::Student, $next, $settings->remember_days);
+                $this->signIn($request, $student, remembered: true);
+
+                return to_route('grades.student.result');
+            }
+
+            DeviceCookie::forget(DeviceHolder::Student);
+        }
+
+        return Inertia::render('modules/grades/pages/student/login', [
+            // 0: the option is off.
+            'rememberDays' => $settings->remember_days,
+        ]);
     }
 
     public function store(Request $request, StudentCodes $codes): RedirectResponse
     {
-        $request->validate(['code' => ['required', 'string', 'max:64']]);
+        $request->validate([
+            'code' => ['required', 'string', 'max:64'],
+            'remember' => ['sometimes', 'boolean'],
+        ]);
 
         $settings = GradeSettings::current();
 
@@ -84,16 +114,32 @@ class StudentPortalController
             throw ValidationException::withMessages(['code' => __('This code was not recognised.')]);
         }
 
-        StudentSession::start($request, $student);
-        // Counted in the database: two sign-ins at once both count.
-        Student::query()->whereKey($student->id)->increment('login_count', 1, ['last_login_at' => now()]);
-        $this->audit->record('grades.student_login', $student, withoutActor: true);
+        if ($request->boolean('remember') && $settings->remember_days > 0) {
+            DeviceCookie::put(DeviceHolder::Student, $this->devices->remember($student, $settings->remember_days, $request->userAgent()), $settings->remember_days);
+        }
+
+        $this->signIn($request, $student, remembered: false);
 
         return to_route('grades.student.result');
     }
 
+    private function signIn(Request $request, Student $student, bool $remembered): void
+    {
+        StudentSession::start($request, $student);
+        // Counted in the database: two sign-ins at once both count.
+        Student::query()->whereKey($student->id)->increment('login_count', 1, ['last_login_at' => now()]);
+        $this->audit->record('grades.student_login', $student, $remembered ? ['remembered' => true] : [], withoutActor: true);
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
+        // Signing out also forgets this device (ADR-0038).
+        $token = DeviceCookie::read($request, DeviceHolder::Student);
+        if ($token !== null) {
+            $this->devices->forget(DeviceHolder::Student, $token);
+            DeviceCookie::forget(DeviceHolder::Student);
+        }
+
         StudentSession::end($request);
 
         return to_route('grades.student.login');

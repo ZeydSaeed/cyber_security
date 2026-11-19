@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Database\Factories\TeacherFactory;
+use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\TeacherAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
@@ -73,6 +74,16 @@ class Teacher extends Model implements Authenticatable
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * The browsers this teacher asked to be remembered on (ADR-0038).
+     *
+     * @return HasMany<RememberedDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(RememberedDevice::class, 'holder_id')->where('holder', DeviceHolder::Teacher->value);
     }
 
     /**

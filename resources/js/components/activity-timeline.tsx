@@ -153,6 +153,10 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Request to change marks sent');
         case 'grades.edit_request_decided':
             return t('Request to change marks answered');
+        case 'grades.devices_forgotten':
+            return t('Remembered devices forgotten');
+        case 'grades.device_token_mismatch':
+            return t('Remembered device refused: its token was already used');
         case 'user.created':
             return role
                 ? t('Added as :role', { role })

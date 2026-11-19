@@ -713,5 +713,14 @@
     "Student stopped from signing in": "إيقاف دخول طالب",
     "Student allowed to sign in": "السماح بدخول طالب",
     "Request to change marks sent": "إرسال طلب تعديل درجات",
-    "Request to change marks answered": "الرد على طلب تعديل درجات"
+    "Request to change marks answered": "الرد على طلب تعديل درجات",
+    ":count remembered devices.": "عدد الأجهزة المحفوظة: :count.",
+    "Forget the devices": "نسيان الأجهزة المحفوظة",
+    "Next time you go straight in, until your code changes. Do not use it on a shared computer.": "في المرة القادمة تدخل مباشرة ما لم يتغير رقمك التعريفي. لا تستخدم هذا الخيار على جهاز مشترك.",
+    "Remember a device for (days)": "مدة حفظ الجهاز (بالأيام)",
+    "Remember this device for :days days": "تذكّر هذا الجهاز لمدة :days يومًا",
+    "Remembered device refused: its token was already used": "رُفض جهاز محفوظ: رمزه استُخدم سابقًا",
+    "Remembered devices forgotten": "نسيان الأجهزة المحفوظة",
+    "Teachers and students who tick \"Remember this device\" go straight in for this many days, until their code changes. 0 turns it off.": "المدرسون والطلاب الذين يختارون \"تذكّر هذا الجهاز\" يدخلون مباشرة خلال هذه المدة ما لم يتغير رقمهم التعريفي. القيمة 0 تلغي الخيار.",
+    "The remembered devices were forgotten. A new sign-in needs the code.": "نُسيت الأجهزة المحفوظة. الدخول القادم يحتاج الرقم التعريفي."
 }

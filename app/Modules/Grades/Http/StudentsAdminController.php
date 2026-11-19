@@ -46,7 +46,7 @@ class StudentsAdminController
     public function index(Request $request, StudentsTable $table, StudentCodes $codes, AuditLogger $audit, #[CurrentUser] User $viewer): Response
     {
         $state = TableState::from($table, $request->query());
-        $students = $state->paginate($table, Student::query());
+        $students = $state->paginate($table, Student::query()->withCount(['devices' => fn ($query) => $query->where('expires_at', '>', now())]));
         $showCodes = $viewer->can('grades.manage');
 
         if ($showCodes && $students->count() > 0) {
@@ -63,6 +63,7 @@ class StudentsAdminController
                     'logins' => $student->login_count,
                     'last_login_at' => $student->last_login_at?->toIso8601String(),
                     'blocked' => $student->access_blocked,
+                    'devices' => (int) $student->getAttribute('devices_count'),
                     'code' => $showCodes && $student->code_encrypted !== null ? $codes->decrypt($student->code_encrypted) : null,
                     'name' => $student->full_name,
                     'number' => $student->student_number,

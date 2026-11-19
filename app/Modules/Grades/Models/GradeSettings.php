@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property TeacherAccess $teacher_mode
  * @property int|null $teacher_edit_hours
  * @property StudentAccess $student_access
+ * @property int $remember_days
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
@@ -47,6 +48,7 @@ class GradeSettings extends Model
             'teacher_mode' => TeacherAccess::class,
             'teacher_edit_hours' => 'integer',
             'student_access' => StudentAccess::class,
+            'remember_days' => 'integer',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
