@@ -102,6 +102,10 @@ for (const locale of ['ar', 'en']) {
             test(`${path}: every stop shows focus, and focus can leave`, async ({
                 page,
             }) => {
+                // About 115 stops at ~0.4 s each in WebKit: 41 s measured
+                // alone (review, 2026-11-19), past the 30 s default.
+                test.slow(path === '/admin/users');
+
                 await page
                     .context()
                     .addCookies([

@@ -80,6 +80,10 @@ for (const { locale, dir, section, first, absentWord } of [
         });
 
         test('enters, checks and saves a section', async ({ page }) => {
+            // Three axe scans and a reload: past 30 s in Firefox and WebKit
+            // (review, 2026-11-19), well within it in Chromium.
+            test.slow();
+
             await page.goto('/teacher');
             await pageReady(page);
             await page.fill('[data-test="teacher-code"]', teacherCode());
