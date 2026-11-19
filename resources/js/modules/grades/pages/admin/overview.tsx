@@ -539,6 +539,7 @@ export default function GradesOverview({
                                                             >
                                                                 {canManage ? (
                                                                     <Link
+                                                                        prefetch
                                                                         href={ResultsController.sheet.url(
                                                                             {
                                                                                 subject:

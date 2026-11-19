@@ -46,6 +46,7 @@ export default function TeacherSubject({
         <>
             <Head title={subject.name} />
             <Link
+                prefetch
                 href={TeacherMarksController.subjects.url()}
                 className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >

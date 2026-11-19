@@ -53,6 +53,7 @@ export default function TeacherResults({
         <>
             <Head title={t("Your students' results")} />
             <Link
+                prefetch
                 href={TeacherMarksController.subjects.url()}
                 className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
@@ -103,6 +104,7 @@ export default function TeacherResults({
                                         asChild
                                     >
                                         <Link
+                                            prefetch
                                             href={TeacherResultsController.show.url(
                                                 {
                                                     query: {

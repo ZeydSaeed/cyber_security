@@ -106,6 +106,7 @@ export function SettingsClose() {
     return (
         <PageToolbarNav>
             <Link
+                prefetch
                 href={tabHref(null)}
                 className={cn(
                     'inline-flex h-7 items-center gap-1 rounded-md border px-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
@@ -159,6 +160,7 @@ export function SettingsLanding({ tabs }: { tabs: TabInfo[] }) {
             {tabs.map((tab) => (
                 <li key={tab.key}>
                     <Link
+                        prefetch
                         href={tabHref(tab.key)}
                         className={cn(
                             'flex h-full flex-col gap-2 rounded-lg border border-t-4 border-border bg-card p-4 shadow-xs transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',

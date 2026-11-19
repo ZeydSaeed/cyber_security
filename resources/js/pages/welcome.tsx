@@ -37,9 +37,13 @@ export default function Welcome() {
 
                     <Button asChild size="lg">
                         {auth.user ? (
-                            <Link href={dashboard()}>{t('Dashboard')}</Link>
+                            <Link prefetch href={dashboard()}>
+                                {t('Dashboard')}
+                            </Link>
                         ) : (
-                            <Link href={login()}>{t('Log in')}</Link>
+                            <Link prefetch href={login()}>
+                                {t('Log in')}
+                            </Link>
                         )}
                     </Button>
                 </main>

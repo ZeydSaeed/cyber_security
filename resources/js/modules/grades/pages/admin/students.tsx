@@ -413,6 +413,7 @@ export default function GradesStudents({
                         asChild
                     >
                         <Link
+                            prefetch
                             href={StudentsAdminController.printMenu.url()}
                             data-test="print-students"
                         >

@@ -86,6 +86,7 @@ export default function MarkSheet({
         <>
             {back && (
                 <Link
+                    prefetch
                     href={back.href}
                     className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                 >

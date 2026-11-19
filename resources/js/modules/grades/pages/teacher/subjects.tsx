@@ -32,6 +32,7 @@ export default function TeacherSubjects({
             <TeacherSummary subjects={subjects} />
             {/* Their own students' results, when the department allows (ADR-0040). */}
             <Link
+                prefetch
                 href={TeacherResultsController.show.url()}
                 className="mb-6 flex min-h-12 items-center gap-3 rounded-md border bg-card px-3 py-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 data-test="teacher-results-link"
@@ -63,6 +64,7 @@ export default function TeacherSubjects({
                                 students straight away, section A then B
                                 (owner's request, 2026-11-19). */}
                             <Link
+                                prefetch
                                 href={TeacherMarksController.subject.url(
                                     subject.uuid,
                                 )}

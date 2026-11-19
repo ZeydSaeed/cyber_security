@@ -72,6 +72,7 @@ export function AppSidebarHeader({
                     asChild
                 >
                     <Link
+                        prefetch
                         href={gradesOverview()}
                         aria-label={t('Home')}
                         title={t('Home')}

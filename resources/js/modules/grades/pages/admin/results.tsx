@@ -151,6 +151,7 @@ export default function GradesResults({
                                     asChild
                                 >
                                     <Link
+                                        prefetch
                                         href={
                                             ResultsController.index.url() +
                                             query(place.stage, place.section)
