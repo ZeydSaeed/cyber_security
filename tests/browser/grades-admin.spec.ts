@@ -91,6 +91,38 @@ for (const { locale, dir } of [
 test.describe('grades owner flow', () => {
     test.use({ viewport: viewports.desktop });
 
+    // A section's sheet with its change history and approval (ADR-0041),
+    // reached from the overview, on a phone and a desktop.
+    for (const { locale, dir } of [
+        { locale: 'ar', dir: 'rtl' },
+        { locale: 'en', dir: 'ltr' },
+    ]) {
+        for (const [size, viewport] of Object.entries(viewports)) {
+            test(`a section's sheet and history ${locale} ${size}`, async ({
+                page,
+            }) => {
+                await page.setViewportSize(viewport);
+                await open(page, '/admin', locale);
+                await page
+                    .locator('a[href*="/admin/subjects/"]')
+                    .first()
+                    .click();
+                await page.waitForURL(
+                    /\/admin\/subjects\/[0-9a-f-]{36}\/[AB]$/,
+                );
+                await pageReady(page);
+                await expect(
+                    page.locator('[data-test="mark-history"]'),
+                ).toBeVisible();
+                await check(page, "the owner's sheet", dir);
+                await page.screenshot({
+                    path: `storage/framework/screenshots/admin-sheet-${locale}-${size}.png`,
+                    fullPage: true,
+                });
+            });
+        }
+    }
+
     // The code slips print on white paper with black ink in every theme
     // (owner's request, 2026-11-17).
     for (const path of [

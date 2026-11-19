@@ -148,6 +148,15 @@ for (const { locale, dir, section, first, absentWord } of [
                 fullPage: true,
             });
 
+            // Their students' results (ADR-0040): closed to teachers until
+            // the department opens them, but the page itself must hold up.
+            await page.goto('/teacher/subjects');
+            await pageReady(page);
+            await page.click('[data-test="teacher-results-link"]');
+            await page.waitForURL(/\/teacher\/results/);
+            await pageReady(page);
+            await check(page, "their students' results", dir);
+
             await page.click('[data-test="portal-logout"]');
             await page.waitForURL(/\/teacher$/);
         });

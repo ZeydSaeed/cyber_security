@@ -111,7 +111,7 @@ describe('subject scales', function () {
         $lab = $this->lab->fresh();
         expect($lab?->max_mark)->toBe(90)
             ->and($lab?->pass_mark)->toBe(45)
-            ->and(AuditEvent::query()->where('action', 'grades.subject_scale_changed')->latest('id')->first()?->changes['max_mark'])->toBe(['from' => 80, 'to' => 90]);
+            ->and(AuditEvent::query()->where('action', 'grades.subject_scale_changed')->latest('id')->first()?->changes['max_mark'])->toEqual(['from' => 80, 'to' => 90]);
     });
 
     it('refuses an exemption mark below the pass mark', function () {
@@ -158,7 +158,7 @@ describe('the owner\'s results', function () {
             ->where('students.0.notes', 'Helps his classmates.'));
 
         $audit = AuditEvent::query()->where('action', 'grades.student_note_saved')->sole();
-        expect($audit->changes['behaviour'])->toBe(['from' => null, 'to' => 'very_good'])
+        expect($audit->changes['behaviour'])->toEqual(['from' => null, 'to' => 'very_good'])
             ->and($audit->actor_id)->toBe($this->owner->id);
     });
 

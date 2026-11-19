@@ -136,8 +136,8 @@ describe('teachers signing in', function () {
 
         $audit = AuditEvent::query()->where('action', 'grades.teacher_access_changed')->sole();
         expect($audit->actor_id)->toBe($this->owner->id)
-            ->and($audit->changes['access_mode'])->toBe(['from' => null, 'to' => 'blocked'])
-            ->and($audit->changes['access_reason'])->toBe(['from' => null, 'to' => 'On leave']);
+            ->and($audit->changes['access_mode'])->toEqual(['from' => null, 'to' => 'blocked'])
+            ->and($audit->changes['access_reason'])->toEqual(['from' => null, 'to' => 'On leave']);
     });
 
     it('closes signing in for every teacher, saying so before any code is checked', function () {
@@ -401,7 +401,7 @@ describe('the owner\'s page', function () {
         $audit = AuditEvent::query()->where('action', 'grades.access_settings_changed')->sole();
         expect($settings->teacher_mode)->toBe(TeacherAccess::Timed)
             ->and($settings->teacher_edit_hours)->toBe(48)
-            ->and($audit->changes['teacher_attempts_per_minute'])->toBe(['from' => 5, 'to' => 3])
+            ->and($audit->changes['teacher_attempts_per_minute'])->toEqual(['from' => 5, 'to' => 3])
             ->and($audit->changes)->not->toHaveKey('student_attempts_per_minute');
     });
 });

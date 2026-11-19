@@ -82,7 +82,7 @@ describe('publishing one section', function () {
         $this->post('/student', ['code' => 'CCCC-DDDD']);
         $this->get('/student/result')->assertInertia(fn (Assert $page) => $page->where('published', false)->where('card', null));
 
-        expect(AuditEvent::query()->where('action', 'grades.section_published')->sole()->metadata)->toBe(['stage' => 2, 'section' => 'A']);
+        expect(AuditEvent::query()->where('action', 'grades.section_published')->sole()->metadata)->toEqual(['stage' => 2, 'section' => 'A']);
     });
 
     it('needs entry closed, refuses reopening entry while a section is shown, and hiding all hides it', function () {
@@ -176,7 +176,7 @@ it('tells the department of a teacher\'s request to change marks', function () {
 
     $payload = OutboxMessage::query()->where('topic', NotifyGradesManagers::TOPIC)->sole()->payload;
     expect($payload['kind'])->toBe('grades_edit_requested')
-        ->and($payload['facts'])->toBe(['teacher' => 'Huda Karim', 'subject' => 'Networks', 'stage' => '2', 'section' => 'A']);
+        ->and($payload['facts'])->toEqual(['teacher' => 'Huda Karim', 'subject' => 'Networks', 'stage' => '2', 'section' => 'A']);
 });
 
 it('flags a student absent from as many subjects as the owner sets, not on the student\'s card', function () {

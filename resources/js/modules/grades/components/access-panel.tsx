@@ -970,16 +970,20 @@ export default function AccessPanel({ access }: { access: AccessBoardProps }) {
                                                     onClick={() =>
                                                         setOpen(teacher.uuid)
                                                     }
-                                                    aria-label={t(
-                                                        'Access of :name',
-                                                        {
-                                                            name: teacher.name,
-                                                        },
-                                                    )}
                                                     data-test="open-teacher-access"
                                                 >
                                                     <KeyRound aria-hidden />
+                                                    {/* The visible word starts
+                                                        the accessible name
+                                                        (WCAG 2.5.3); the name
+                                                        tells the rows apart. */}
                                                     {t('Access')}
+                                                    <span className="sr-only">
+                                                        {' '}
+                                                        <bdi>
+                                                            {teacher.name}
+                                                        </bdi>
+                                                    </span>
                                                 </Button>
                                             </td>
                                         </tr>

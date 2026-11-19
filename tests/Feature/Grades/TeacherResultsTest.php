@@ -105,7 +105,7 @@ it('shows only the teacher\'s sections and subjects, and none of what is hidden'
 
     $audit = AuditEvent::query()->where('action', 'grades.teacher_results_viewed')->sole();
     expect($audit->actor_id)->toBeNull()
-        ->and($audit->metadata)->toBe(['stage' => 2, 'section' => 'A']);
+        ->and($audit->metadata)->toEqual(['stage' => 2, 'section' => 'A']);
 });
 
 it('shows what the owner ticks', function () {
