@@ -121,6 +121,11 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('sheet');
+        Route::delete('subjects/{subject}/{section}/approval', [ResultsController::class, 'withdrawApproval'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('sheet.approval');
         Route::put('subjects/{subject}/{section}', [ResultsController::class, 'saveSheet'])
             ->middleware('throttle:60,1')
             ->whereUuid('subject')
@@ -185,6 +190,11 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.save');
+        Route::post('subjects/{subject}/{section}/approve', [TeacherMarksController::class, 'approve'])
+            ->middleware('throttle:10,1')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('section.approve');
         Route::post('subjects/{subject}/{section}/request', [TeacherMarksController::class, 'requestEdit'])
             ->middleware('throttle:10,1')
             ->whereUuid('subject')

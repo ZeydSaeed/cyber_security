@@ -19,7 +19,14 @@ export type TeacherSubject = {
  * describes it: the state decides the notice, can_write the sheet.
  */
 export type SectionAccess = {
-    state: 'edit' | 'timed' | 'view_only' | 'closed' | 'granted' | 'published';
+    state:
+        | 'edit'
+        | 'timed'
+        | 'view_only'
+        | 'closed'
+        | 'granted'
+        | 'approved'
+        | 'published';
     can_write: boolean;
     /** Timed mode: hours a mark stays editable after it is entered. */
     hours: number | null;
@@ -149,8 +156,20 @@ export type ResultFrame = {
     subjects: ResultSubject[];
 };
 
+/** One subject's figures for a section (ADR-0041), aligned with subjects. */
+export type SubjectStats = {
+    entered: number;
+    absent: number;
+    passed: number;
+    pass_rate: number | null;
+    highest: number | null;
+    lowest: number | null;
+    mean: number | null;
+};
+
 export type ResultSheet = ResultFrame & {
     students: ResultRow[];
+    stats: SubjectStats[];
     summary: { students: number; complete: number; passed_all: number };
 };
 

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useTranslations } from '@/hooks/use-translations';
 import NoteDialog from '../../components/note-dialog';
 import ResultsTable from '../../components/results-table';
+import SubjectStats from '../../components/subject-stats';
 import { matchRanges, searchTerms } from '../../name-search';
 import { placeLabel } from '../../place';
 import type { ResultRow, ResultSheet } from '../../types';
@@ -232,6 +233,9 @@ export default function GradesResults({
                             </div>
                         )}
                     />
+                )}
+                {sheet.students.length > 0 && sheet.subjects.length > 0 && (
+                    <SubjectStats sheet={sheet} />
                 )}
                 {noting && (
                     <NoteDialog

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Grades\Http;
 
+use App\Modules\Grades\Application\Actions\ApproveSection;
 use App\Modules\Grades\Application\Actions\RequestEdit;
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\Queries\TeacherSheets;
@@ -10,6 +11,7 @@ use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\GradeSettings;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
@@ -44,11 +46,13 @@ class TeacherMarksController
         $teacher = $this->teacher();
         $settings = TeacherSession::settings($request);
         $row = $this->ensureOwn($teacher, $subject, $section, $settings);
-        $policy = SectionAccess::policy($teacher, $row, $settings, GradePeriod::for(Period::Month1));
+        // Read once, for the policy and the page (ADR-0041).
+        $approval = SectionApproval::find($subject, Section::from($section), Period::Month1);
+        $policy = SectionAccess::policy($teacher, $row, $settings, GradePeriod::for(Period::Month1), $approval !== null);
 
         return Inertia::render('modules/grades/pages/teacher/section', [
             'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],
-            ...$this->sheets->section($subject, Section::from($section), Period::Month1, $policy, $teacher),
+            ...$this->sheets->section($subject, Section::from($section), Period::Month1, $policy, $teacher, $approval),
         ]);
     }
 
@@ -81,6 +85,18 @@ class TeacherMarksController
 
         $edit->handle($teacher, $subject, Section::from($section), Period::Month1, (string) $request->string('reason'));
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Request sent. The department will answer it.')]);
+
+        return to_route('grades.teacher.section', ['subject' => $subject->uuid, 'section' => $section]);
+    }
+
+    /** Approves this section's marks (ADR-0041): the sheet then locks. */
+    public function approve(Request $request, Subject $subject, string $section, ApproveSection $approve): RedirectResponse
+    {
+        $teacher = $this->teacher();
+        $this->ensureOwn($teacher, $subject, $section, TeacherSession::settings($request));
+
+        $approve->approve($teacher, $subject, Section::from($section), Period::Month1);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Marks approved. They are now locked.')]);
 
         return to_route('grades.teacher.section', ['subject' => $subject->uuid, 'section' => $section]);
     }

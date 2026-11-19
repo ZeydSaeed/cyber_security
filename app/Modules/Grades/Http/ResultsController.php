@@ -3,7 +3,9 @@
 namespace App\Modules\Grades\Http;
 
 use App\Models\User;
+use App\Modules\Grades\Application\Actions\ApproveSection;
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Queries\MarkHistory;
 use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\Queries\TeacherSheets;
 use App\Modules\Grades\Application\ResultsWorkbook;
@@ -11,6 +13,7 @@ use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Platform\Audit\AuditLogger;
@@ -140,11 +143,35 @@ class ResultsController
         ];
     }
 
-    public function sheet(Subject $subject, string $section, TeacherSheets $sheets): Response
+    public function sheet(Subject $subject, string $section, TeacherSheets $sheets, MarkHistory $history): Response
     {
         abort_unless($subject->stage->hasSection(Section::from($section)), 404);
 
-        return Inertia::render('modules/grades/pages/admin/sheet', $sheets->section($subject, Section::from($section)));
+        $place = Section::from($section);
+        $approval = SectionApproval::query()->with('teacher:id,name')
+            ->where('subject_id', $subject->id)->where('section', $place->value)->where('period', Period::Month1->value)
+            ->first();
+
+        return Inertia::render('modules/grades/pages/admin/sheet', [
+            ...$sheets->section($subject, $place, Period::Month1, null, null, $approval),
+            // Every change of these marks, and the teacher's approval (ADR-0041).
+            'history' => $history->for($subject, $place),
+            'approval' => $approval === null ? null : [
+                'at' => $approval->approved_at->toIso8601String(),
+                'by' => $approval->teacher?->name,
+            ],
+        ]);
+    }
+
+    /** Reopens approved marks to their teacher (ADR-0041). */
+    public function withdrawApproval(Subject $subject, string $section, ApproveSection $approve, #[CurrentUser] User $user): RedirectResponse
+    {
+        abort_unless($subject->stage->hasSection(Section::from($section)), 404);
+
+        $approve->withdraw($user, $subject, Section::from($section), Period::Month1);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Approval withdrawn. The teacher can change the marks again.')]);
+
+        return to_route('grades.admin.sheet', ['subject' => $subject->uuid, 'section' => $section]);
     }
 
     public function saveSheet(SaveMarksRequest $request, Subject $subject, string $section, SaveMarks $save, #[CurrentUser] User $user): RedirectResponse

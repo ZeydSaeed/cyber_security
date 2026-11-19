@@ -12,6 +12,7 @@ use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\GradeSettings;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
@@ -38,6 +39,13 @@ final class TeacherSheets
             ->get(['id', 'subject_id', 'section', 'teacher_id', 'access_mode', 'edit_until'])
             ->reject(fn (SubjectTeacher $row): bool => SectionAccess::hidden($teacher, $row, $settings))
             ->keyBy(fn (SubjectTeacher $row): string => $row->subject_id.'|'.$row->section->value);
+
+        // Sections the teacher approved (ADR-0041).
+        $approved = SectionApproval::query()->toBase()
+            ->whereIn('subject_id', $rows->pluck('subject_id')->unique()->values())
+            ->where('period', $period->value)
+            ->get(['subject_id', 'section'])
+            ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => true]);
 
         $subjects = Subject::query()
             ->whereIn('id', $rows->pluck('subject_id')->unique()->values())
@@ -71,14 +79,14 @@ final class TeacherSheets
                 'stage' => $subject->stage->value,
                 'divided' => $subject->stage->isDivided(),
                 // The stage's sections in order, those the teacher has only.
-                'sections' => array_values(array_filter(array_map(function (Section $section) use ($subject, $rows, $students, $entered, $teacher, $settings, $window): ?array {
+                'sections' => array_values(array_filter(array_map(function (Section $section) use ($subject, $rows, $students, $entered, $teacher, $settings, $window, $approved): ?array {
                     $row = $rows->get($subject->id.'|'.$section->value);
 
                     return $row === null ? null : [
                         'section' => $section->value,
                         'students' => (int) ($students[$subject->stage->value.'|'.$section->value] ?? 0),
                         'entered' => (int) ($entered[$subject->id.'|'.$section->value] ?? 0),
-                        'access' => self::describe(SectionAccess::policy($teacher, $row, $settings, $window)),
+                        'access' => self::describe(SectionAccess::policy($teacher, $row, $settings, $window, isset($approved[$subject->id.'|'.$section->value]))),
                     ];
                 }, $subject->stage->sections()))),
             ])->all()),
@@ -90,7 +98,7 @@ final class TeacherSheets
      *
      * @return array{open: bool, subject: array{uuid: string, name: string, stage: int}, section: string, students: list<array{uuid: string, name: string, number: string|null, mark: int|string|null}>}
      */
-    public function section(Subject $subject, Section $section, Period $period = Period::Month1, ?EditPolicy $policy = null, ?Teacher $teacher = null): array
+    public function section(Subject $subject, Section $section, Period $period = Period::Month1, ?EditPolicy $policy = null, ?Teacher $teacher = null, ?SectionApproval $approval = null): array
     {
         $request = null;
         if ($teacher !== null) {
@@ -119,6 +127,8 @@ final class TeacherSheets
 
         return [
             'open' => $policy->windowOpen ?? $this->isOpen($period),
+            // When the teacher approved these marks (ADR-0041; null: not approved).
+            'approved_at' => $approval?->approved_at->toIso8601String(),
             // The teacher's access to this section (null: the owner's sheet).
             'access' => $policy === null ? null : self::describe($policy),
             'request' => $request === null ? null : [
@@ -151,6 +161,7 @@ final class TeacherSheets
         $state = match (true) {
             $policy->published => 'published',
             $policy->hasGrant() => 'granted',
+            $policy->approved => 'approved',
             ! $policy->windowOpen => 'closed',
             $policy->mode === TeacherAccess::ViewOnly => 'view_only',
             $policy->mode === TeacherAccess::Timed && $policy->editHours !== null => 'timed',

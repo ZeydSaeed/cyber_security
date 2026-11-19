@@ -23,6 +23,8 @@ type Stage = {
         /** Each section's teacher's name (null: none yet). */
         teachers: Record<string, string | null>;
         sections: Record<string, number>;
+        /** Whether each section's teacher approved the marks (ADR-0041). */
+        approved: Record<string, boolean>;
     }[];
 };
 
@@ -388,6 +390,19 @@ export default function GradesOverview({
                                                                 </Link>
                                                             ) : (
                                                                 label
+                                                            )}
+                                                            {subject.approved[
+                                                                section
+                                                            ] && (
+                                                                <Badge
+                                                                    variant="secondary"
+                                                                    className="ms-2"
+                                                                    data-test="section-approved"
+                                                                >
+                                                                    {t(
+                                                                        'Approved',
+                                                                    )}
+                                                                </Badge>
                                                             )}
                                                         </td>
                                                     );

@@ -50,6 +50,8 @@ final class ResultSheets
     public function student(Student $student, Period $period = Period::Month1): array
     {
         $sheet = $this->section($student->stage, $student->section, $period);
+        // A card has no section figures.
+        unset($sheet['stats']);
         $row = null;
         foreach ($sheet['students'] as $candidate) {
             if ($candidate['uuid'] === $student->uuid) {
@@ -140,6 +142,7 @@ final class ResultSheets
         ];
 
         $sheet['subjects'] = $pick($sheet['subjects']);
+        $sheet['stats'] = $pick($sheet['stats']);
         $sheet['students'] = array_map(function (array $row) use ($pick, $hidden, $view): array {
             $row['marks'] = $pick($row['marks']);
             $row['cells'] = array_map(fn (?array $cell): ?array => $cell === null ? null : [
@@ -211,6 +214,35 @@ final class ResultSheets
         }
         $ranks = ResultCalculator::ranks($results);
 
+        // Each subject's figures for the section (ADR-0041).
+        $stats = [];
+        foreach ($subjects as $subject) {
+            $present = [];
+            $absent = 0;
+            $passed = 0;
+            foreach ($results as $result) {
+                $mark = $result->marks[$subject->id] ?? null;
+                if ($mark === null) {
+                    continue;
+                }
+                $absent += $mark->absent ? 1 : 0;
+                $passed += ($result->cells[$subject->id]['passed'] ?? false) ? 1 : 0;
+                if (! $mark->absent) {
+                    $present[] = (int) $mark->value;
+                }
+            }
+            $entered = count($present) + $absent;
+            $stats[] = [
+                'entered' => $entered,
+                'absent' => $absent,
+                'passed' => $passed,
+                'pass_rate' => $entered === 0 ? null : round($passed * 100 / $entered, 1),
+                'highest' => $present === [] ? null : max($present),
+                'lowest' => $present === [] ? null : min($present),
+                'mean' => $present === [] ? null : round(array_sum($present) / count($present), 1),
+            ];
+        }
+
         $rows = [];
         foreach ($students as $student) {
             $note = $notes->get($student->id);
@@ -241,6 +273,7 @@ final class ResultSheets
                 ];
             })->all()),
             'students' => $rows,
+            'stats' => $stats,
             'summary' => [
                 'students' => count($rows),
                 'complete' => count(array_filter($results, fn (StudentResult $result): bool => $result->isComplete())),

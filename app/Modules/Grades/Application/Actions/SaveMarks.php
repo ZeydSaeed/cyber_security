@@ -12,6 +12,7 @@ use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\GradeSettings;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
@@ -172,6 +173,19 @@ class SaveMarks
                 return ['changed' => 0, 'complete' => $complete];
             }
 
+            // A teacher changing approved marks (under a grant) must approve
+            // them again (ADR-0041); the owner's corrections keep it.
+            if ($author instanceof Teacher) {
+                $cleared = SectionApproval::query()
+                    ->where('subject_id', $subject->id)
+                    ->where('section', $section->value)
+                    ->where('period', $period->value)
+                    ->delete();
+                if ($cleared > 0) {
+                    $this->audit->record('grades.section_approval_cleared', $subject, ['section' => $section->value, 'teacher_name' => $author->name], withoutActor: true);
+                }
+            }
+
             $metadata = ['section' => $section->value, 'period' => $period->value, 'count' => count($changes)];
             if ($author instanceof Teacher) {
                 $metadata += ['teacher' => $author->uuid, 'teacher_name' => $author->name];
@@ -227,12 +241,18 @@ class SaveMarks
             throw new AuthorizationException;
         }
 
-        $policy = SectionAccess::policy($teacher, $row, $settings, $window);
+        $approved = SectionApproval::query()
+            ->where('subject_id', $subject->id)
+            ->where('section', $section->value)
+            ->where('period', $window->period->value)
+            ->exists();
+        $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approved);
 
         if (! $policy->canWrite()) {
             throw new DomainRuleViolation(match (true) {
                 $policy->published => __('The results are published; their marks can no longer be changed.'),
                 ! $policy->windowOpen => __('Mark entry is closed for this period.'),
+                $policy->approved => __('You approved these marks. Ask the department to change them.'),
                 default => __('You can read these marks but not change them. Ask the department.'),
             }, 'marks');
         }

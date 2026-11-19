@@ -28,9 +28,10 @@ final class SectionAccess
         return self::mode($teacher, $row, $settings) === TeacherAccess::Blocked;
     }
 
-    public static function policy(Teacher $teacher, SubjectTeacher $row, GradeSettings $settings, GradePeriod $period): EditPolicy
+    public static function policy(Teacher $teacher, SubjectTeacher $row, GradeSettings $settings, GradePeriod $period, bool $approved = false): EditPolicy
     {
         return new EditPolicy(
+            approved: $approved,
             mode: self::mode($teacher, $row, $settings),
             editHours: $teacher->edit_hours ?? $settings->teacher_edit_hours,
             grantUntil: $row->edit_until,

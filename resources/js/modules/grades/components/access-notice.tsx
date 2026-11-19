@@ -30,6 +30,10 @@ export function useAccessLabel() {
                 return t(
                     'The results are published; marks can no longer change.',
                 );
+            case 'approved':
+                return t(
+                    'You approved these marks. Ask the department to change them.',
+                );
             case 'granted':
                 return t('You may change the marks until :time.', {
                     time: access.until ? moment(access.until) : '',

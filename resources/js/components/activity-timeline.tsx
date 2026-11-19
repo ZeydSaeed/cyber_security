@@ -163,6 +163,12 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('What teachers see of results changed');
         case 'grades.teacher_results_viewed':
             return t("Teacher read their students' results");
+        case 'grades.section_approved':
+            return t("Teacher approved a section's marks");
+        case 'grades.section_approval_withdrawn':
+            return t('Approval of marks withdrawn');
+        case 'grades.section_approval_cleared':
+            return t('Approval cleared by a later change');
         case 'grades.devices_forgotten':
             return t('Remembered devices forgotten');
         case 'grades.device_token_mismatch':

@@ -10,6 +10,8 @@ use DateTimeInterface;
  * and the period, and passes what they say.
  *
  * - Published results are never changed by a teacher.
+ * - An unexpired grant also reopens marks the teacher approved (ADR-0041);
+ *   without one, approved marks are read-only.
  * - An unexpired grant (the owner's unlock, or an approved request) allows
  *   every change, even with mark entry closed or a view-only mode.
  * - Otherwise mark entry must be open, and the mode decides: Edit allows,
@@ -25,6 +27,8 @@ final readonly class EditPolicy
         public bool $windowOpen,
         public bool $published,
         public DateTimeInterface $now,
+        /** The teacher approved this section's marks (ADR-0041). */
+        public bool $approved = false,
     ) {}
 
     public function hasGrant(): bool
@@ -43,6 +47,10 @@ final readonly class EditPolicy
 
         if ($this->hasGrant()) {
             return true;
+        }
+
+        if ($this->approved) {
+            return false;
         }
 
         return $this->windowOpen && in_array($this->mode, [TeacherAccess::Edit, TeacherAccess::Timed], true);
