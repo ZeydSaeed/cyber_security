@@ -1,17 +1,12 @@
 import logoUrl from '@/../images/logo.png';
 import type { useTranslations } from '@/hooks/use-translations';
 import { stageName } from './place';
-import type { MarkValue, ResultRow } from './types';
+import { bandLabel, behaviourLabel, markTone, toneToken } from './result-words';
+import type { MarkValue, ResultCardData } from './types';
 
 type Translate = ReturnType<typeof useTranslations>['t'];
 
-export type CardData = {
-    stage: number;
-    section: string;
-    divided: boolean;
-    pass_mark: number;
-    subjects: { uuid: string; name: string }[];
-    student: ResultRow;
+export type CardData = ResultCardData & {
     /** The student's code, shown as their ID on the owner's card. */
     code?: string | null;
 };
@@ -41,6 +36,18 @@ export async function downloadResultCard(
 
         return getComputedStyle(probe).color;
     };
+    // Each mark's tone, resolved while the probe is on the page (ADR-0039).
+    const toneColors = card.subjects.map((_, i) => {
+        const name = toneToken(
+            markTone(
+                card.student.marks[i] ?? null,
+                card.student.cells[i] ?? null,
+                card.tones,
+            ),
+        );
+
+        return name === null ? null : token(name);
+    });
     const colors = {
         page: token('background'),
         text: token('foreground'),
@@ -58,13 +65,29 @@ export async function downloadResultCard(
     logo.src = logoUrl;
     await logo.decode();
 
-    const { student, subjects, pass_mark } = card;
+    const { student, subjects, options } = card;
+    const showTotal =
+        (options.total || options.percentage) && student.total !== null;
+    const facts = [
+        options.rank && student.rank !== null
+            ? `${t('Rank in the section')}: ${student.rank}`
+            : null,
+        options.overall_grade && student.band !== null
+            ? `${t('Overall grade')}: ${bandLabel(t, student.band)}`
+            : null,
+        options.exemption && student.exempt_all
+            ? `${t('General exemption')}: ${t('Exempt from every subject')}`
+            : null,
+        options.behaviour && student.behaviour !== null
+            ? `${t('Behaviour')}: ${behaviourLabel(t, student.behaviour)}`
+            : null,
+    ].filter((line): line is string => line !== null);
     const width = 1240;
     const pad = 70;
     const rowHeight = 64;
     const tableTop = 400;
-    const rows = subjects.length + 2; // head, subjects, total
-    const height = tableTop + rows * rowHeight + 220;
+    const rows = subjects.length + (showTotal ? 2 : 1); // head, subjects, total
+    const height = tableTop + rows * rowHeight + 220 + facts.length * 44;
     const scale = 2;
 
     const canvas = document.createElement('canvas');
@@ -143,58 +166,75 @@ export async function downloadResultCard(
     ctx.fillStyle = colors.head;
     ctx.fillRect(pad, tableTop, tableWidth, rowHeight);
 
-    const markText = (mark: MarkValue) =>
-        mark === null ? '—' : mark === 'absent' ? t('Absent') : String(mark);
-    const statusOf = (mark: MarkValue): [string, boolean] => {
-        if (mark === null) {
-            return [t('Not entered yet'), false];
+    const markText = (mark: MarkValue, max: number) =>
+        mark === null
+            ? '—'
+            : (mark === 'absent' ? t('Absent') : String(mark)) +
+              (options.max_mark ? ` / ${max}` : '');
+    const statusOf = (i: number): string => {
+        const mark = student.marks[i] ?? null;
+        const cell = student.cells[i] ?? null;
+        if (mark === null || cell === null) {
+            return t('Not entered yet');
         }
-        if (mark === 'absent') {
-            return [t('Absent'), true];
+        const words = [
+            mark === 'absent'
+                ? t('Absent')
+                : cell.passed
+                  ? t('Passed')
+                  : t('Below the pass mark'),
+        ];
+        if (options.mark_grade && cell.band && mark !== 'absent') {
+            words.push(bandLabel(t, cell.band));
+        }
+        if (options.exemption && cell.exempt) {
+            words.push(t('Exempt'));
         }
 
-        return mark >= pass_mark
-            ? [t('Passed'), false]
-            : [t('Below the pass mark'), true];
+        return words.join(' · ');
     };
 
     const lines: {
         cells: [string, string, string];
         bold: boolean;
-        danger: boolean;
+        color: string | null;
     }[] = [
         {
-            cells: [t('Subject'), t('Mark out of 100'), t('Status')],
+            cells: [t('Subject'), t('Mark'), t('Status')],
             bold: true,
-            danger: false,
+            color: null,
         },
-        ...subjects.map((subject, i) => {
-            const mark = student.marks[i] ?? null;
-            const [status, danger] = statusOf(mark);
-
-            return {
-                cells: [subject.name, markText(mark), status] as [
-                    string,
-                    string,
-                    string,
-                ],
-                bold: false,
-                danger,
-            };
-        }),
-        {
+        ...subjects.map((subject, i) => ({
             cells: [
-                t('Total'),
-                `${student.total} / ${student.maximum}`,
-                student.complete
-                    ? `${student.percentage.toFixed(2)}%`
-                    : t('Incomplete (:missing missing)', {
-                          missing: String(student.missing),
-                      }),
-            ],
-            bold: true,
-            danger: false,
-        },
+                subject.name,
+                markText(student.marks[i] ?? null, subject.max),
+                statusOf(i),
+            ] as [string, string, string],
+            bold: false,
+            color: toneColors[i] ?? null,
+        })),
+        ...(showTotal
+            ? [
+                  {
+                      cells: [
+                          t('Total'),
+                          options.total
+                              ? `${student.total} / ${student.maximum}`
+                              : '—',
+                          !student.complete
+                              ? t('Incomplete (:missing missing)', {
+                                    missing: String(student.missing),
+                                })
+                              : options.percentage &&
+                                  student.percentage !== null
+                                ? `${student.percentage.toFixed(2)}%`
+                                : '—',
+                      ] as [string, string, string],
+                      bold: true,
+                      color: null,
+                  },
+              ]
+            : []),
     ];
 
     lines.forEach((line, row) => {
@@ -212,8 +252,8 @@ export async function downloadResultCard(
                     color:
                         row === 0
                             ? colors.headText
-                            : col === 2 && line.danger
-                              ? colors.danger
+                            : col === 2 && line.color
+                              ? line.color
                               : colors.text,
                     align: first ? alignStart : 'center',
                 },
@@ -243,21 +283,27 @@ export async function downloadResultCard(
 
     // Outcome and note.
     const after = tableTop + rows * rowHeight;
+    facts.forEach((line, i) => {
+        text(line, x(pad), after + 50 + i * 44, 26, { weight: 600 });
+    });
+    const below = after + facts.length * 44;
     const outcome = !student.complete
         ? t('Some marks are not entered yet.')
         : student.passed
           ? t('Passed every subject.')
-          : t('Below the pass mark in :count subjects.', {
-                count: String(student.below),
-            });
-    text(outcome, x(pad), after + 70, 28, { weight: 600 });
+          : student.below === null
+            ? t('Not every subject is passed.')
+            : t('Below the pass mark in :count subjects.', {
+                  count: String(student.below),
+              });
+    text(outcome, x(pad), below + 70, 28, { weight: 600 });
     text(
         t(
-            'Each subject is out of 100; :mark is the pass mark. An absence counts as 0.',
-            { mark: String(pass_mark) },
+            'Each subject is passed at :percent% of its maximum unless set otherwise. An absence counts as 0.',
+            { percent: String(card.pass_percent) },
         ),
         x(pad),
-        after + 130,
+        below + 130,
         22,
         { color: colors.muted },
     );

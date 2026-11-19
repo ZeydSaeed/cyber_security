@@ -128,7 +128,7 @@ final class TeacherSheets
                 'created_at' => $request->created_at->toIso8601String(),
                 'decided_at' => $request->decided_at?->toIso8601String(),
             ],
-            'subject' => ['uuid' => $subject->uuid, 'name' => $subject->name, 'stage' => $subject->stage->value, 'divided' => $subject->stage->isDivided()],
+            'subject' => ['uuid' => $subject->uuid, 'name' => $subject->name, 'stage' => $subject->stage->value, 'divided' => $subject->stage->isDivided(), 'max' => $subject->max_mark],
             'section' => $section->value,
             'students' => array_values($students->map(fn (Student $student): array => [
                 'uuid' => $student->uuid,

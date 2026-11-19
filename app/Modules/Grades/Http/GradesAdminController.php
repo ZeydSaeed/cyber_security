@@ -10,11 +10,13 @@ use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\Queries\AccessBoard;
 use App\Modules\Grades\Application\Queries\GradesBoard;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\TeachingKind;
 use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
@@ -44,11 +46,28 @@ class GradesAdminController
             ...$board->show(),
             // Sign-ins and mark editing (ADR-0037), for those who may change them.
             'access' => $canManage ? $access->show() : null,
+            // What a result says and shows (ADR-0039).
+            'resultSettings' => $canManage ? self::resultSettings(GradeSettings::current()) : null,
             'teacherLink' => route('grades.teacher.login'),
             'studentLink' => route('grades.student.login'),
             'adminLink' => route('grades.admin.overview'),
             'canManage' => $canManage,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function resultSettings(GradeSettings $settings): array
+    {
+        return [
+            'pass_percent' => $settings->pass_percent,
+            'exempt_subject_percent' => $settings->exempt_subject_percent,
+            'exempt_overall_percent' => $settings->exempt_overall_percent,
+            'bands' => $settings->bands()->minimums,
+            'options' => $settings->options(),
+            'tones' => $settings->tones(),
+        ];
     }
 
     public function window(Request $request, ChangeEntryWindow $window, #[CurrentUser] User $user): RedirectResponse
@@ -378,6 +397,10 @@ class GradesAdminController
                 'subjects' => array_values($subjects->filter(fn (Subject $s): bool => $s->stage === $stage)->map(fn (Subject $subject): array => [
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
+                    // Out of what, and its own pass and exemption marks (ADR-0039).
+                    'max_mark' => $subject->max_mark,
+                    'pass_mark' => $subject->pass_mark,
+                    'exempt_mark' => $subject->exempt_mark,
                 ])->all()),
             ], Stage::cases()),
             // No teachers here: a teacher's subjects are chosen on the
@@ -421,8 +444,20 @@ class GradesAdminController
             'name' => ['sometimes', 'required', 'string', 'max:120'],
             'teacher' => ['sometimes', 'nullable', 'uuid', Rule::exists('grade_teachers', 'uuid')],
             'stage' => ['sometimes', 'required', Rule::enum(Stage::class)],
+            'max_mark' => ['sometimes', 'required', 'integer', 'min:1', 'max:'.Mark::CEILING],
+            'pass_mark' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:'.Mark::CEILING],
+            'exempt_mark' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:'.Mark::CEILING],
         ]);
 
+        if ($request->has('max_mark')) {
+            $save->changeScale(
+                $user,
+                $subject,
+                $request->integer('max_mark'),
+                $request->filled('pass_mark') ? $request->integer('pass_mark') : null,
+                $request->filled('exempt_mark') ? $request->integer('exempt_mark') : null,
+            );
+        }
         if ($request->has('stage')) {
             $save->changeStage($user, $subject, Stage::from($request->integer('stage')));
         }

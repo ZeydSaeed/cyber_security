@@ -58,28 +58,101 @@ export type StageLayout = {
     divided: boolean;
 };
 
-/** One student's line in a results sheet (ResultSheets). */
+/** A grade band (Domain\GradeBand). */
+export type Band =
+    | 'excellent'
+    | 'very_good'
+    | 'good'
+    | 'fair'
+    | 'pass'
+    | 'fail';
+
+/** What one entered mark earns (ADR-0039); null: not entered. */
+export type ResultCell = {
+    percent: number;
+    passed: boolean;
+    /** Null on a student's card when the owner hides mark grades. */
+    band: Band | null;
+    exempt: boolean;
+} | null;
+
+/** A subject of a results sheet, with its scale and the section's teacher. */
+export type ResultSubject = {
+    uuid: string;
+    name: string;
+    max: number;
+    pass: number;
+    exempt: number | null;
+    teacher: string | null;
+    assistant: string | null;
+    kind: 'theory' | 'practical' | null;
+};
+
+/** What a result card shows (Domain\ResultDisplay::OPTIONS). */
+export type ResultOptions = Record<
+    | 'total'
+    | 'percentage'
+    | 'rank'
+    | 'failed_count'
+    | 'mark_grade'
+    | 'overall_grade'
+    | 'exemption'
+    | 'max_mark'
+    | 'teachers'
+    | 'kind'
+    | 'student_status'
+    | 'behaviour'
+    | 'notes',
+    boolean
+>;
+
+export type Tone = 'none' | 'success' | 'warning' | 'info' | 'danger';
+
+/** The tones of marks (Domain\ResultDisplay::TONED). */
+export type MarkTones = Record<'fail' | 'fair' | 'exempt' | 'excellent', Tone>;
+
+/**
+ * One student's line in a results sheet (ResultSheets). On a student's own
+ * card, what the owner hides comes as null.
+ */
 export type ResultRow = {
     uuid: string;
     name: string;
     number: string | null;
+    status: string | null;
     marks: MarkValue[];
-    total: number;
-    maximum: number;
-    percentage: number;
-    below: number;
+    cells: ResultCell[];
+    total: number | null;
+    maximum: number | null;
+    percentage: number | null;
+    below: number | null;
     absences: number;
     missing: number;
     complete: boolean;
     passed: boolean;
+    rank: number | null;
+    band: Band | null;
+    exempt_all: boolean | null;
+    behaviour: string | null;
+    notes: string | null;
 };
 
-export type ResultSheet = {
+/** What every sheet and card carries besides its students. */
+export type ResultFrame = {
     stage: number;
     section: string;
     divided: boolean;
-    pass_mark: number;
-    subjects: { uuid: string; name: string }[];
+    pass_percent: number;
+    exempt_overall: number | null;
+    options: ResultOptions;
+    tones: MarkTones;
+    subjects: ResultSubject[];
+};
+
+export type ResultSheet = ResultFrame & {
     students: ResultRow[];
     summary: { students: number; complete: number; passed_all: number };
 };
+
+/** One student's card (ResultSheets::student / forStudent). */
+export type ResultCardData = ResultFrame & { student: ResultRow };

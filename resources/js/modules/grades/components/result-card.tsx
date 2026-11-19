@@ -1,66 +1,121 @@
 import { useTranslations } from '@/hooks/use-translations';
 import { stageName } from '../place';
-import type { ResultRow } from '../types';
+import {
+    bandLabel,
+    behaviourLabel,
+    kindLabel,
+    markTone,
+    toneClass,
+} from '../result-words';
+import type { ResultCardData, ResultRow } from '../types';
 
 /**
- * One student's result (ADR-0034): each subject with its mark and whether
- * it is passed, then the total, the percentage and the outcome. On the
- * owner's printable card and on the student's own page alike.
+ * One student's result (ADR-0034, ADR-0039): each subject with its mark
+ * (out of the subject's maximum), whether it is passed, and, as the owner
+ * chose, its grade, exemption, teacher and type; then the total, the
+ * percentage, the rank in the section, the overall grade, the general
+ * exemption, behaviour and notes. On the owner's printable card and on the
+ * student's own page alike. A coloured mark always has words beside it.
  */
 export default function ResultCard({
-    pass_mark,
-    subjects,
-    student,
+    card,
     showName = true,
-    place,
+    code,
 }: {
-    pass_mark: number;
-    subjects: { uuid: string; name: string }[];
-    student: ResultRow;
+    card: ResultCardData;
     /** The student's own page shows the name at the top already. */
     showName?: boolean;
     /**
-     * The owner's printable card shows the name, stage, section and code
+     * On the owner's printable card: the name, stage, section and code
      * spread across one line (owner's request, 2026-11-16).
      */
-    place?: {
-        stage: number;
-        section: string;
-        divided: boolean;
-        /** The student's code, shown as their ID. */
-        code?: string | null;
-    };
+    code?: string | null;
 }) {
     const { t } = useTranslations();
+    const { student, subjects, options, tones } = card;
+    const printable = code !== undefined;
 
-    const status = (mark: ResultRow['marks'][number]) => {
-        if (mark === null) {
+    const status = (i: number) => {
+        const mark = student.marks[i] ?? null;
+        const cell = student.cells[i] ?? null;
+        if (mark === null || cell === null) {
             return (
                 <span className="text-muted-foreground">
                     {t('Not entered yet')}
                 </span>
             );
         }
-        if (mark === 'absent') {
-            return (
-                <span className="font-medium text-destructive-text">
-                    {t('Absent')}
-                </span>
-            );
+        const tone = toneClass(markTone(mark, cell, tones));
+        const words: string[] = [
+            mark === 'absent'
+                ? t('Absent')
+                : cell.passed
+                  ? t('Passed')
+                  : t('Below the pass mark'),
+        ];
+        if (options.mark_grade && cell.band && mark !== 'absent') {
+            words.push(bandLabel(t, cell.band));
+        }
+        if (options.exemption && cell.exempt) {
+            words.push(t('Exempt'));
         }
 
-        return mark >= pass_mark ? (
-            t('Passed')
-        ) : (
-            <span className="font-medium text-destructive-text">
-                {t('Below the pass mark')}
-            </span>
-        );
+        return <span className={tone}>{words.join(' · ')}</span>;
+    };
+
+    const facts: { label: string; value: string; test: string }[] = [];
+    if (options.rank && student.rank !== null) {
+        facts.push({
+            label: t('Rank in the section'),
+            value: String(student.rank),
+            test: 'card-rank',
+        });
+    }
+    if (options.overall_grade && student.band !== null) {
+        facts.push({
+            label: t('Overall grade'),
+            value: bandLabel(t, student.band),
+            test: 'card-grade',
+        });
+    }
+    if (options.failed_count && student.below !== null && student.complete) {
+        facts.push({
+            label: t('Failed subjects'),
+            value: String(student.below),
+            test: 'card-failed',
+        });
+    }
+    if (options.exemption && student.exempt_all) {
+        facts.push({
+            label: t('General exemption'),
+            value: t('Exempt from every subject'),
+            test: 'card-exempt',
+        });
+    }
+    if (options.student_status) {
+        facts.push({
+            label: t('Student status'),
+            value: student.status === 'external' ? t('External') : t('Regular'),
+            test: 'card-status',
+        });
+    }
+    if (options.behaviour && student.behaviour !== null) {
+        facts.push({
+            label: t('Behaviour'),
+            value: behaviourLabel(t, student.behaviour),
+            test: 'card-behaviour',
+        });
+    }
+
+    const markText = (row: ResultRow, i: number) => {
+        const mark = row.marks[i] ?? null;
+
+        return mark === null ? '—' : mark === 'absent' ? t('Absent') : mark;
     };
 
     return (
         <>
-            {place ? (
+            {printable ? (
                 <dl
                     className="mb-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2"
                     data-test="card-details"
@@ -71,14 +126,14 @@ export default function ResultCard({
                             value: student.name,
                             test: 'card-name',
                         },
-                        { label: t('Stage'), value: stageName(t, place.stage) },
+                        { label: t('Stage'), value: stageName(t, card.stage) },
                         {
                             label: t('Section'),
-                            value: place.divided ? place.section : '—',
+                            value: card.divided ? card.section : '—',
                         },
                         {
                             label: t('Student ID'),
-                            value: place.code ?? student.number ?? '—',
+                            value: code ?? student.number ?? '—',
                         },
                     ].map((item) => (
                         <div key={item.label} className="flex gap-2">
@@ -140,7 +195,7 @@ export default function ResultCard({
                                 scope="col"
                                 className="border border-grid-line p-2 text-center font-medium"
                             >
-                                {t('Mark out of 100')}
+                                {t('Mark')}
                             </th>
                             <th
                                 scope="col"
@@ -152,71 +207,136 @@ export default function ResultCard({
                     </thead>
                     <tbody>
                         {subjects.map((subject, i) => {
-                            const mark = student.marks[i] ?? null;
+                            const details = [
+                                options.kind && subject.kind
+                                    ? kindLabel(t, subject.kind)
+                                    : null,
+                                options.teachers && subject.teacher
+                                    ? subject.assistant
+                                        ? t(
+                                              ':teacher, assisted by :assistant',
+                                              {
+                                                  teacher: subject.teacher,
+                                                  assistant: subject.assistant,
+                                              },
+                                          )
+                                        : subject.teacher
+                                    : null,
+                            ].filter((item): item is string => item !== null);
 
                             return (
-                                <tr key={subject.uuid}>
+                                <tr key={subject.uuid} data-test="card-row">
                                     <th
                                         scope="row"
                                         className="border border-grid-line p-2 text-start font-normal"
                                     >
                                         <bdi>{subject.name}</bdi>
+                                        {details.length > 0 && (
+                                            <span
+                                                className="block text-xs text-muted-foreground"
+                                                data-test="card-subject-details"
+                                            >
+                                                <bdi>{details.join(' · ')}</bdi>
+                                            </span>
+                                        )}
                                     </th>
                                     <td className="border border-grid-line p-2 text-center tabular-nums">
-                                        {mark === null
-                                            ? '—'
-                                            : mark === 'absent'
-                                              ? t('Absent')
-                                              : mark}
+                                        {markText(student, i)}
+                                        {options.max_mark && (
+                                            <span className="text-muted-foreground">
+                                                {' '}
+                                                / {subject.max}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="border border-grid-line p-2 text-center">
-                                        {status(mark)}
+                                        {status(i)}
                                     </td>
                                 </tr>
                             );
                         })}
                     </tbody>
-                    <tfoot>
-                        <tr className="font-semibold">
-                            <th
-                                scope="row"
-                                className="border border-grid-line p-2 text-start"
-                            >
-                                {t('Total')}
-                            </th>
-                            <td
-                                className="border border-grid-line p-2 text-center tabular-nums"
-                                data-test="card-total"
-                            >
-                                {student.total} / {student.maximum}
-                            </td>
-                            <td className="border border-grid-line p-2 text-center">
-                                {student.complete
-                                    ? `${student.percentage.toFixed(2)}%`
-                                    : t('Incomplete (:missing missing)', {
-                                          missing: String(student.missing),
-                                      })}
-                            </td>
-                        </tr>
-                    </tfoot>
+                    {(options.total || options.percentage) &&
+                        student.total !== null && (
+                            <tfoot>
+                                <tr className="font-semibold">
+                                    <th
+                                        scope="row"
+                                        className="border border-grid-line p-2 text-start"
+                                    >
+                                        {t('Total')}
+                                    </th>
+                                    <td
+                                        className="border border-grid-line p-2 text-center tabular-nums"
+                                        data-test="card-total"
+                                    >
+                                        {options.total
+                                            ? `${student.total} / ${student.maximum}`
+                                            : '—'}
+                                    </td>
+                                    <td
+                                        className="border border-grid-line p-2 text-center"
+                                        data-test="card-percentage"
+                                    >
+                                        {!student.complete
+                                            ? t(
+                                                  'Incomplete (:missing missing)',
+                                                  {
+                                                      missing: String(
+                                                          student.missing,
+                                                      ),
+                                                  },
+                                              )
+                                            : options.percentage &&
+                                                student.percentage !== null
+                                              ? `${student.percentage.toFixed(2)}%`
+                                              : '—'}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        )}
                 </table>
             </div>
+
+            {facts.length > 0 && (
+                <dl
+                    className="mt-6 grid gap-x-6 gap-y-2 sm:grid-cols-2"
+                    data-test="card-facts"
+                >
+                    {facts.map((fact) => (
+                        <div key={fact.test} className="flex gap-2">
+                            <dt className="font-semibold">{fact.label}:</dt>
+                            <dd data-test={fact.test}>{fact.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
+
+            {options.notes && student.notes && (
+                <div className="mt-4" data-test="card-notes">
+                    <p className="font-semibold">{t('Notes')}</p>
+                    <p className="text-sm whitespace-pre-line" dir="auto">
+                        {student.notes}
+                    </p>
+                </div>
+            )}
 
             <p className="mt-6 text-base font-medium" data-test="card-outcome">
                 {!student.complete
                     ? t('Some marks are not entered yet.')
                     : student.passed
                       ? t('Passed every subject.')
-                      : t('Below the pass mark in :count subjects.', {
-                            count: String(student.below),
-                        })}
+                      : // The count only when the owner shows it.
+                        student.below === null
+                        ? t('Not every subject is passed.')
+                        : t('Below the pass mark in :count subjects.', {
+                              count: String(student.below),
+                          })}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
                 {t(
-                    'Each subject is out of 100; :mark is the pass mark. An absence counts as 0.',
-                    {
-                        mark: String(pass_mark),
-                    },
+                    'Each subject is passed at :percent% of its maximum unless set otherwise. An absence counts as 0.',
+                    { percent: String(card.pass_percent) },
                 )}
             </p>
         </>

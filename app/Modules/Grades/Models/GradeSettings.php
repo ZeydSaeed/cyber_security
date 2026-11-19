@@ -2,10 +2,14 @@
 
 namespace App\Modules\Grades\Models;
 
+use App\Modules\Grades\Domain\GradeBands;
+use App\Modules\Grades\Domain\ResultCalculator;
+use App\Modules\Grades\Domain\ResultDisplay;
 use App\Modules\Grades\Domain\StudentAccess;
 use App\Modules\Grades\Domain\TeacherAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 
 /**
  * The department-wide access rules (ADR-0037), one row.
@@ -21,6 +25,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $teacher_edit_hours
  * @property StudentAccess $student_access
  * @property int $remember_days
+ * @property int $pass_percent
+ * @property int|null $exempt_subject_percent
+ * @property int|null $exempt_overall_percent
+ * @property array<string, mixed>|null $grade_bands
+ * @property array<string, mixed>|null $result_options
+ * @property array<string, mixed>|null $mark_tones
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
@@ -49,9 +59,50 @@ class GradeSettings extends Model
             'teacher_edit_hours' => 'integer',
             'student_access' => StudentAccess::class,
             'remember_days' => 'integer',
+            'pass_percent' => 'integer',
+            'exempt_subject_percent' => 'integer',
+            'exempt_overall_percent' => 'integer',
+            'grade_bands' => 'array',
+            'result_options' => 'array',
+            'mark_tones' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /** The grade bands (ADR-0039): the saved ones, else the defaults. */
+    public function bands(): GradeBands
+    {
+        try {
+            return $this->grade_bands === null ? GradeBands::defaults() : GradeBands::of($this->grade_bands);
+        } catch (InvalidArgumentException) {
+            return GradeBands::defaults();
+        }
+    }
+
+    /**
+     * What a result card shows (ADR-0039).
+     *
+     * @return array<string, bool>
+     */
+    public function options(): array
+    {
+        return ResultDisplay::options($this->result_options);
+    }
+
+    /**
+     * The status tones of marks (ADR-0039).
+     *
+     * @return array<string, string>
+     */
+    public function tones(): array
+    {
+        return ResultDisplay::tones($this->mark_tones);
+    }
+
+    public function calculator(): ResultCalculator
+    {
+        return new ResultCalculator($this->bands(), $this->exempt_overall_percent);
     }
 
     /**

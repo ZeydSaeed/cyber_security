@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import ResultCard from '../../components/result-card';
 import { placeLabelFull } from '../../place';
-import type { ResultRow } from '../../types';
+import type { ResultCardData } from '../../types';
 
 /**
  * A student's own first-month result (ADR-0034), once the owner has
@@ -15,14 +15,8 @@ export default function StudentResult({
     card,
 }: {
     published: boolean;
-    card: {
-        stage: number;
-        section: string;
-        divided: boolean;
-        pass_mark: number;
-        subjects: { uuid: string; name: string }[];
-        student: ResultRow;
-    } | null;
+    /** Only what the owner chose to show (ADR-0039). */
+    card: ResultCardData | null;
 }) {
     const { t } = useTranslations();
 
@@ -58,12 +52,7 @@ export default function StudentResult({
             </header>
 
             {published && card ? (
-                <ResultCard
-                    pass_mark={card.pass_mark}
-                    subjects={card.subjects}
-                    student={card.student}
-                    showName={false}
-                />
+                <ResultCard card={card} showName={false} />
             ) : (
                 <p
                     role="status"

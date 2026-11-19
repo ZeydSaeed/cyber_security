@@ -7,10 +7,11 @@ import PageToolbar, { toolbarControls } from '@/components/page-toolbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslations } from '@/hooks/use-translations';
+import NoteDialog from '../../components/note-dialog';
 import ResultsTable from '../../components/results-table';
 import { matchRanges, searchTerms } from '../../name-search';
 import { placeLabel } from '../../place';
-import type { ResultSheet } from '../../types';
+import type { ResultRow, ResultSheet } from '../../types';
 
 type Place = { stage: number; section: string; divided: boolean };
 
@@ -38,6 +39,8 @@ export default function GradesResults({
     const [search, setSearch] = useState('');
     const [index, setIndex] = useState(0);
     const terms = useMemo(() => searchTerms(search), [search]);
+    // Behaviour and notes of one student (ADR-0039).
+    const [noting, setNoting] = useState<ResultRow | null>(null);
     const matches = useMemo(
         () =>
             sheet.students
@@ -207,17 +210,33 @@ export default function GradesResults({
                         terms={terms}
                         current={current}
                         action={(student) => (
-                            <a
-                                href={ResultsController.printStudent.url(
-                                    student.uuid,
-                                )}
-                                target="_blank"
-                                rel="noopener"
-                                className="text-sm whitespace-nowrap underline-offset-4 hover:underline"
-                            >
-                                {t('Result card')}
-                            </a>
+                            <div className="flex flex-col items-start gap-1">
+                                <a
+                                    href={ResultsController.printStudent.url(
+                                        student.uuid,
+                                    )}
+                                    target="_blank"
+                                    rel="noopener"
+                                    className="text-sm whitespace-nowrap underline-offset-4 hover:underline"
+                                >
+                                    {t('Result card')}
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => setNoting(student)}
+                                    className="text-sm whitespace-nowrap underline-offset-4 hover:underline"
+                                    data-test="open-note"
+                                >
+                                    {t('Behaviour and notes')}
+                                </button>
+                            </div>
                         )}
+                    />
+                )}
+                {noting && (
+                    <NoteDialog
+                        student={noting}
+                        onClose={() => setNoting(null)}
                     />
                 )}
             </div>

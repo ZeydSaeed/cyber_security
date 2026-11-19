@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\TeachingKind;
@@ -98,6 +99,49 @@ class SaveSubject
                 $this->place($locked, $each, $teacher);
                 $this->audit->record('grades.subject_assigned', $locked, ['section' => $each->value], ['teacher' => ['from' => $row?->teacher?->name, 'to' => $teacher?->name]], actor: $actor);
             }
+
+            return $locked;
+        }, 3);
+    }
+
+    /**
+     * The subject's maximum, and its own pass and exemption marks (null:
+     * the department's percentages), ADR-0039. The maximum cannot fall
+     * below a mark already entered.
+     */
+    public function changeScale(User $actor, Subject $subject, int $max, ?int $pass, ?int $exempt): Subject
+    {
+        if ($max < 1 || $max > Mark::CEILING) {
+            throw new DomainRuleViolation(__('A subject is out of 1 to :max.', ['max' => Mark::CEILING]), 'max_mark');
+        }
+        if ($pass !== null && ($pass < 0 || $pass > $max)) {
+            throw new DomainRuleViolation(__('The pass mark is from 0 to the maximum.'), 'pass_mark');
+        }
+        if ($exempt !== null && ($exempt > $max || $exempt < ($pass ?? 0))) {
+            throw new DomainRuleViolation(__('The exemption mark is from the pass mark to the maximum.'), 'exempt_mark');
+        }
+
+        return DB::transaction(function () use ($actor, $subject, $max, $pass, $exempt): Subject {
+            $locked = Subject::query()->whereKey($subject->id)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            $changes = array_filter([
+                'max_mark' => ['from' => $locked->max_mark, 'to' => $max],
+                'pass_mark' => ['from' => $locked->pass_mark, 'to' => $pass],
+                'exempt_mark' => ['from' => $locked->exempt_mark, 'to' => $exempt],
+            ], fn (array $change): bool => $change['from'] !== $change['to']);
+
+            if ($changes === []) {
+                return $locked;
+            }
+
+            $highest = (int) GradeMark::query()->where('subject_id', $locked->id)->max('mark');
+            if ($max < $highest) {
+                throw new DomainRuleViolation(__('A mark of :mark is already entered; the maximum cannot be lower.', ['mark' => $highest]), 'max_mark');
+            }
+
+            $locked->forceFill(['max_mark' => $max, 'pass_mark' => $pass, 'exempt_mark' => $exempt])->save();
+            $this->audit->record('grades.subject_scale_changed', $locked, [], $changes, actor: $actor);
 
             return $locked;
         }, 3);

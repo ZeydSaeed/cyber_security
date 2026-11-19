@@ -70,6 +70,13 @@ class SaveMarks
                 ->pluck('id', 'uuid')
                 ->all();
 
+            // The subject's own maximum (ADR-0039), read under its lock.
+            foreach ($marks as $mark) {
+                if ($mark !== null && ! $mark->absent && (int) $mark->value > $subject->max_mark) {
+                    throw new DomainRuleViolation(__('Marks in this subject are out of :max.', ['max' => $subject->max_mark]), 'marks');
+                }
+            }
+
             $unknown = array_diff(array_keys($marks), array_keys($students));
             if ($unknown !== []) {
                 throw new DomainRuleViolation(__('Some students are not in this section.'), 'marks');

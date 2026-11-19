@@ -159,7 +159,8 @@ class StudentPortalController
             'portal' => ['name' => $student->full_name, 'logout' => route('grades.student.logout')],
             'published' => $published,
             // Nothing of the marks before the owner publishes them.
-            'card' => $published ? $sheets->student($student) : null,
+            // Only what the owner chose to show (ADR-0039).
+            'card' => $published ? $sheets->forStudent($student) : null,
         ]);
     }
 }

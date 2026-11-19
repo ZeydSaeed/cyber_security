@@ -9,16 +9,18 @@ use OpenSpout\Writer\XLSX\Options;
 use OpenSpout\Writer\XLSX\Writer;
 
 /**
- * A section's results as an Excel file (ADR-0034): one row per student, a
- * column per subject, then total, percentage, subjects below the pass mark
- * and absences. Headers come translated; marks stay numbers so Excel can
- * sort and sum them, and an absence is the translated word.
+ * A section's results as an Excel file (ADR-0034, ADR-0039): one row per
+ * student, a column per subject (with its maximum), then total,
+ * percentage, failed subjects, absences, rank in the section, overall
+ * grade, exemption, behaviour and notes. Headers come translated; marks
+ * stay numbers so Excel can sort and sum them, and an absence is the
+ * translated word.
  */
 final class ResultsWorkbook
 {
     /**
-     * @param  array{subjects: list<array{uuid: string, name: string}>, students: list<array{name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, complete: bool}>}  $sheet
-     * @param  array{number: string, name: string, total: string, percentage: string, below: string, absences: string, absent: string, incomplete: string, title: string}  $words
+     * @param  array<string, mixed>  $sheet  ResultSheets::section()
+     * @param  array{number: string, name: string, total: string, percentage: string, below: string, absences: string, absent: string, incomplete: string, title: string, rank: string, grade: string, exempt: string, behaviour: string, notes: string, bands: array<string, string>, behaviours: array<string, string>}  $words
      */
     public function write(string $path, array $sheet, array $words, bool $rightToLeft): void
     {
@@ -35,11 +37,16 @@ final class ResultsWorkbook
         $writer->addRow(Row::fromValuesWithStyle([
             $words['number'],
             $words['name'],
-            ...array_map(fn (array $subject): string => $subject['name'], $sheet['subjects']),
+            ...array_map(fn (array $subject): string => $subject['name'].' ('.$subject['max'].')', $sheet['subjects']),
             $words['total'],
             $words['percentage'],
             $words['below'],
             $words['absences'],
+            $words['rank'],
+            $words['grade'],
+            $words['exempt'],
+            $words['behaviour'],
+            $words['notes'],
         ], $bold));
 
         foreach ($sheet['students'] as $student) {
@@ -55,6 +62,11 @@ final class ResultsWorkbook
                 $student['complete'] ? $student['percentage'] : '',
                 $student['below'],
                 $student['absences'],
+                $student['rank'] ?? '',
+                $student['band'] === null ? '' : $words['bands'][$student['band']],
+                $student['exempt_all'] ? $words['exempt'] : '',
+                $student['behaviour'] === null ? '' : $words['behaviours'][$student['behaviour']],
+                (string) ($student['notes'] ?? ''),
             ]));
         }
 

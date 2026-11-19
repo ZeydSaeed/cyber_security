@@ -9,6 +9,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import AccessPanel from '../../components/access-panel';
 import type { AccessBoardProps } from '../../components/access-panel';
 import CopyLink from '../../components/copy-link';
+import ResultSettingsPanel from '../../components/result-settings-panel';
+import type { ResultSettings } from '../../components/result-settings-panel';
 import { sectionLabel, stageLabel } from '../../place';
 
 type Stage = {
@@ -39,6 +41,7 @@ export default function GradesOverview({
     adminLink,
     canManage,
     access,
+    resultSettings,
 }: {
     window: {
         open: boolean;
@@ -53,6 +56,8 @@ export default function GradesOverview({
     canManage: boolean;
     /** Sign-ins and mark editing (ADR-0037); only for grades.manage. */
     access: AccessBoardProps | null;
+    /** What a result says and shows (ADR-0039); only for grades.manage. */
+    resultSettings: ResultSettings | null;
 }) {
     const { t } = useTranslations();
     const put = (url: string, data: Record<string, string | boolean>) =>
@@ -207,6 +212,10 @@ export default function GradesOverview({
                 )}
 
                 {access && <AccessPanel access={access} />}
+
+                {resultSettings && (
+                    <ResultSettingsPanel settings={resultSettings} />
+                )}
 
                 {stages.map((stage) => {
                     const sections = Object.keys(stage.students);

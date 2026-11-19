@@ -93,12 +93,19 @@ class ResultsController
                 : $stage->label(),
             'number' => __('Number'),
             'name' => __('Name'),
-            'total' => __('Total out of :max', ['max' => $sheet['students'][0]['maximum'] ?? count($sheet['subjects']) * 100]),
+            'total' => __('Total out of :max', ['max' => array_sum(array_column($sheet['subjects'], 'max'))]),
             'percentage' => __('Percentage'),
-            'below' => __('Below :mark', ['mark' => $sheet['pass_mark']]),
+            'below' => __('Failed subjects'),
             'absences' => __('Absences'),
             'absent' => __('Absent'),
             'incomplete' => __('Incomplete'),
+            'rank' => __('Rank in the section'),
+            'grade' => __('Overall grade'),
+            'exempt' => __('Exempt'),
+            'behaviour' => __('Behaviour'),
+            'notes' => __('Notes'),
+            'bands' => self::bandWords(),
+            'behaviours' => self::behaviourWords(),
         ], App::getLocale() === 'ar');
 
         $audit->record('grades.results_exported', null, ['stage' => $stage->value, 'section' => $section->value], actor: $user);
@@ -106,6 +113,31 @@ class ResultsController
         return response()
             ->download($path, "results-stage{$stage->value}-{$section->value}.xlsx")
             ->deleteFileAfterSend();
+    }
+
+    /** @return array<string, string> */
+    public static function bandWords(): array
+    {
+        return [
+            'excellent' => __('Excellent'),
+            'very_good' => __('Very good'),
+            'good' => __('Good'),
+            'fair' => __('Fair'),
+            'pass' => __('Pass'),
+            'fail' => __('Fail'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function behaviourWords(): array
+    {
+        return [
+            'excellent' => __('Excellent'),
+            'very_good' => __('Very good'),
+            'good' => __('Good'),
+            'acceptable' => __('Acceptable'),
+            'poor' => __('Poor'),
+        ];
     }
 
     public function sheet(Subject $subject, string $section, TeacherSheets $sheets): Response

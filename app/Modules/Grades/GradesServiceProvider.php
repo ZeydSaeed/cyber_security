@@ -56,7 +56,8 @@ class GradesServiceProvider extends ServiceProvider
         ]]);
 
         $this->app->singleton(TeacherCodes::class);
-        $this->app->bind(ResultCalculator::class, fn (): ResultCalculator => new ResultCalculator((int) config('grades.pass_mark')));
+        // The department's bands and exemption, read when a result is made (ADR-0039).
+        $this->app->bind(ResultCalculator::class, fn (): ResultCalculator => GradeSettings::current()->calculator());
 
         // The module's public read API (Contracts), for the dashboard.
         $this->app->bind(GradesOverview::class, GradesOverviewQuery::class);

@@ -18,7 +18,14 @@ import { Label } from '@/components/ui/label';
 import { useTranslations } from '@/hooks/use-translations';
 import { stageLabel } from '../../place';
 
-type Subject = { uuid: string; name: string };
+type Subject = {
+    uuid: string;
+    name: string;
+    /** Out of what, and its own pass and exemption marks (ADR-0039). */
+    max_mark: number;
+    pass_mark: number | null;
+    exempt_mark: number | null;
+};
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
@@ -100,6 +107,62 @@ function EditSubject({
                         />
                         <InputError message={errors.stage} />
                     </div>
+                    <fieldset className="grid gap-3 sm:grid-cols-3 md:col-span-2">
+                        <legend className="mb-2 text-sm font-medium">
+                            {t('Marking')}
+                        </legend>
+                        {(
+                            [
+                                [
+                                    'max_mark',
+                                    t('Out of'),
+                                    subject.max_mark,
+                                    true,
+                                ],
+                                [
+                                    'pass_mark',
+                                    t('Pass mark'),
+                                    subject.pass_mark,
+                                    false,
+                                ],
+                                [
+                                    'exempt_mark',
+                                    t('Exemption mark'),
+                                    subject.exempt_mark,
+                                    false,
+                                ],
+                            ] as const
+                        ).map(([field, label, value, required]) => (
+                            <div key={field} className="grid gap-1">
+                                <Label htmlFor={`${field}-${subject.uuid}`}>
+                                    {label}
+                                </Label>
+                                <Input
+                                    id={`${field}-${subject.uuid}`}
+                                    name={field}
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={field === 'max_mark' ? 1 : 0}
+                                    max={1000}
+                                    defaultValue={value ?? ''}
+                                    required={required}
+                                    placeholder={
+                                        required
+                                            ? undefined
+                                            : t('As the department')
+                                    }
+                                    dir="ltr"
+                                    data-test={`subject-${field}`}
+                                />
+                                <InputError message={errors[field]} />
+                            </div>
+                        ))}
+                        <p className="text-xs text-muted-foreground sm:col-span-3">
+                            {t(
+                                "Empty pass or exemption marks follow the department's percentages of the maximum.",
+                            )}
+                        </p>
+                    </fieldset>
                     <div className="flex gap-2 md:col-span-2">
                         <Button disabled={processing}>{t('Save')}</Button>
                         <Button type="button" variant="ghost" onClick={onDone}>
@@ -291,6 +354,18 @@ export default function GradesSubjects({
                                             dir="auto"
                                         >
                                             {subject.name}
+                                        </span>
+                                        <span
+                                            className="text-sm text-muted-foreground"
+                                            data-test="subject-scale"
+                                        >
+                                            {t('Out of :max', {
+                                                max: String(subject.max_mark),
+                                            })}
+                                            {subject.pass_mark !== null &&
+                                                ` · ${t('Pass mark')}: ${subject.pass_mark}`}
+                                            {subject.exempt_mark !== null &&
+                                                ` · ${t('Exemption mark')}: ${subject.exempt_mark}`}
                                         </span>
                                         <div className="ms-auto flex gap-2">
                                             <Button

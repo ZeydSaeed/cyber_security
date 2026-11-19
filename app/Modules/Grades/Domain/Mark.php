@@ -6,22 +6,28 @@ use InvalidArgumentException;
 
 /**
  * One student's mark in one subject (ADR-0034): a whole number from 0 to
- * 100, or absent. The table repeats the rule as a CHECK constraint.
+ * the subject's maximum (100 unless the owner sets another, at most
+ * CEILING; ADR-0039), or absent. The table repeats the ceiling as a CHECK
+ * constraint; SaveMarks checks the subject's own maximum.
  */
 final readonly class Mark
 {
     public const MIN = 0;
 
+    /** The usual maximum of a subject. */
     public const MAX = 100;
+
+    /** The highest maximum a subject may have. */
+    public const CEILING = 1000;
 
     public const ABSENT = 'absent';
 
     private function __construct(public ?int $value, public bool $absent) {}
 
-    public static function of(int $value): self
+    public static function of(int $value, int $max = self::MAX): self
     {
-        if ($value < self::MIN || $value > self::MAX) {
-            throw new InvalidArgumentException('A mark is a whole number from '.self::MIN.' to '.self::MAX.'.');
+        if ($value < self::MIN || $value > $max || $max > self::CEILING) {
+            throw new InvalidArgumentException('A mark is a whole number from '.self::MIN.' to '.$max.'.');
         }
 
         return new self($value, false);
@@ -33,21 +39,22 @@ final readonly class Mark
     }
 
     /**
-     * Reads what a form sends: a whole number from 0 to 100, or "absent".
-     * Anything else (empty, 12.5, 101, "abc") is null: not a mark.
+     * Reads what a form sends: a whole number from 0 to the subject's
+     * maximum, or "absent". Anything else (empty, 12.5, above the maximum,
+     * "abc") is null: not a mark.
      */
-    public static function fromInput(mixed $input): ?self
+    public static function fromInput(mixed $input, int $max = self::MAX): ?self
     {
         if ($input === self::ABSENT) {
             return self::absent();
         }
 
         if (is_int($input)) {
-            return $input >= self::MIN && $input <= self::MAX ? self::of($input) : null;
+            return $input >= self::MIN && $input <= $max && $max <= self::CEILING ? self::of($input, $max) : null;
         }
 
-        if (is_string($input) && preg_match('/^\s*(\d{1,3})\s*$/', $input, $match) === 1) {
-            return self::fromInput((int) $match[1]);
+        if (is_string($input) && preg_match('/^\s*(\d{1,4})\s*$/', $input, $match) === 1) {
+            return self::fromInput((int) $match[1], $max);
         }
 
         return null;
@@ -58,7 +65,7 @@ final readonly class Mark
      */
     public static function fromStored(?int $value, bool $absent): self
     {
-        return $absent ? self::absent() : self::of((int) $value);
+        return $absent ? self::absent() : self::of((int) $value, self::CEILING);
     }
 
     /**

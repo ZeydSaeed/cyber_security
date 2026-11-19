@@ -3,6 +3,7 @@
 use App\Modules\Grades\Http\AccessController;
 use App\Modules\Grades\Http\GradesAdminController;
 use App\Modules\Grades\Http\ResultsController;
+use App\Modules\Grades\Http\ResultSettingsController;
 use App\Modules\Grades\Http\StudentPortalController;
 use App\Modules\Grades\Http\StudentsAdminController;
 use App\Modules\Grades\Http\StudentSession;
@@ -44,6 +45,13 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
     Route::middleware('can:grades.manage')->group(function () {
         Route::put('window', [GradesAdminController::class, 'window'])->name('window');
         Route::put('publish', [GradesAdminController::class, 'publish'])->name('publish');
+
+        // What a result says and shows (ADR-0039).
+        Route::put('results/settings', [ResultSettingsController::class, 'settings'])->middleware('throttle:30,1')->name('results.settings');
+        Route::put('results/students/{student}/note', [ResultSettingsController::class, 'note'])
+            ->middleware('throttle:120,1')
+            ->whereUuid('student')
+            ->name('results.note');
 
         // Who may sign in and change marks (ADR-0037).
         Route::put('access', [AccessController::class, 'settings'])->middleware('throttle:30,1')->name('access.settings');

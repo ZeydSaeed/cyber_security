@@ -153,6 +153,12 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Request to change marks sent');
         case 'grades.edit_request_decided':
             return t('Request to change marks answered');
+        case 'grades.subject_scale_changed':
+            return t('Subject maximum or pass mark changed');
+        case 'grades.result_settings_changed':
+            return t('Result settings changed');
+        case 'grades.student_note_saved':
+            return t('Behaviour or notes saved');
         case 'grades.devices_forgotten':
             return t('Remembered devices forgotten');
         case 'grades.device_token_mismatch':

@@ -18,9 +18,9 @@ function initial(mark: MarkValue): string {
     return mark === null ? '' : String(mark);
 }
 
-/** A whole number from 0 to 100, as the server will check it. */
-function isMark(value: string): boolean {
-    return /^\d{1,3}$/.test(value.trim()) && Number(value) <= 100;
+/** A whole number from 0 to the subject's maximum, as the server checks it. */
+function isMark(value: string, max: number): boolean {
+    return /^\d{1,4}$/.test(value.trim()) && Number(value) <= max;
 }
 
 /**
@@ -39,7 +39,14 @@ export default function MarkSheet({
     back,
     notice,
 }: {
-    subject: { uuid: string; name: string; stage: number; divided: boolean };
+    subject: {
+        uuid: string;
+        name: string;
+        stage: number;
+        divided: boolean;
+        /** Out of what (ADR-0039); 100 unless the owner set another. */
+        max?: number;
+    };
     section: string;
     students: SheetStudent[];
     editable: boolean;
@@ -48,6 +55,7 @@ export default function MarkSheet({
     notice?: ReactNode;
 }) {
     const { t } = useTranslations();
+    const max = subject.max ?? 100;
     const inputs = useRef<(HTMLInputElement | null)[]>([]);
     const form = useForm<{ marks: Record<string, string> }>({
         marks: Object.fromEntries(
@@ -137,7 +145,9 @@ export default function MarkSheet({
                                         scope="col"
                                         className="w-24 border border-grid-line p-2 text-center"
                                     >
-                                        {t('Mark out of 100')}
+                                        {t('Mark out of :max', {
+                                            max: String(max),
+                                        })}
                                     </th>
                                     <th
                                         scope="col"
@@ -161,7 +171,7 @@ export default function MarkSheet({
                                     const invalid =
                                         !absent &&
                                         value.trim() !== '' &&
-                                        !isMark(value);
+                                        !isMark(value, max);
                                     const fieldId = `mark-${student.uuid}`;
                                     const absentId = `absent-${student.uuid}`;
                                     const errorId = `error-${student.uuid}`;
@@ -203,7 +213,12 @@ export default function MarkSheet({
                                                     >
                                                         {error ??
                                                             t(
-                                                                'Enter a whole number from 0 to 100, or mark the student absent.',
+                                                                'Enter a whole number from 0 to :max, or mark the student absent.',
+                                                                {
+                                                                    max: String(
+                                                                        max,
+                                                                    ),
+                                                                },
                                                             )}
                                                     </p>
                                                 )}
@@ -237,7 +252,7 @@ export default function MarkSheet({
                                                     }}
                                                     disabled={locked || absent}
                                                     inputMode="numeric"
-                                                    maxLength={3}
+                                                    maxLength={4}
                                                     dir="ltr"
                                                     enterKeyHint="next"
                                                     autoComplete="off"

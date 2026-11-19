@@ -3,7 +3,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import { matchRanges } from '../name-search';
 import { placeLabel } from '../place';
-import type { MarkValue, ResultSheet } from '../types';
+import { bandLabel, markTone, toneClass } from '../result-words';
+import type { MarkValue, ResultCell, ResultSheet } from '../types';
 
 /**
  * The name with the searched parts marked in yellow (the palette's
@@ -72,25 +73,32 @@ export default function ResultsTable({
 }) {
     const { t } = useTranslations();
 
-    const cell = (mark: MarkValue) => {
+    // A mark in its tone (ADR-0039), always with words for what the colour
+    // says: below the pass mark, exempt.
+    const cell = (mark: MarkValue, result: ResultCell) => {
         if (mark === null) {
             return <span className="text-muted-foreground">—</span>;
         }
+        const tone = toneClass(markTone(mark, result, sheet.tones));
         if (mark === 'absent') {
-            return (
-                <span className="font-medium text-destructive-text">
-                    {t('Absent')}
-                </span>
-            );
+            return <span className={tone}>{t('Absent')}</span>;
         }
 
-        return mark < sheet.pass_mark ? (
-            <span className="font-semibold text-destructive-text">
+        return (
+            <span className={tone}>
                 {mark}
-                <span className="sr-only"> ({t('below the pass mark')})</span>
+                {result && !result.passed && (
+                    <span className="sr-only">
+                        {' '}
+                        ({t('below the pass mark')})
+                    </span>
+                )}
+                {result?.exempt && (
+                    <span className="block text-xs font-normal">
+                        {t('Exempt')}
+                    </span>
+                )}
             </span>
-        ) : (
-            mark
         );
     };
 
@@ -128,6 +136,9 @@ export default function ResultsTable({
                                 className="p-2 text-center font-medium"
                             >
                                 <bdi>{subject.name}</bdi>
+                                <span className="block text-xs font-normal text-muted-foreground tabular-nums">
+                                    / {subject.max}
+                                </span>
                             </th>
                         ))}
                         <th scope="col" className="p-2 text-center font-medium">
@@ -137,12 +148,16 @@ export default function ResultsTable({
                             %
                         </th>
                         <th scope="col" className="p-2 text-center font-medium">
-                            {t('Below :mark', {
-                                mark: String(sheet.pass_mark),
-                            })}
+                            {t('Failed subjects')}
                         </th>
                         <th scope="col" className="p-2 text-center font-medium">
                             {t('Absences')}
+                        </th>
+                        <th scope="col" className="p-2 text-center font-medium">
+                            {t('Rank')}
+                        </th>
+                        <th scope="col" className="p-2 text-center font-medium">
+                            {t('Grade')}
                         </th>
                         {action && (
                             <th scope="col" className="p-2 print:hidden">
@@ -179,7 +194,7 @@ export default function ResultsTable({
                                     key={sheet.subjects[i]?.uuid ?? i}
                                     className="p-2 text-center tabular-nums"
                                 >
-                                    {cell(mark)}
+                                    {cell(mark, student.cells[i] ?? null)}
                                 </td>
                             ))}
                             <td className="p-2 text-center font-semibold tabular-nums">
@@ -194,7 +209,7 @@ export default function ResultsTable({
                                 )}
                             </td>
                             <td className="p-2 text-center tabular-nums">
-                                {student.complete
+                                {student.complete && student.percentage !== null
                                     ? student.percentage.toFixed(2)
                                     : '—'}
                             </td>
@@ -203,6 +218,22 @@ export default function ResultsTable({
                             </td>
                             <td className="p-2 text-center tabular-nums">
                                 {student.absences}
+                            </td>
+                            <td
+                                className="p-2 text-center tabular-nums"
+                                data-test="result-rank"
+                            >
+                                {student.rank ?? '—'}
+                            </td>
+                            <td className="p-2 text-center">
+                                {student.band
+                                    ? bandLabel(t, student.band)
+                                    : '—'}
+                                {student.exempt_all && (
+                                    <span className="block text-xs">
+                                        {t('Exempt')}
+                                    </span>
+                                )}
                             </td>
                             {action && (
                                 <td className="p-2 print:hidden">

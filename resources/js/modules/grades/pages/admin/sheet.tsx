@@ -17,7 +17,13 @@ export default function GradesSheet({
     students,
 }: {
     open: boolean;
-    subject: { uuid: string; name: string; stage: number; divided: boolean };
+    subject: {
+        uuid: string;
+        name: string;
+        stage: number;
+        divided: boolean;
+        max: number;
+    };
     section: string;
     students: SheetStudent[];
 }) {

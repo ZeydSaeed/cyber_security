@@ -218,7 +218,7 @@ describe('results', function () {
     it('matches the results worked out by hand', function () {
         $this->actingAs($this->owner)->get('/admin/results?stage=1&section=A')->assertInertia(fn (Assert $page) => $page
             ->component('modules/grades/pages/admin/results')
-            ->where('pass_mark', 50)
+            ->where('pass_percent', 50)
             ->where('subjects.0.name', 'Networks')
             ->has('students', 3)
             ->where('students.0.name', 'Ali Hassan')
@@ -269,8 +269,8 @@ describe('results', function () {
         }
         $reader->close();
 
-        expect($rows[0])->toBe(['Number', 'Name', 'Networks', 'Cryptography', 'Programming', 'Total out of 300', 'Percentage', 'Below 50', 'Absences'])
-            ->and($rows[1])->toBe(['11', 'Ali Hassan', 90, 45, 'Absent', 135, 45, 2, 1])
+        expect($rows[0])->toBe(['Number', 'Name', 'Networks (100)', 'Cryptography (100)', 'Programming (100)', 'Total out of 300', 'Percentage', 'Failed subjects', 'Absences', 'Rank in the section', 'Overall grade', 'Exempt', 'Behaviour', 'Notes'])
+            ->and(array_slice($rows[1], 0, 11))->toBe(['11', 'Ali Hassan', 90, 45, 'Absent', 135, 45, 2, 1, 2, 'Fail'])
             ->and($rows[3][5])->toBe('Incomplete')
             ->and(AuditEvent::query()->where('action', 'grades.results_exported')->sole()->metadata)->toBe(['stage' => 1, 'section' => 'A']);
     });

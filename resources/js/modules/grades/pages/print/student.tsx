@@ -7,25 +7,19 @@ import { useTranslations } from '@/hooks/use-translations';
 import PrintPage from '../../components/print-page';
 import ResultCard from '../../components/result-card';
 import { downloadResultCard } from '../../download-card';
-import type { ResultRow } from '../../types';
+import type { ResultCardData } from '../../types';
 
 /**
  * One student's first-month result card, to print or to save as an image
  * on a phone or a computer (ADR-0034; owner's request, 2026-11-16).
  */
-export default function PrintStudent(card: {
-    stage: number;
-    section: string;
-    divided: boolean;
-    pass_mark: number;
-    subjects: { uuid: string; name: string }[];
-    student: ResultRow;
-    code: string | null;
-}) {
+export default function PrintStudent(
+    card: ResultCardData & { code: string | null },
+) {
     const { t } = useTranslations();
     const { name } = usePage<{ name: string }>().props;
     const [busy, setBusy] = useState(false);
-    const { stage, section, divided, pass_mark, subjects, student } = card;
+    const { student } = card;
 
     const download = async () => {
         setBusy(true);
@@ -66,12 +60,7 @@ export default function PrintStudent(card: {
                     </Button>
                 }
             >
-                <ResultCard
-                    pass_mark={pass_mark}
-                    subjects={subjects}
-                    student={student}
-                    place={{ stage, section, divided, code: card.code }}
-                />
+                <ResultCard card={card} code={card.code} />
             </PrintPage>
         </>
     );
