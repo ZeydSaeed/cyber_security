@@ -2,7 +2,9 @@
 
 namespace App\Modules\Grades\Application\Queries;
 
+use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\EditRequestStatus;
+use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
@@ -58,7 +60,25 @@ final class AccessBoard
             ->orderBy('created_at')
             ->get();
 
+        // Students' appeals waiting for an answer (ADR-0042).
+        $appeals = GradeAppeal::query()
+            ->with(['student:id,full_name,stage,section', 'subject:id,uuid,name'])
+            ->where('status', AppealStatus::Pending->value)
+            ->orderBy('created_at')
+            ->get();
+
         return [
+            'appeals' => array_values($appeals->map(fn (GradeAppeal $appeal): array => [
+                'uuid' => $appeal->uuid,
+                'student' => $appeal->student?->full_name,
+                'stage' => $appeal->student?->stage->value,
+                'section' => $appeal->student?->section->value,
+                'divided' => $appeal->student?->stage->isDivided() ?? false,
+                'subject' => $appeal->subject?->name,
+                'subject_uuid' => $appeal->subject?->uuid,
+                'reason' => $appeal->reason,
+                'created_at' => $appeal->created_at->toIso8601String(),
+            ])->all()),
             'settings' => [
                 'teacher_attempts_per_minute' => $settings->teacher_attempts_per_minute,
                 'teacher_attempts_per_hour' => $settings->teacher_attempts_per_hour,

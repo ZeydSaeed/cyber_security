@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Grades\Http\AccessController;
+use App\Modules\Grades\Http\AppealsController;
 use App\Modules\Grades\Http\GradesAdminController;
 use App\Modules\Grades\Http\ResultsController;
 use App\Modules\Grades\Http\ResultSettingsController;
@@ -46,6 +47,11 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
     Route::middleware('can:grades.manage')->group(function () {
         Route::put('window', [GradesAdminController::class, 'window'])->name('window');
         Route::put('publish', [GradesAdminController::class, 'publish'])->name('publish');
+        Route::put('appeals/{appeal}', [AppealsController::class, 'decide'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('appeal')
+            ->name('appeals.decide');
+        Route::put('publish/section', [GradesAdminController::class, 'publishSection'])->middleware('throttle:60,1')->name('publish.section');
 
         // What a result says and shows (ADR-0039).
         Route::put('results/settings', [ResultSettingsController::class, 'settings'])->middleware('throttle:30,1')->name('results.settings');
@@ -215,5 +221,7 @@ Route::middleware('web')->prefix('student')->name('grades.student.')->group(func
     Route::middleware(StudentSession::class)->group(function () {
         Route::post('logout', [StudentPortalController::class, 'destroy'])->name('logout');
         Route::get('result', [StudentPortalController::class, 'result'])->name('result');
+        // Appealing a mark (ADR-0042).
+        Route::post('appeals', [AppealsController::class, 'store'])->middleware('throttle:10,1')->name('appeals.store');
     });
 });

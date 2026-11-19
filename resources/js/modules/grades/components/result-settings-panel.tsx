@@ -20,6 +20,10 @@ export type ResultSettings = {
     /** When teachers may read their students' results (ADR-0040). */
     teacher_results: 'off' | 'published' | 'always';
     teacher_view: Record<string, boolean>;
+    /** Days to appeal after publication; null: no appeals (ADR-0042). */
+    appeal_days: number | null;
+    /** Flag a student absent from this many subjects; null: no flag. */
+    absence_flag: number | null;
 };
 
 const selectClass =
@@ -180,6 +184,54 @@ export default function ResultSettingsPanel({
                                 )}
                                 error={errors.exempt_overall_percent}
                             />
+                        </fieldset>
+
+                        <fieldset className="grid gap-3 sm:grid-cols-2">
+                            <legend className="mb-2 text-sm font-semibold">
+                                {t('Appeals and absences')}
+                            </legend>
+                            <div className="grid gap-1">
+                                <Label htmlFor="appeal-days">
+                                    {t('Days to appeal after publication')}
+                                </Label>
+                                <Input
+                                    id="appeal-days"
+                                    name="appeal_days"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={90}
+                                    defaultValue={settings.appeal_days ?? ''}
+                                    dir="ltr"
+                                    className="bg-background"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    {t('Empty: students cannot appeal.')}
+                                </p>
+                                <InputError message={errors.appeal_days} />
+                            </div>
+                            <div className="grid gap-1">
+                                <Label htmlFor="absence-flag">
+                                    {t('Flag a student absent from (subjects)')}
+                                </Label>
+                                <Input
+                                    id="absence-flag"
+                                    name="absence_flag"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={50}
+                                    defaultValue={settings.absence_flag ?? ''}
+                                    dir="ltr"
+                                    className="bg-background"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    {t(
+                                        'Shown to the department and the teachers. Empty: no flag.',
+                                    )}
+                                </p>
+                                <InputError message={errors.absence_flag} />
+                            </div>
                         </fieldset>
 
                         <fieldset className="grid gap-3">

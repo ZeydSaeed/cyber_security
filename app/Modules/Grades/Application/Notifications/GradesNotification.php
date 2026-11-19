@@ -13,6 +13,12 @@ class GradesNotification extends Notification
 {
     public const SECTION_COMPLETED = 'grades_section_completed';
 
+    /** A teacher asks to change locked marks (ADR-0042). */
+    public const EDIT_REQUESTED = 'grades_edit_requested';
+
+    /** A student appeals a mark (ADR-0042). */
+    public const APPEAL_SUBMITTED = 'grades_appeal_submitted';
+
     /**
      * @param  array<string, string>  $facts
      */

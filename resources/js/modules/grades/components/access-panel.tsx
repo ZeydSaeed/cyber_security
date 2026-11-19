@@ -2,6 +2,7 @@ import { Form, router } from '@inertiajs/react';
 import { Check, KeyRound, ShieldCheck, X } from 'lucide-react';
 import { useState } from 'react';
 import AccessController from '@/actions/App/Modules/Grades/Http/AccessController';
+import AppealsController from '@/actions/App/Modules/Grades/Http/AppealsController';
 import ConfirmAction from '@/components/confirm-action';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,18 @@ type AccessTeacher = {
 export type AccessBoardProps = {
     settings: AccessSettings;
     teachers: AccessTeacher[];
+    /** Students' appeals waiting for an answer (ADR-0042). */
+    appeals: {
+        uuid: string;
+        student: string | null;
+        stage: number | null;
+        section: string | null;
+        divided: boolean;
+        subject: string | null;
+        subject_uuid: string | null;
+        reason: string;
+        created_at: string;
+    }[];
     requests: {
         uuid: string;
         teacher: string | null;
@@ -591,6 +604,82 @@ function TeacherAccessDialog({
     );
 }
 
+/** A student's appeal: accept or reject, with an answer they read. */
+function AppealRow({
+    appeal,
+}: {
+    appeal: AccessBoardProps['appeals'][number];
+}) {
+    const { t } = useTranslations();
+    const moment = useMoment();
+    const [response, setResponse] = useState('');
+    const decide = (decision: 'accept' | 'reject') =>
+        router.put(
+            AppealsController.decide.url(appeal.uuid),
+            { decision, response },
+            { preserveScroll: true },
+        );
+
+    return (
+        <li className="grid gap-2 rounded-md border p-3" data-test="appeal">
+            <p className="text-sm">
+                <span className="font-medium">
+                    <bdi>{appeal.student}</bdi>
+                </span>{' '}
+                · <bdi>{appeal.subject}</bdi>{' '}
+                {appeal.stage !== null && appeal.section !== null && (
+                    <span className="text-muted-foreground">
+                        {placeLabel(
+                            t,
+                            appeal.stage,
+                            appeal.section,
+                            appeal.divided,
+                        )}
+                    </span>
+                )}
+            </p>
+            <p className="text-sm whitespace-pre-line" dir="auto">
+                {appeal.reason}
+            </p>
+            <p className="text-xs text-muted-foreground">
+                {moment(appeal.created_at)}
+            </p>
+            <div className="grid gap-1">
+                <Label htmlFor={`answer-${appeal.uuid}`} className="text-xs">
+                    {t('Answer to the student')}
+                </Label>
+                <Input
+                    id={`answer-${appeal.uuid}`}
+                    value={response}
+                    onChange={(event) => setResponse(event.target.value)}
+                    maxLength={500}
+                    dir="auto"
+                    className="bg-background"
+                />
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <Button
+                    size="sm"
+                    onClick={() => decide('accept')}
+                    data-test="accept-appeal"
+                >
+                    <Check aria-hidden />
+                    {t('Accept')}
+                </Button>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => decide('reject')}
+                    data-test="reject-appeal"
+                >
+                    <X aria-hidden />
+                    {t('Reject')}
+                </Button>
+            </div>
+        </li>
+    );
+}
+
 /** A request waiting for an answer: approve for some hours, or reject. */
 function RequestRow({
     request,
@@ -714,6 +803,23 @@ export default function AccessPanel({ access }: { access: AccessBoardProps }) {
             </header>
 
             <SettingsForm settings={access.settings} />
+
+            {access.appeals.length > 0 && (
+                <section className="grid gap-2" aria-labelledby="appeals">
+                    <h3
+                        id="appeals"
+                        className="flex items-center gap-2 font-semibold"
+                    >
+                        {t("Students' appeals")}
+                        <Badge>{access.appeals.length}</Badge>
+                    </h3>
+                    <ul className="grid gap-2">
+                        {access.appeals.map((appeal) => (
+                            <AppealRow key={appeal.uuid} appeal={appeal} />
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             {access.requests.length > 0 && (
                 <section className="grid gap-2" aria-labelledby="requests">

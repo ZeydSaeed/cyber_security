@@ -169,6 +169,14 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Approval of marks withdrawn');
         case 'grades.section_approval_cleared':
             return t('Approval cleared by a later change');
+        case 'grades.section_published':
+            return t('One section’s results published');
+        case 'grades.section_unpublished':
+            return t('One section’s results hidden');
+        case 'grades.appeal_submitted':
+            return t('Student appealed a mark');
+        case 'grades.appeal_decided':
+            return t('Appeal answered');
         case 'grades.devices_forgotten':
             return t('Remembered devices forgotten');
         case 'grades.device_token_mismatch':

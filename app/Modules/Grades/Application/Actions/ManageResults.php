@@ -34,8 +34,15 @@ class ManageResults
      * @param  array<string, bool>  $options  option => shown
      * @param  array<string, string>  $tones  what => tone
      */
-    public function settings(User $actor, int $passPercent, ?int $exemptSubject, ?int $exemptOverall, array $bands, array $options, array $tones): GradeSettings
+    public function settings(User $actor, int $passPercent, ?int $exemptSubject, ?int $exemptOverall, array $bands, array $options, array $tones, ?int $appealDays = null, ?int $absenceFlag = null): GradeSettings
     {
+        if ($appealDays !== null && ($appealDays < 1 || $appealDays > 90)) {
+            throw new DomainRuleViolation(__('Give a number of days from 1 to 90.'), 'appeal_days');
+        }
+        if ($absenceFlag !== null && ($absenceFlag < 1 || $absenceFlag > 50)) {
+            throw new DomainRuleViolation(__('Give a number of subjects from 1 to 50.'), 'absence_flag');
+        }
+
         foreach (['pass_percent' => $passPercent, 'exempt_subject_percent' => $exemptSubject, 'exempt_overall_percent' => $exemptOverall] as $field => $percent) {
             if ($percent !== null && ($percent < 1 || $percent > 100)) {
                 throw new DomainRuleViolation(__('Give a percentage from 1 to 100.'), $field);
@@ -60,6 +67,9 @@ class ManageResults
             'grade_bands' => $bands,
             'result_options' => ResultDisplay::options($options),
             'mark_tones' => ResultDisplay::tones($tones),
+            // Appeals and the absence flag (ADR-0042).
+            'appeal_days' => $appealDays,
+            'absence_flag' => $absenceFlag,
         ];
 
         return DB::transaction(function () use ($actor, $values): GradeSettings {
@@ -74,6 +84,8 @@ class ManageResults
                 'grade_bands' => $settings->bands()->minimums,
                 'result_options' => $settings->options(),
                 'mark_tones' => $settings->tones(),
+                'appeal_days' => $settings->appeal_days,
+                'absence_flag' => $settings->absence_flag,
             ];
             $changes = [];
             foreach ($values as $field => $value) {

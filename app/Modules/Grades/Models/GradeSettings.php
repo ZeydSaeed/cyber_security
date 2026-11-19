@@ -33,6 +33,8 @@ use InvalidArgumentException;
  * @property array<string, mixed>|null $result_options
  * @property array<string, mixed>|null $mark_tones
  * @property TeacherResults $teacher_results
+ * @property int|null $appeal_days
+ * @property int|null $absence_flag
  * @property array<string, mixed>|null $teacher_view
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -69,6 +71,8 @@ class GradeSettings extends Model
             'result_options' => 'array',
             'mark_tones' => 'array',
             'teacher_results' => TeacherResults::class,
+            'appeal_days' => 'integer',
+            'absence_flag' => 'integer',
             'teacher_view' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

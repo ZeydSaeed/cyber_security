@@ -8,6 +8,7 @@ use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
@@ -86,7 +87,7 @@ final class TeacherSheets
                         'section' => $section->value,
                         'students' => (int) ($students[$subject->stage->value.'|'.$section->value] ?? 0),
                         'entered' => (int) ($entered[$subject->id.'|'.$section->value] ?? 0),
-                        'access' => self::describe(SectionAccess::policy($teacher, $row, $settings, $window, isset($approved[$subject->id.'|'.$section->value]))),
+                        'access' => self::describe(SectionAccess::policy($teacher, $row, $settings, $window, isset($approved[$subject->id.'|'.$section->value]), $window->publishedFor($subject->stage, $section))),
                     ];
                 }, $subject->stage->sections()))),
             ])->all()),
@@ -131,6 +132,21 @@ final class TeacherSheets
             'approved_at' => $approval?->approved_at->toIso8601String(),
             // The teacher's access to this section (null: the owner's sheet).
             'access' => $policy === null ? null : self::describe($policy),
+            // Students' appeals of this subject in this section (ADR-0042).
+            // None before publication, so not read then.
+            'appeals' => $teacher === null || ! ($policy->published ?? false) ? [] : array_values(GradeAppeal::query()
+                ->where('subject_id', $subject->id)
+                ->where('period', $period->value)
+                ->whereIn('student_id', $students->pluck('id'))
+                ->orderByDesc('id')
+                ->get(['student_id', 'reason', 'status', 'response', 'created_at'])
+                ->map(fn (GradeAppeal $appeal): array => [
+                    'student' => (string) $students->firstWhere('id', $appeal->student_id)?->full_name,
+                    'reason' => $appeal->reason,
+                    'status' => $appeal->status->value,
+                    'response' => $appeal->response,
+                    'created_at' => $appeal->created_at->toIso8601String(),
+                ])->all()),
             'request' => $request === null ? null : [
                 'status' => $request->status->value,
                 'reason' => $request->reason,
@@ -147,6 +163,10 @@ final class TeacherSheets
                 'mark' => $marks->get($student->id)?->value()->toScalar(),
                 // A mark past its editing time (timed mode, ADR-0037).
                 'locked' => $policy !== null && ($row = $marks->get($student->id)) !== null && ! $policy->canChange($row->created_at),
+                // When a mark still changeable locks (timed mode; ADR-0042 warns before).
+                'locks_at' => $policy !== null && ($row = $marks->get($student->id)) !== null && $policy->canChange($row->created_at) && ($until = $policy->editableUntil($row->created_at)) !== null
+                    ? date(DATE_ATOM, $until)
+                    : null,
             ])->all()),
         ];
     }

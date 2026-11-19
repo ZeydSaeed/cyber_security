@@ -11,7 +11,7 @@ import type { AccessBoardProps } from '../../components/access-panel';
 import CopyLink from '../../components/copy-link';
 import ResultSettingsPanel from '../../components/result-settings-panel';
 import type { ResultSettings } from '../../components/result-settings-panel';
-import { sectionLabel, stageLabel } from '../../place';
+import { placeLabel, sectionLabel, stageLabel } from '../../place';
 
 type Stage = {
     stage: number;
@@ -50,6 +50,8 @@ export default function GradesOverview({
         published: boolean;
         opened_at: string | null;
         closed_at: string | null;
+        /** Sections published on their own (ADR-0042): "stage|section". */
+        sections_published: string[];
     };
     stages: Stage[];
     teacherLink: string;
@@ -190,6 +192,64 @@ export default function GradesOverview({
                                     {t('Publish the results')}
                                 </Button>
                             ))}
+                        {/* One section at a time (ADR-0042), while not all are. */}
+                        {canManage && !window.published && (
+                            <div
+                                className="flex flex-wrap gap-2"
+                                data-test="section-publication"
+                            >
+                                {stages.flatMap((stage) =>
+                                    Object.keys(stage.students).map(
+                                        (section) => {
+                                            const shown =
+                                                window.sections_published.includes(
+                                                    `${stage.stage}|${section}`,
+                                                );
+
+                                            return (
+                                                <Button
+                                                    key={`${stage.stage}${section}`}
+                                                    size="sm"
+                                                    variant={
+                                                        shown
+                                                            ? 'default'
+                                                            : 'outline'
+                                                    }
+                                                    disabled={
+                                                        window.open && !shown
+                                                    }
+                                                    aria-pressed={shown}
+                                                    onClick={() =>
+                                                        put(
+                                                            GradesAdminController.publishSection.url(),
+                                                            {
+                                                                stage: String(
+                                                                    stage.stage,
+                                                                ),
+                                                                section,
+                                                                published:
+                                                                    !shown,
+                                                            },
+                                                        )
+                                                    }
+                                                    data-test="publish-section"
+                                                >
+                                                    {placeLabel(
+                                                        t,
+                                                        stage.stage,
+                                                        section,
+                                                        stage.divided,
+                                                    )}
+                                                    {shown
+                                                        ? ` · ${t('Published')}`
+                                                        : ''}
+                                                </Button>
+                                            );
+                                        },
+                                    ),
+                                )}
+                            </div>
+                        )}
                     </div>
                 </section>
 

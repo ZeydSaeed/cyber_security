@@ -40,6 +40,8 @@ class ResultSettingsController
             'options.*' => [Rule::in(array_keys(ResultDisplay::OPTIONS))],
             'tones' => ['required', 'array:'.implode(',', array_keys(ResultDisplay::TONED))],
             'tones.*' => ['required', Rule::in(ResultDisplay::TONES)],
+            'appeal_days' => ['nullable', 'integer', 'min:1', 'max:90'],
+            'absence_flag' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         // The options come as the list of those ticked.
@@ -57,6 +59,8 @@ class ResultSettingsController
             array_map('intval', (array) $request->input('bands')),
             $options,
             array_map('strval', (array) $request->input('tones')),
+            $request->filled('appeal_days') ? $request->integer('appeal_days') : null,
+            $request->filled('absence_flag') ? $request->integer('absence_flag') : null,
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Result settings saved.')]);
 

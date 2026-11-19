@@ -53,6 +53,8 @@ export type SheetStudent = {
     mark: MarkValue;
     /** Past its editing time (timed mode): shown, not changeable. */
     locked?: boolean;
+    /** When a still-changeable mark locks (timed mode, ADR-0042). */
+    locks_at?: string | null;
 };
 
 /** Who is signed in on a teacher's or student's page, and how to leave. */
@@ -142,6 +144,8 @@ export type ResultRow = {
     exempt_all: boolean | null;
     behaviour: string | null;
     notes: string | null;
+    /** Absent from as many subjects as the owner flags (ADR-0042). */
+    frequent_absence?: boolean | null;
 };
 
 /** What every sheet and card carries besides its students. */

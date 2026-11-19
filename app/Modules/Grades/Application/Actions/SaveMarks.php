@@ -246,7 +246,7 @@ class SaveMarks
             ->where('section', $section->value)
             ->where('period', $window->period->value)
             ->exists();
-        $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approved);
+        $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approved, $window->publishedFor($subject->stage, $section));
 
         if (! $policy->canWrite()) {
             throw new DomainRuleViolation(match (true) {

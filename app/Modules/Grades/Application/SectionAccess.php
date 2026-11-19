@@ -28,7 +28,10 @@ final class SectionAccess
         return self::mode($teacher, $row, $settings) === TeacherAccess::Blocked;
     }
 
-    public static function policy(Teacher $teacher, SubjectTeacher $row, GradeSettings $settings, GradePeriod $period, bool $approved = false): EditPolicy
+    /**
+     * @param  bool|null  $published  whether this section's results are published (ADR-0042); null: the whole period's
+     */
+    public static function policy(Teacher $teacher, SubjectTeacher $row, GradeSettings $settings, GradePeriod $period, bool $approved = false, ?bool $published = null): EditPolicy
     {
         return new EditPolicy(
             approved: $approved,
@@ -36,7 +39,7 @@ final class SectionAccess
             editHours: $teacher->edit_hours ?? $settings->teacher_edit_hours,
             grantUntil: $row->edit_until,
             windowOpen: $period->isOpen(),
-            published: $period->isPublished(),
+            published: $published ?? $period->isPublished(),
             now: now(),
         );
     }

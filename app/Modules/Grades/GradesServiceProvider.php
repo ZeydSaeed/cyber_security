@@ -3,6 +3,7 @@
 namespace App\Modules\Grades;
 
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
 use App\Modules\Grades\Application\Jobs\NotifySectionCompleted;
 use App\Modules\Grades\Application\Metrics\GradesMetrics;
 use App\Modules\Grades\Application\Queries\GradesOverviewQuery;
@@ -11,6 +12,7 @@ use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Contracts\GradesOverview;
 use App\Modules\Grades\Domain\ResultCalculator;
 use App\Modules\Grades\Http\StudentsTable;
+use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\GradeSettings;
@@ -53,6 +55,7 @@ class GradesServiceProvider extends ServiceProvider
         config(['platform.outbox.handlers' => [
             ...(array) config('platform.outbox.handlers'),
             SaveMarks::TOPIC => NotifySectionCompleted::class,
+            NotifyGradesManagers::TOPIC => NotifyGradesManagers::class,
         ]]);
 
         $this->app->singleton(TeacherCodes::class);
@@ -88,6 +91,7 @@ class GradesServiceProvider extends ServiceProvider
             GradeSettings::MORPH => GradeSettings::class,
             GradeEditRequest::MORPH => GradeEditRequest::class,
             SubjectTeacher::MORPH => SubjectTeacher::class,
+            GradeAppeal::MORPH => GradeAppeal::class,
         ]);
     }
 }

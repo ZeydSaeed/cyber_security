@@ -40,6 +40,20 @@ export function notificationText(t: Translate, data: NotificationData): string {
                     section: data.section ?? '',
                 },
             );
+        case 'grades_edit_requested':
+            return t(
+                ':teacher asks to change the marks of “:subject”, section :section.',
+                {
+                    teacher: data.teacher ?? '',
+                    subject: data.subject ?? '',
+                    section: data.section ?? '',
+                },
+            );
+        case 'grades_appeal_submitted':
+            return t(':student appeals the mark of “:subject”.', {
+                student: data.student ?? '',
+                subject: data.subject ?? '',
+            });
         default:
             return t('Something changed in your account.');
     }

@@ -52,6 +52,7 @@ final class ResultSheets
         $sheet = $this->section($student->stage, $student->section, $period);
         // A card has no section figures.
         unset($sheet['stats']);
+        unset($sheet['absence_flag']);
         $row = null;
         foreach ($sheet['students'] as $candidate) {
             if ($candidate['uuid'] === $student->uuid) {
@@ -246,7 +247,11 @@ final class ResultSheets
         $rows = [];
         foreach ($students as $student) {
             $note = $notes->get($student->id);
-            $rows[] = $this->row($student, $results[$student->id], $ranks[$student->id], $note);
+            $rows[] = [
+                ...$this->row($student, $results[$student->id], $ranks[$student->id], $note),
+                // Absent from as many subjects as the owner flags, or more (ADR-0042).
+                'frequent_absence' => $settings->absence_flag !== null && $results[$student->id]->absences >= $settings->absence_flag,
+            ];
         }
 
         return [
@@ -255,6 +260,7 @@ final class ResultSheets
             'divided' => $stage->isDivided(),
             'pass_percent' => $settings->pass_percent,
             'exempt_overall' => $settings->exempt_overall_percent,
+            'absence_flag' => $settings->absence_flag,
             'options' => $settings->options(),
             'tones' => $settings->tones(),
             'subjects' => array_values($subjects->map(function (Subject $subject) use ($scales, $teaching): array {

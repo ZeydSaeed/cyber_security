@@ -48,7 +48,8 @@ class TeacherMarksController
         $row = $this->ensureOwn($teacher, $subject, $section, $settings);
         // Read once, for the policy and the page (ADR-0041).
         $approval = SectionApproval::find($subject, Section::from($section), Period::Month1);
-        $policy = SectionAccess::policy($teacher, $row, $settings, GradePeriod::for(Period::Month1), $approval !== null);
+        $window = GradePeriod::for(Period::Month1);
+        $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approval !== null, $window->publishedFor($subject->stage, Section::from($section)));
 
         return Inertia::render('modules/grades/pages/teacher/section', [
             'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],

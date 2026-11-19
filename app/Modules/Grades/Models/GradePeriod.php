@@ -3,6 +3,8 @@
 namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Domain\Period;
+use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\WindowStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
@@ -73,9 +75,50 @@ class GradePeriod extends Model
         return $this->status === WindowStatus::Open;
     }
 
-    /** Whether students may see the results (PublishResults). */
+    /** Whether every section's results are published (PublishResults). */
     public function isPublished(): bool
     {
         return $this->results_published_at !== null;
+    }
+
+    /** @var array<string, CarbonImmutable>|null "stage|section" => published at, read once */
+    private ?array $sections = null;
+
+    /**
+     * The sections published on their own (ADR-0042).
+     *
+     * @return array<string, CarbonImmutable>
+     */
+    public function publishedSections(): array
+    {
+        // None while mark entry is open: publishing needs it closed, and
+        // opening it needs every section hidden (ChangeEntryWindow).
+        if ($this->isOpen()) {
+            return $this->sections = [];
+        }
+
+        return $this->sections ??= SectionPublication::query()
+            ->where('period', $this->period->value)
+            ->get(['stage', 'section', 'published_at'])
+            ->mapWithKeys(fn (SectionPublication $row): array => [$row->stage->value.'|'.$row->section->value => $row->published_at])
+            ->all();
+    }
+
+    /** When one section's results reached its students (null: not yet). */
+    public function publishedAtFor(Stage $stage, Section $section): ?CarbonImmutable
+    {
+        return $this->results_published_at ?? ($this->publishedSections()[$stage->value.'|'.$section->value] ?? null);
+    }
+
+    /** Whether one section's students may see their results (ADR-0042). */
+    public function publishedFor(Stage $stage, Section $section): bool
+    {
+        return $this->publishedAtFor($stage, $section) !== null;
+    }
+
+    /** Whether any section's results are published. */
+    public function anyPublished(): bool
+    {
+        return $this->isPublished() || $this->publishedSections() !== [];
     }
 }

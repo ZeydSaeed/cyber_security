@@ -23,6 +23,7 @@ export default function TeacherSection({
     access,
     request,
     approved_at,
+    appeals = [],
 }: {
     subject: {
         uuid: string;
@@ -37,8 +38,22 @@ export default function TeacherSection({
     request: EditRequest | null;
     /** When the teacher approved these marks; null: not approved. */
     approved_at: string | null;
+    /** Students' appeals of this subject in this section (ADR-0042). */
+    appeals?: {
+        student: string;
+        reason: string;
+        status: 'pending' | 'accepted' | 'rejected';
+        response: string | null;
+        created_at: string;
+    }[];
 }) {
     const { t } = useTranslations();
+    // Marks that lock within a day (timed mode): a warning first (ADR-0042).
+    const soon = students.filter(
+        (student) =>
+            student.locks_at &&
+            new Date(student.locks_at).getTime() - Date.now() < 86_400_000,
+    ).length;
     const complete =
         students.length > 0 &&
         students.every((student) => student.mark !== null);
@@ -72,6 +87,18 @@ export default function TeacherSection({
                             subject={subject.uuid}
                             section={section}
                         />
+                        {soon > 0 && (
+                            <p
+                                role="status"
+                                className="mb-4 rounded-md border border-warning bg-warning/15 p-3 text-sm"
+                                data-test="locks-soon"
+                            >
+                                {t(
+                                    ':count marks lock within a day. Check them now.',
+                                    { count: String(soon) },
+                                )}
+                            </p>
+                        )}
                         {approved_at === null &&
                             access.can_write &&
                             complete && (
@@ -101,6 +128,42 @@ export default function TeacherSection({
                     </>
                 }
             />
+            {appeals.length > 0 && (
+                <section
+                    className="mt-8 grid gap-2"
+                    aria-labelledby="section-appeals"
+                    data-test="section-appeals"
+                >
+                    <h2 id="section-appeals" className="font-semibold">
+                        {t("Students' appeals")}
+                    </h2>
+                    <ul className="grid gap-2">
+                        {appeals.map((appeal, i) => (
+                            <li
+                                key={`${appeal.created_at}-${i}`}
+                                className="rounded-md border bg-card p-3 text-sm"
+                            >
+                                <p className="font-medium">
+                                    <bdi>{appeal.student}</bdi> ·{' '}
+                                    <span className="text-muted-foreground">
+                                        {appeal.status === 'pending'
+                                            ? t('Waiting for an answer')
+                                            : appeal.status === 'accepted'
+                                              ? t('Accepted')
+                                              : t('Rejected')}
+                                    </span>
+                                </p>
+                                <p
+                                    className="mt-1 font-normal whitespace-pre-line"
+                                    dir="auto"
+                                >
+                                    {appeal.reason}
+                                </p>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
         </>
     );
 }

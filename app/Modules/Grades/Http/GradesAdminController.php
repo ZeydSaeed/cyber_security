@@ -70,6 +70,8 @@ class GradesAdminController
             // What teachers see of their students' results (ADR-0040).
             'teacher_results' => $settings->teacher_results->value,
             'teacher_view' => $settings->teacherView(),
+            'appeal_days' => $settings->appeal_days,
+            'absence_flag' => $settings->absence_flag,
         ];
     }
 
@@ -82,6 +84,24 @@ class GradesAdminController
         Inertia::flash('toast', ['type' => 'success', 'message' => $target === WindowStatus::Open
             ? __('Mark entry is open. Teachers can enter marks.')
             : __('Mark entry is closed. Teachers can no longer change marks.')]);
+
+        return back();
+    }
+
+    /** Shows or hides one section's results (ADR-0042). */
+    public function publishSection(Request $request, PublishResults $publish, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate([
+            'stage' => ['required', Rule::enum(Stage::class)],
+            'section' => ['required', Rule::enum(Section::class)],
+            'published' => ['required', 'boolean'],
+        ]);
+        $shown = $request->boolean('published');
+
+        $publish->section($user, Period::Month1, Stage::from($request->integer('stage')), Section::from((string) $request->string('section')), $shown);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $shown
+            ? __('This section\'s results are published to its students.')
+            : __('This section\'s results are hidden from its students.')]);
 
         return back();
     }

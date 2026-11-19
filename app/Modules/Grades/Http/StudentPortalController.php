@@ -2,12 +2,14 @@
 
 namespace App\Modules\Grades\Http;
 
+use App\Modules\Grades\Application\Actions\ManageAppeals;
 use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\RememberedDevices;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\StudentAccess;
+use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradePeriod;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
@@ -153,7 +155,8 @@ class StudentPortalController
             throw new NotFoundHttpException;
         }
 
-        $published = GradePeriod::for(Period::Month1)->isPublished();
+        // This student's section, or all (ADR-0042).
+        $published = GradePeriod::for(Period::Month1)->publishedFor($student->stage, $student->section);
 
         return Inertia::render('modules/grades/pages/student/result', [
             'portal' => ['name' => $student->full_name, 'logout' => route('grades.student.logout')],
@@ -161,6 +164,19 @@ class StudentPortalController
             // Nothing of the marks before the owner publishes them.
             // Only what the owner chose to show (ADR-0039).
             'card' => $published ? $sheets->forStudent($student) : null,
+            // Appeals (ADR-0042): until when, and the student's own.
+            'appealUntil' => $published ? ManageAppeals::openUntil($student, GradeSettings::current(), GradePeriod::for(Period::Month1))?->toIso8601String() : null,
+            'appeals' => $published ? array_values(GradeAppeal::query()->with('subject:id,name')
+                ->where('student_id', $student->id)->where('period', Period::Month1->value)
+                ->orderByDesc('id')->get()
+                ->map(fn (GradeAppeal $appeal): array => [
+                    'uuid' => $appeal->uuid,
+                    'subject' => $appeal->subject?->name,
+                    'reason' => $appeal->reason,
+                    'status' => $appeal->status->value,
+                    'response' => $appeal->response,
+                    'created_at' => $appeal->created_at->toIso8601String(),
+                ])->all()) : [],
         ]);
     }
 }

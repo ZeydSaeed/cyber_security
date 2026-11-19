@@ -57,7 +57,9 @@ class TeacherResultsController
         }
         ksort($places);
 
-        $allowed = $settings->teacher_results->allows(GradePeriod::for(Period::Month1)->isPublished());
+        $window = GradePeriod::for(Period::Month1);
+        // Allowed at all: always, or once any section is published (ADR-0042).
+        $allowed = $settings->teacher_results->allows($window->anyPublished());
 
         if (! $allowed || $places === []) {
             return Inertia::render('modules/grades/pages/teacher/results', [
@@ -71,6 +73,16 @@ class TeacherResultsController
         // The place asked for, or the first; one that is not theirs is not found.
         $asked = $request->filled('stage') ? $request->integer('stage').$request->string('section') : array_key_first($places);
         $place = $places[$asked] ?? throw new NotFoundHttpException;
+
+        // Once published: this section's results, not another's.
+        if (! $settings->teacher_results->allows($window->publishedFor(Stage::from($place['stage']), Section::from($place['section'])))) {
+            return Inertia::render('modules/grades/pages/teacher/results', [
+                'portal' => $portal,
+                'allowed' => false,
+                'places' => array_values(array_map(fn (array $place): array => array_diff_key($place, ['subjects' => true]), $places)),
+                'sheet' => null,
+            ]);
+        }
 
         $sheet = $this->sheets->forTeacher(Stage::from($place['stage']), Section::from($place['section']), $place['subjects'], $settings->teacherView());
         $this->audit->record('grades.teacher_results_viewed', $teacher, ['stage' => $place['stage'], 'section' => $place['section']], withoutActor: true);

@@ -2,6 +2,8 @@
 
 namespace App\Modules\Grades\Application\Actions;
 
+use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
+use App\Modules\Grades\Application\Notifications\GradesNotification;
 use App\Modules\Grades\Application\SectionAccess;
 use App\Modules\Grades\Domain\EditRequestStatus;
 use App\Modules\Grades\Domain\Period;
@@ -13,6 +15,7 @@ use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
+use App\Platform\Outbox\Outbox;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 
@@ -28,7 +31,7 @@ class RequestEdit
 
     public const MAX_REASON = 500;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(private readonly AuditLogger $audit, private readonly Outbox $outbox) {}
 
     public function handle(Teacher $teacher, Subject $subject, Section $section, Period $period, string $reason): GradeEditRequest
     {
@@ -79,6 +82,12 @@ class RequestEdit
                 'teacher_name' => $teacher->name,
                 'section' => $section->value,
             ], withoutActor: true);
+
+            // The department hears of it (ADR-0042).
+            $this->outbox->record(NotifyGradesManagers::TOPIC, [
+                'kind' => GradesNotification::EDIT_REQUESTED,
+                'facts' => ['teacher' => $teacher->name, 'subject' => $subject->name, 'stage' => (string) $subject->stage->value, 'section' => $section->value],
+            ]);
 
             return $request;
         }, 3);

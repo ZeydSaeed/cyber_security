@@ -225,6 +225,14 @@ export default function ResultsTable({
                                     terms={terms}
                                     current={current === student.uuid}
                                 />
+                                {student.frequent_absence && (
+                                    <span
+                                        className="block text-xs font-normal text-warning-text"
+                                        data-test="frequent-absence"
+                                    >
+                                        {t('Frequently absent')}
+                                    </span>
+                                )}
                             </th>
                             {student.marks.map((mark, i) => (
                                 <td

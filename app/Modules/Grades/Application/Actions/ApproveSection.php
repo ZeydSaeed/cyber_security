@@ -48,7 +48,8 @@ class ApproveSection
                 throw new DomainRuleViolation(__('These marks are already approved.'), 'approval');
             }
 
-            $policy = SectionAccess::policy($fresh, $row, $settings, GradePeriod::for($period));
+            $window = GradePeriod::for($period);
+            $policy = SectionAccess::policy($fresh, $row, $settings, $window, false, $window->publishedFor($locked->stage, $section));
             if (! $policy->canWrite()) {
                 throw new DomainRuleViolation(__('These marks cannot be changed now, so they cannot be approved.'), 'approval');
             }

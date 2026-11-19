@@ -94,6 +94,8 @@ final class GradesBoard
             'window' => [
                 'open' => $window->status === WindowStatus::Open,
                 'published' => $window->isPublished(),
+                // Sections published on their own (ADR-0042): "stage|section".
+                'sections_published' => array_keys($window->publishedSections()),
                 'opened_at' => $window->opened_at?->toIso8601String(),
                 'closed_at' => $window->closed_at?->toIso8601String(),
             ],
