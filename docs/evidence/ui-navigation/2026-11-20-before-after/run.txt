@@ -1,0 +1,54 @@
+before repeat 0 dwell 0: 17 visits
+before repeat 0 dwell 300: 17 visits
+before repeat 0 scroll x1: 244 frames on /admin/students
+before repeat 0 scroll x4: 232 frames on /admin/students
+after-transition repeat 0 dwell 0: 17 visits
+after-transition repeat 0 dwell 300: 17 visits
+after-transition repeat 0 scroll x1: 242 frames on /admin/students
+after-transition repeat 0 scroll x4: 231 frames on /admin/students
+after-no-transition repeat 0 dwell 0: 17 visits
+after-no-transition repeat 0 dwell 300: 17 visits
+after-no-transition repeat 0 scroll x1: 241 frames on /admin/students
+after-no-transition repeat 0 scroll x4: 245 frames on /admin/students
+before repeat 1 dwell 0: 17 visits
+before repeat 1 dwell 300: 17 visits
+before repeat 1 scroll x1: 242 frames on /admin/students
+before repeat 1 scroll x4: 224 frames on /admin/students
+after-transition repeat 1 dwell 0: 17 visits
+after-transition repeat 1 dwell 300: 17 visits
+after-transition repeat 1 scroll x1: 243 frames on /admin/students
+after-transition repeat 1 scroll x4: 243 frames on /admin/students
+after-no-transition repeat 1 dwell 0: 17 visits
+after-no-transition repeat 1 dwell 300: 17 visits
+after-no-transition repeat 1 scroll x1: 242 frames on /admin/students
+after-no-transition repeat 1 scroll x4: 243 frames on /admin/students
+before repeat 2 dwell 0: 17 visits
+before repeat 2 dwell 300: 17 visits
+before repeat 2 scroll x1: 241 frames on /admin/students
+before repeat 2 scroll x4: 243 frames on /admin/students
+after-transition repeat 2 dwell 0: 17 visits
+after-transition repeat 2 dwell 300: 17 visits
+after-transition repeat 2 scroll x1: 242 frames on /admin/students
+after-transition repeat 2 scroll x4: 241 frames on /admin/students
+after-no-transition repeat 2 dwell 0: 17 visits
+after-no-transition repeat 2 dwell 300: 17 visits
+after-no-transition repeat 2 scroll x1: 241 frames on /admin/students
+after-no-transition repeat 2 scroll x4: 244 frames on /admin/students
+
+| Target | Pointer rests | Visits | Shown median | Shown p90 | Settled median | Settled p90 | With transition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| before | 0 ms | 51 | 137.4 ms | 207.3 ms | 137.4 ms | 207.3 ms | 0 |
+| before | 300 ms | 51 | 44.5 ms | 125.5 ms | 44.5 ms | 125.5 ms | 0 |
+| after-transition | 0 ms | 51 | 230.1 ms | 325.5 ms | 496.0 ms | 598.6 ms | 51 |
+| after-transition | 300 ms | 51 | 110.9 ms | 187.9 ms | 374.2 ms | 465.4 ms | 51 |
+| after-no-transition | 0 ms | 51 | 116.2 ms | 228.3 ms | 116.2 ms | 228.4 ms | 0 |
+| after-no-transition | 300 ms | 51 | 43.5 ms | 123.0 ms | 43.5 ms | 123.1 ms | 0 |
+
+| Target | CPU | Page | Frames | Mean fps | Frame p95 | Frames > 33 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| before | full speed | /admin/students | 727 | 60.0 | 16.7 ms | 0 (0.0 %) |
+| before | 4x slower | /admin/students | 699 | 57.8 | 16.7 ms | 4 (0.6 %) |
+| after-transition | full speed | /admin/students | 727 | 60.0 | 16.7 ms | 0 (0.0 %) |
+| after-transition | 4x slower | /admin/students | 715 | 59.0 | 16.7 ms | 1 (0.1 %) |
+| after-no-transition | full speed | /admin/students | 724 | 59.9 | 16.7 ms | 0 (0.0 %) |
+| after-no-transition | 4x slower | /admin/students | 732 | 59.8 | 16.7 ms | 1 (0.1 %) |

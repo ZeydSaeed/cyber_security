@@ -6,7 +6,7 @@ import { initializeTheme } from '@/hooks/use-appearance';
 // Listens from the start: dialogs in lazy chunks need the click that
 // opened them (lib/opener.ts).
 import '@/lib/opener';
-import { visitOptions, warmPageChunks } from '@/lib/navigation';
+import { warmPageChunks } from '@/lib/navigation';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -29,10 +29,9 @@ const pagePath = (name: string) =>
 warmPageChunks((name) => void pages[pagePath(name)]?.().catch(() => null));
 
 void createInertiaApp({
-    defaults: {
-        // Page-to-page visits cross-fade; in-place updates do not.
-        visitOptions,
-    },
+    // No page-to-page view transitions: measured 2026-11-20, they showed
+    // each page ~90 ms later and settled it ~300 ms later
+    // (docs/evidence/ui-navigation/2026-11-20-before-after).
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: async (name) => {
         const load = pages[pagePath(name)];

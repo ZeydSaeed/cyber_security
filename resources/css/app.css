@@ -200,21 +200,6 @@
             scroll-behavior: auto !important;
             transition-duration: 0.01ms !important;
         }
-
-        /* No cross-fade between pages either (lib/navigation.ts). */
-        ::view-transition-group(*),
-        ::view-transition-old(*),
-        ::view-transition-new(*) {
-            animation: none !important;
-        }
-    }
-
-    /* Page-to-page cross-fade (lib/navigation.ts): short, so a visit
-       feels quicker, not slower. */
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-        animation-duration: 160ms;
-        animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
     }
 
     /* Taps act at once on touch screens: no double-tap-to-zoom wait and
