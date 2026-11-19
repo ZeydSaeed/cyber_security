@@ -28,6 +28,24 @@ final class ResultDisplay
         'notes' => false,
     ];
 
+    /**
+     * What a teacher sees of their own students' results (ADR-0040) =>
+     * shown by default. Their own subjects' marks are always shown.
+     */
+    public const TEACHER_OPTIONS = [
+        'other_subjects' => false,
+        'total' => true,
+        'percentage' => true,
+        'rank' => false,
+        'failed_count' => true,
+        'mark_grade' => false,
+        'overall_grade' => false,
+        'exemption' => false,
+        'student_status' => false,
+        'behaviour' => false,
+        'notes' => false,
+    ];
+
     /** The status tones a mark may take. */
     public const TONES = ['none', 'success', 'warning', 'info', 'danger'];
 
@@ -49,6 +67,20 @@ final class ResultDisplay
     {
         $options = [];
         foreach (self::OPTIONS as $key => $default) {
+            $options[$key] = is_bool($saved[$key] ?? null) ? $saved[$key] : $default;
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $saved
+     * @return array<string, bool>
+     */
+    public static function teacherOptions(?array $saved): array
+    {
+        $options = [];
+        foreach (self::TEACHER_OPTIONS as $key => $default) {
             $options[$key] = is_bool($saved[$key] ?? null) ? $saved[$key] : $default;
         }
 

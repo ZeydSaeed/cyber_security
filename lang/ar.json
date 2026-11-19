@@ -795,5 +795,18 @@
     "The pass mark is from 0 to the maximum.": "درجة النجاح من 0 إلى الدرجة العظمى.",
     "The result card": "بطاقة النتيجة",
     "Theoretical or practical": "نظري أو عملي",
-    "Very good": "جيد جدًا"
+    "Very good": "جيد جدًا",
+    "A teacher sees only the sections they teach, and always the marks of their own subjects.": "يرى المدرس الشعب التي يدرّسها فقط، ويرى دائمًا درجات مواده هو.",
+    "Always, while marks come in too": "دائمًا، حتى أثناء إدخال الدرجات",
+    "Marks of the other subjects": "درجات المواد الأخرى",
+    "No sections yet": "لا توجد شعب بعد",
+    "Once published to the students": "بعد نشرها للطلاب",
+    "Save what teachers see": "حفظ ما يراه المدرسون",
+    "Teacher read their students' results": "اطلاع مدرس على نتائج طلابه",
+    "Teachers may read the results": "اطلاع المدرسين على النتائج",
+    "The department has not opened the results to teachers yet.": "لم يتح القسم النتائج للمدرسين بعد.",
+    "What teachers see of results changed": "تغيير ما يراه المدرسون من النتائج",
+    "What teachers see of their students' results": "ما يراه المدرسون من نتائج طلابهم",
+    "What teachers see was saved.": "حُفظ ما يراه المدرسون.",
+    "Your students' results": "نتائج طلابك"
 }

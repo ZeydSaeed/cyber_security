@@ -159,6 +159,10 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Result settings changed');
         case 'grades.student_note_saved':
             return t('Behaviour or notes saved');
+        case 'grades.teacher_view_changed':
+            return t('What teachers see of results changed');
+        case 'grades.teacher_results_viewed':
+            return t("Teacher read their students' results");
         case 'grades.devices_forgotten':
             return t('Remembered devices forgotten');
         case 'grades.device_token_mismatch':

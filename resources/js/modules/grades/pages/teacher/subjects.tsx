@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMarksController';
+import TeacherResultsController from '@/actions/App/Modules/Grades/Http/TeacherResultsController';
 import EmptyState from '@/components/empty-state';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAccessLabel } from '../../components/access-notice';
@@ -26,6 +27,20 @@ export default function TeacherSubjects({
         <>
             <Head title={t('Your subjects')} />
             <WindowNotice open={open} />
+            {/* Their own students' results, when the department allows (ADR-0040). */}
+            <Link
+                href={TeacherResultsController.show.url()}
+                className="mb-6 flex min-h-12 items-center gap-3 rounded-md border bg-card px-3 py-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                data-test="teacher-results-link"
+            >
+                <span className="flex-1 font-medium">
+                    {t("Your students' results")}
+                </span>
+                <ChevronRight
+                    className="size-4 text-muted-foreground rtl:-scale-x-100"
+                    aria-hidden
+                />
+            </Link>
 
             {subjects.length === 0 ? (
                 <EmptyState

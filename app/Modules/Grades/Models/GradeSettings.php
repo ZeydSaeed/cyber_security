@@ -7,6 +7,7 @@ use App\Modules\Grades\Domain\ResultCalculator;
 use App\Modules\Grades\Domain\ResultDisplay;
 use App\Modules\Grades\Domain\StudentAccess;
 use App\Modules\Grades\Domain\TeacherAccess;
+use App\Modules\Grades\Domain\TeacherResults;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
@@ -31,6 +32,8 @@ use InvalidArgumentException;
  * @property array<string, mixed>|null $grade_bands
  * @property array<string, mixed>|null $result_options
  * @property array<string, mixed>|null $mark_tones
+ * @property TeacherResults $teacher_results
+ * @property array<string, mixed>|null $teacher_view
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
@@ -65,6 +68,8 @@ class GradeSettings extends Model
             'grade_bands' => 'array',
             'result_options' => 'array',
             'mark_tones' => 'array',
+            'teacher_results' => TeacherResults::class,
+            'teacher_view' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
@@ -98,6 +103,16 @@ class GradeSettings extends Model
     public function tones(): array
     {
         return ResultDisplay::tones($this->mark_tones);
+    }
+
+    /**
+     * What teachers see of their students' results (ADR-0040).
+     *
+     * @return array<string, bool>
+     */
+    public function teacherView(): array
+    {
+        return ResultDisplay::teacherOptions($this->teacher_view);
     }
 
     public function calculator(): ResultCalculator

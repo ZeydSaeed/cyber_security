@@ -67,6 +67,9 @@ class GradesAdminController
             'bands' => $settings->bands()->minimums,
             'options' => $settings->options(),
             'tones' => $settings->tones(),
+            // What teachers see of their students' results (ADR-0040).
+            'teacher_results' => $settings->teacher_results->value,
+            'teacher_view' => $settings->teacherView(),
         ];
     }
 

@@ -7,6 +7,7 @@ use App\Modules\Grades\Domain\Behaviour;
 use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\ResultDisplay;
+use App\Modules\Grades\Domain\TeacherResults;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\GradeStudentNote;
 use App\Modules\Grades\Models\Student;
@@ -87,6 +88,37 @@ class ManageResults
 
             $settings->forceFill($values)->save();
             $this->audit->record('grades.result_settings_changed', $settings, [], $changes, actor: $actor);
+
+            return $settings;
+        }, 3);
+    }
+
+    /**
+     * When teachers may read their own students' results, and what they
+     * see of them (ADR-0040).
+     *
+     * @param  array<string, bool>  $options
+     */
+    public function teacherView(User $actor, TeacherResults $access, array $options): GradeSettings
+    {
+        $options = ResultDisplay::teacherOptions($options);
+
+        return DB::transaction(function () use ($actor, $access, $options): GradeSettings {
+            GradeSettings::current();
+            $settings = GradeSettings::query()->whereKey(GradeSettings::ROW)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            $changes = array_filter([
+                'teacher_results' => ['from' => $settings->teacher_results->value, 'to' => $access->value],
+                'teacher_view' => ['from' => $settings->teacherView(), 'to' => $options],
+            ], fn (array $change): bool => $change['from'] !== $change['to']);
+
+            if ($changes === []) {
+                return $settings;
+            }
+
+            $settings->forceFill(['teacher_results' => $access, 'teacher_view' => $options])->save();
+            $this->audit->record('grades.teacher_view_changed', $settings, [], $changes, actor: $actor);
 
             return $settings;
         }, 3);

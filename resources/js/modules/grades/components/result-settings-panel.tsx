@@ -17,6 +17,9 @@ export type ResultSettings = {
     bands: Record<Exclude<Band, 'fail'>, number>;
     options: ResultOptions;
     tones: MarkTones;
+    /** When teachers may read their students' results (ADR-0040). */
+    teacher_results: 'off' | 'published' | 'always';
+    teacher_view: Record<string, boolean>;
 };
 
 const selectClass =
@@ -100,6 +103,19 @@ export default function ResultSettingsPanel({
         fair: t('Fair'),
         exempt: t('Exempt'),
         excellent: t('Excellent'),
+    };
+    const teacherLabels: Record<string, string> = {
+        other_subjects: t('Marks of the other subjects'),
+        total: t('Total'),
+        percentage: t('Average (percentage)'),
+        rank: t('Rank in the section'),
+        failed_count: t('Number of failed subjects'),
+        mark_grade: t('Grade of each mark'),
+        overall_grade: t('Overall grade'),
+        exemption: t('Exemption'),
+        student_status: t('Student status (regular or external)'),
+        behaviour: t('Behaviour'),
+        notes: t('Notes'),
     };
     const toneNames: Record<Tone, string> = {
         none: t('No colour'),
@@ -285,6 +301,87 @@ export default function ResultSettingsPanel({
                             data-test="save-result-settings"
                         >
                             {t('Save the result settings')}
+                        </Button>
+                    </>
+                )}
+            </Form>
+
+            <Form
+                {...ResultSettingsController.teacherView.form()}
+                options={{ preserveScroll: true }}
+                className="grid gap-4 border-t pt-4"
+                data-test="teacher-view-form"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <fieldset className="grid gap-3">
+                            <legend className="mb-2 text-sm font-semibold">
+                                {t(
+                                    "What teachers see of their students' results",
+                                )}
+                            </legend>
+                            <div className="grid max-w-sm gap-1">
+                                <Label htmlFor="teacher-results">
+                                    {t('Teachers may read the results')}
+                                </Label>
+                                <select
+                                    id="teacher-results"
+                                    name="teacher_results"
+                                    defaultValue={settings.teacher_results}
+                                    className={selectClass}
+                                    data-test="teacher-results"
+                                >
+                                    <option value="off">{t('Never')}</option>
+                                    <option value="published">
+                                        {t('Once published to the students')}
+                                    </option>
+                                    <option value="always">
+                                        {t('Always, while marks come in too')}
+                                    </option>
+                                </select>
+                                <InputError message={errors.teacher_results} />
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                {(Object.keys(teacherLabels) as string[]).map(
+                                    (option) => (
+                                        <div
+                                            key={option}
+                                            className="flex items-center gap-2"
+                                        >
+                                            <Checkbox
+                                                id={`teacher-view-${option}`}
+                                                name="teacher_view[]"
+                                                value={option}
+                                                defaultChecked={
+                                                    settings.teacher_view[
+                                                        option
+                                                    ]
+                                                }
+                                                data-test={`teacher-view-${option}`}
+                                            />
+                                            <Label
+                                                htmlFor={`teacher-view-${option}`}
+                                                className="font-normal"
+                                            >
+                                                {teacherLabels[option]}
+                                            </Label>
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {t(
+                                    'A teacher sees only the sections they teach, and always the marks of their own subjects.',
+                                )}
+                            </p>
+                        </fieldset>
+                        <Button
+                            className="self-start"
+                            variant="outline"
+                            disabled={processing}
+                            data-test="save-teacher-view"
+                        >
+                            {t('Save what teachers see')}
                         </Button>
                     </>
                 )}

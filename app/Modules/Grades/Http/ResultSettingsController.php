@@ -8,6 +8,7 @@ use App\Modules\Grades\Domain\Behaviour;
 use App\Modules\Grades\Domain\GradeBand;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\ResultDisplay;
+use App\Modules\Grades\Domain\TeacherResults;
 use App\Modules\Grades\Models\Student;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
@@ -58,6 +59,28 @@ class ResultSettingsController
             array_map('strval', (array) $request->input('tones')),
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Result settings saved.')]);
+
+        return back();
+    }
+
+    /** When teachers may read their own students' results, and what of them (ADR-0040). */
+    public function teacherView(Request $request, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate([
+            'teacher_results' => ['required', Rule::enum(TeacherResults::class)],
+            // Absent when none is ticked.
+            'teacher_view' => ['sometimes', 'array'],
+            'teacher_view.*' => [Rule::in(array_keys(ResultDisplay::TEACHER_OPTIONS))],
+        ]);
+
+        $shown = array_map('strval', (array) $request->input('teacher_view', []));
+        $options = [];
+        foreach (array_keys(ResultDisplay::TEACHER_OPTIONS) as $option) {
+            $options[$option] = in_array($option, $shown, true);
+        }
+
+        $this->results->teacherView($user, TeacherResults::from((string) $request->string('teacher_results')), $options);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('What teachers see was saved.')]);
 
         return back();
     }

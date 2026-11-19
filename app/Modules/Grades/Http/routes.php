@@ -8,6 +8,7 @@ use App\Modules\Grades\Http\StudentPortalController;
 use App\Modules\Grades\Http\StudentsAdminController;
 use App\Modules\Grades\Http\StudentSession;
 use App\Modules\Grades\Http\TeacherMarksController;
+use App\Modules\Grades\Http\TeacherResultsController;
 use App\Modules\Grades\Http\TeacherSession;
 use App\Modules\Grades\Http\TeacherSessionController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,7 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
 
         // What a result says and shows (ADR-0039).
         Route::put('results/settings', [ResultSettingsController::class, 'settings'])->middleware('throttle:30,1')->name('results.settings');
+        Route::put('results/teacher-view', [ResultSettingsController::class, 'teacherView'])->middleware('throttle:30,1')->name('results.teacher_view');
         Route::put('results/students/{student}/note', [ResultSettingsController::class, 'note'])
             ->middleware('throttle:120,1')
             ->whereUuid('student')
@@ -171,6 +173,8 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
         Route::post('logout', [TeacherSessionController::class, 'destroy'])->name('logout');
 
         Route::get('subjects', [TeacherMarksController::class, 'subjects'])->name('subjects');
+        // Their own students' results, as the owner allows (ADR-0040).
+        Route::get('results', [TeacherResultsController::class, 'show'])->name('results');
         Route::get('subjects/{subject}/{section}', [TeacherMarksController::class, 'section'])
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])

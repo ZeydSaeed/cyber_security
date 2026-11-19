@@ -65,13 +65,25 @@ export default function ResultsTable({
     action,
     terms = [],
     current = null,
+    columns = {},
 }: {
     sheet: ResultSheet;
     action?: (student: ResultSheet['students'][number]) => React.ReactNode;
     terms?: string[];
     current?: string | null;
+    /** Summary columns to leave out (a teacher's view, ADR-0040). */
+    columns?: Partial<
+        Record<'total' | 'percentage' | 'failed' | 'rank' | 'grade', boolean>
+    >;
 }) {
     const { t } = useTranslations();
+    const show = {
+        total: columns.total ?? true,
+        percentage: columns.percentage ?? true,
+        failed: columns.failed ?? true,
+        rank: columns.rank ?? true,
+        grade: columns.grade ?? true,
+    };
 
     // A mark in its tone (ADR-0039), always with words for what the colour
     // says: below the pass mark, exempt.
@@ -141,24 +153,49 @@ export default function ResultsTable({
                                 </span>
                             </th>
                         ))}
-                        <th scope="col" className="p-2 text-center font-medium">
-                            {t('Total')}
-                        </th>
-                        <th scope="col" className="p-2 text-center font-medium">
-                            %
-                        </th>
-                        <th scope="col" className="p-2 text-center font-medium">
-                            {t('Failed subjects')}
-                        </th>
+                        {show.total && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Total')}
+                            </th>
+                        )}
+                        {show.percentage && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                %
+                            </th>
+                        )}
+                        {show.failed && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Failed subjects')}
+                            </th>
+                        )}
                         <th scope="col" className="p-2 text-center font-medium">
                             {t('Absences')}
                         </th>
-                        <th scope="col" className="p-2 text-center font-medium">
-                            {t('Rank')}
-                        </th>
-                        <th scope="col" className="p-2 text-center font-medium">
-                            {t('Grade')}
-                        </th>
+                        {show.rank && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Rank')}
+                            </th>
+                        )}
+                        {show.grade && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Grade')}
+                            </th>
+                        )}
                         {action && (
                             <th scope="col" className="p-2 print:hidden">
                                 <span className="sr-only">
@@ -197,44 +234,60 @@ export default function ResultsTable({
                                     {cell(mark, student.cells[i] ?? null)}
                                 </td>
                             ))}
-                            <td className="p-2 text-center font-semibold tabular-nums">
-                                {student.complete ? (
-                                    `${student.total} / ${student.maximum}`
-                                ) : (
-                                    <span className="text-muted-foreground">
-                                        {t('Incomplete (:missing missing)', {
-                                            missing: String(student.missing),
-                                        })}
-                                    </span>
-                                )}
-                            </td>
-                            <td className="p-2 text-center tabular-nums">
-                                {student.complete && student.percentage !== null
-                                    ? student.percentage.toFixed(2)
-                                    : '—'}
-                            </td>
-                            <td className="p-2 text-center tabular-nums">
-                                {student.below}
-                            </td>
+                            {show.total && (
+                                <td className="p-2 text-center font-semibold tabular-nums">
+                                    {student.complete ? (
+                                        `${student.total} / ${student.maximum}`
+                                    ) : (
+                                        <span className="text-muted-foreground">
+                                            {t(
+                                                'Incomplete (:missing missing)',
+                                                {
+                                                    missing: String(
+                                                        student.missing,
+                                                    ),
+                                                },
+                                            )}
+                                        </span>
+                                    )}
+                                </td>
+                            )}
+                            {show.percentage && (
+                                <td className="p-2 text-center tabular-nums">
+                                    {student.complete &&
+                                    student.percentage !== null
+                                        ? student.percentage.toFixed(2)
+                                        : '—'}
+                                </td>
+                            )}
+                            {show.failed && (
+                                <td className="p-2 text-center tabular-nums">
+                                    {student.below ?? '—'}
+                                </td>
+                            )}
                             <td className="p-2 text-center tabular-nums">
                                 {student.absences}
                             </td>
-                            <td
-                                className="p-2 text-center tabular-nums"
-                                data-test="result-rank"
-                            >
-                                {student.rank ?? '—'}
-                            </td>
-                            <td className="p-2 text-center">
-                                {student.band
-                                    ? bandLabel(t, student.band)
-                                    : '—'}
-                                {student.exempt_all && (
-                                    <span className="block text-xs">
-                                        {t('Exempt')}
-                                    </span>
-                                )}
-                            </td>
+                            {show.rank && (
+                                <td
+                                    className="p-2 text-center tabular-nums"
+                                    data-test="result-rank"
+                                >
+                                    {student.rank ?? '—'}
+                                </td>
+                            )}
+                            {show.grade && (
+                                <td className="p-2 text-center">
+                                    {student.band
+                                        ? bandLabel(t, student.band)
+                                        : '—'}
+                                    {student.exempt_all && (
+                                        <span className="block text-xs">
+                                            {t('Exempt')}
+                                        </span>
+                                    )}
+                                </td>
+                            )}
                             {action && (
                                 <td className="p-2 print:hidden">
                                     {action(student)}

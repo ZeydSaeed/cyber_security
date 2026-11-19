@@ -107,6 +107,63 @@ final class ResultSheets
     }
 
     /**
+     * A section's results as one of its teachers may read them (ADR-0040):
+     * their own subjects always, the others only when the owner allows,
+     * and only the parts the owner chose. Hidden parts are not sent.
+     *
+     * @param  list<string>  $own  UUIDs of the subjects the teacher teaches in this section
+     * @param  array<string, bool>  $view  GradeSettings::teacherView()
+     * @return array<string, mixed>
+     */
+    public function forTeacher(Stage $stage, Section $section, array $own, array $view, Period $period = Period::Month1): array
+    {
+        $sheet = $this->section($stage, $section, $period);
+
+        $keep = [];
+        foreach ($sheet['subjects'] as $i => $subject) {
+            if ($view['other_subjects'] || in_array($subject['uuid'], $own, true)) {
+                $keep[] = $i;
+            }
+        }
+        $pick = fn (array $list): array => array_map(fn (int $i): mixed => $list[$i] ?? null, $keep);
+
+        $hidden = [
+            'total' => ['total', 'maximum'],
+            'percentage' => ['percentage'],
+            'rank' => ['rank'],
+            'failed_count' => ['below'],
+            'overall_grade' => ['band'],
+            'exemption' => ['exempt_all'],
+            'student_status' => ['status'],
+            'behaviour' => ['behaviour'],
+            'notes' => ['notes'],
+        ];
+
+        $sheet['subjects'] = $pick($sheet['subjects']);
+        $sheet['students'] = array_map(function (array $row) use ($pick, $hidden, $view): array {
+            $row['marks'] = $pick($row['marks']);
+            $row['cells'] = array_map(fn (?array $cell): ?array => $cell === null ? null : [
+                ...$cell,
+                'band' => $view['mark_grade'] ? $cell['band'] : null,
+                'exempt' => $view['exemption'] && $cell['exempt'],
+            ], $pick($row['cells']));
+
+            foreach ($hidden as $option => $fields) {
+                if (! $view[$option]) {
+                    foreach ($fields as $field) {
+                        $row[$field] = null;
+                    }
+                }
+            }
+
+            return $row;
+        }, $sheet['students']);
+        $sheet['view'] = $view;
+
+        return $sheet;
+    }
+
+    /**
      * @param  Collection<int, Student>  $students
      * @return array<string, mixed>
      */
