@@ -1,5 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import EmptyState from '@/components/empty-state';
@@ -150,6 +150,9 @@ export default function MarkSheet({
                             <tbody>
                                 {students.map((student, index) => {
                                     const value = values[student.uuid] ?? '';
+                                    // Past its editing time (ADR-0037).
+                                    const locked =
+                                        !editable || student.locked === true;
                                     const absent = value === ABSENT;
                                     const error =
                                         form.errors[
@@ -181,6 +184,18 @@ export default function MarkSheet({
                                                 >
                                                     <bdi>{student.name}</bdi>
                                                 </label>
+                                                {editable && student.locked && (
+                                                    <span
+                                                        className="ms-2 inline-flex items-center gap-1 text-xs text-muted-foreground"
+                                                        data-test="mark-locked"
+                                                    >
+                                                        <Lock
+                                                            className="size-3"
+                                                            aria-hidden
+                                                        />
+                                                        {t('Locked')}
+                                                    </span>
+                                                )}
                                                 {(invalid || error) && (
                                                     <p
                                                         id={errorId}
@@ -220,9 +235,7 @@ export default function MarkSheet({
                                                             ]?.focus();
                                                         }
                                                     }}
-                                                    disabled={
-                                                        !editable || absent
-                                                    }
+                                                    disabled={locked || absent}
                                                     inputMode="numeric"
                                                     maxLength={3}
                                                     dir="ltr"
@@ -253,7 +266,7 @@ export default function MarkSheet({
                                                 <Checkbox
                                                     id={absentId}
                                                     checked={absent}
-                                                    disabled={!editable}
+                                                    disabled={locked}
                                                     onCheckedChange={(
                                                         checked,
                                                     ) =>

@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMarksController';
 import EmptyState from '@/components/empty-state';
 import { useTranslations } from '@/hooks/use-translations';
+import { useAccessLabel } from '../../components/access-notice';
 import WindowNotice from '../../components/window-notice';
 import { sectionLabel, stageLabel } from '../../place';
 import type { TeacherSubject } from '../../types';
@@ -19,6 +20,7 @@ export default function TeacherSubjects({
     subjects: TeacherSubject[];
 }) {
     const { t } = useTranslations();
+    const accessLabel = useAccessLabel();
 
     return (
         <>
@@ -68,12 +70,30 @@ export default function TeacherSubjects({
                                                 className="flex min-h-12 items-center gap-3 rounded-md border px-3 py-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                                 data-test={`section-${section.section}`}
                                             >
-                                                <span className="flex-1 font-medium">
-                                                    {sectionLabel(
-                                                        t,
-                                                        section.section,
-                                                        subject.divided,
-                                                    )}
+                                                <span className="flex-1">
+                                                    <span className="block font-medium">
+                                                        {sectionLabel(
+                                                            t,
+                                                            section.section,
+                                                            subject.divided,
+                                                        )}
+                                                    </span>
+                                                    {/* Only what differs from
+                                                        plain entry (ADR-0037);
+                                                        a closed window has its
+                                                        own notice above. */}
+                                                    {open &&
+                                                        section.access.state !==
+                                                            'edit' && (
+                                                            <span
+                                                                className="block text-xs text-muted-foreground"
+                                                                data-test="section-access"
+                                                            >
+                                                                {accessLabel(
+                                                                    section.access,
+                                                                )}
+                                                            </span>
+                                                        )}
                                                 </span>
                                                 <span
                                                     className={

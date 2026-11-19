@@ -135,6 +135,24 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Student sign-in paused after too many attempts');
         case 'grades.teacher_lockout':
             return t('Teacher sign-in paused after too many attempts');
+        case 'grades.access_settings_changed':
+            return t('Access settings changed');
+        case 'grades.teacher_access_changed':
+            return t('Teacher access changed');
+        case 'grades.section_access_changed':
+            return t('Section access changed');
+        case 'grades.teacher_logins_reset':
+            return t('Teacher sign-ins counted from zero');
+        case 'grades.student_logins_reset':
+            return t('Student sign-ins counted from zero');
+        case 'grades.student_blocked':
+            return t('Student stopped from signing in');
+        case 'grades.student_unblocked':
+            return t('Student allowed to sign in');
+        case 'grades.edit_requested':
+            return t('Request to change marks sent');
+        case 'grades.edit_request_decided':
+            return t('Request to change marks answered');
         case 'user.created':
             return role
                 ? t('Added as :role', { role })

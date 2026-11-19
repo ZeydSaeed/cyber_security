@@ -50,6 +50,12 @@ class GradePeriod extends Model
      */
     public static function for(Period $period): self
     {
+        // One query once the row exists (it is read on every teacher's page).
+        $row = self::query()->where('period', $period->value)->first();
+        if ($row !== null) {
+            return $row;
+        }
+
         $now = now();
         self::query()->insertOrIgnore([
             'period' => $period->value,

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Grades\Http\AccessController;
 use App\Modules\Grades\Http\GradesAdminController;
 use App\Modules\Grades\Http\ResultsController;
 use App\Modules\Grades\Http\StudentPortalController;
@@ -43,6 +44,31 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
     Route::middleware('can:grades.manage')->group(function () {
         Route::put('window', [GradesAdminController::class, 'window'])->name('window');
         Route::put('publish', [GradesAdminController::class, 'publish'])->name('publish');
+
+        // Who may sign in and change marks (ADR-0037).
+        Route::put('access', [AccessController::class, 'settings'])->middleware('throttle:30,1')->name('access.settings');
+        Route::put('access/teachers/{teacher}', [AccessController::class, 'teacher'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('teacher')
+            ->name('access.teacher');
+        Route::post('access/teachers/{teacher}/reset', [AccessController::class, 'resetTeacherLogins'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('teacher')
+            ->name('access.teacher.reset');
+        Route::put('access/sections/{subject}/{section}', [AccessController::class, 'section'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('access.section');
+        Route::post('access/students/reset', [AccessController::class, 'resetStudentLogins'])->middleware('throttle:10,1')->name('access.students.reset');
+        Route::put('access/students/{student}', [AccessController::class, 'student'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('student')
+            ->name('access.student');
+        Route::put('access/requests/{editRequest}', [AccessController::class, 'decide'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('editRequest')
+            ->name('access.request');
 
         Route::get('teachers', [GradesAdminController::class, 'teachers'])->name('teachers');
         Route::get('teachers/print', [GradesAdminController::class, 'printTeachers'])->name('teachers.print');
@@ -139,6 +165,11 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.save');
+        Route::post('subjects/{subject}/{section}/request', [TeacherMarksController::class, 'requestEdit'])
+            ->middleware('throttle:10,1')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('section.request');
     });
 });
 

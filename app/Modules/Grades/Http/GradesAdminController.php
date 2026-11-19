@@ -7,6 +7,7 @@ use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
 use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
+use App\Modules\Grades\Application\Queries\AccessBoard;
 use App\Modules\Grades\Application\Queries\GradesBoard;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Domain\Period;
@@ -35,14 +36,18 @@ use Inertia\Response;
  */
 class GradesAdminController
 {
-    public function overview(GradesBoard $board, #[CurrentUser] User $user): Response
+    public function overview(GradesBoard $board, AccessBoard $access, #[CurrentUser] User $user): Response
     {
+        $canManage = $user->can('grades.manage');
+
         return Inertia::render('modules/grades/pages/admin/overview', [
             ...$board->show(),
+            // Sign-ins and mark editing (ADR-0037), for those who may change them.
+            'access' => $canManage ? $access->show() : null,
             'teacherLink' => route('grades.teacher.login'),
             'studentLink' => route('grades.student.login'),
             'adminLink' => route('grades.admin.overview'),
-            'canManage' => $user->can('grades.manage'),
+            'canManage' => $canManage,
         ]);
     }
 

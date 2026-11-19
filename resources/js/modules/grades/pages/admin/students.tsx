@@ -1,6 +1,8 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import {
     KeyRound,
+    Lock,
+    LockOpen,
     Pencil,
     Printer,
     RefreshCw,
@@ -8,6 +10,7 @@ import {
     UserPlus,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import AccessController from '@/actions/App/Modules/Grades/Http/AccessController';
 import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
 import ConfirmAction from '@/components/confirm-action';
 import DataTable from '@/components/data-table/data-table';
@@ -42,6 +45,10 @@ type StudentRow = {
     section: string;
     /** 'external' (intisab), or null for a regular student. */
     status: string | null;
+    /** Sign-ins counted, the last one, and whether stopped (ADR-0037). */
+    logins: number;
+    last_login_at: string | null;
+    blocked: boolean;
 };
 
 const TABLE_PROPS = ['students', 'state'];
@@ -320,6 +327,22 @@ export default function GradesStudents({
             // Empty for a regular student (owner's request, 2026-11-16).
             cell: (s) => (s.status === 'external' ? t('External') : null),
         },
+        {
+            key: 'login_count',
+            header: t('Sign-ins'),
+            sortable: true,
+            className: 'text-center tabular-nums',
+            cell: (s) => (
+                <span data-test="student-logins">
+                    {s.logins}
+                    {s.blocked && (
+                        <span className="block text-xs text-destructive-text">
+                            {t('Stopped')}
+                        </span>
+                    )}
+                </span>
+            ),
+        },
     ];
 
     return (
@@ -479,6 +502,34 @@ export default function GradesStudents({
                                               student.uuid,
                                           )}
                                       />
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className={
+                                              student.blocked
+                                                  ? actionTone.success
+                                                  : actionTone.warning
+                                          }
+                                          onClick={() =>
+                                              router.put(
+                                                  AccessController.student.url(
+                                                      student.uuid,
+                                                  ),
+                                                  { blocked: !student.blocked },
+                                                  { preserveScroll: true },
+                                              )
+                                          }
+                                          data-test="toggle-student-access"
+                                      >
+                                          {student.blocked ? (
+                                              <LockOpen aria-hidden />
+                                          ) : (
+                                              <Lock aria-hidden />
+                                          )}
+                                          {student.blocked
+                                              ? t('Allow signing in')
+                                              : t('Stop signing in')}
+                                      </Button>
                                       <ConfirmAction
                                           trigger={
                                               <Button

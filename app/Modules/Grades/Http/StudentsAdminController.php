@@ -59,6 +59,10 @@ class StudentsAdminController
                     'id' => $student->id,
                     'uuid' => $student->uuid,
                     'has_code' => $student->code_digest !== null,
+                    // Sign-ins and whether stopped (ADR-0037).
+                    'logins' => $student->login_count,
+                    'last_login_at' => $student->last_login_at?->toIso8601String(),
+                    'blocked' => $student->access_blocked,
                     'code' => $showCodes && $student->code_encrypted !== null ? $codes->decrypt($student->code_encrypted) : null,
                     'name' => $student->full_name,
                     'number' => $student->student_number,

@@ -6,6 +6,8 @@ import PageToolbar from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
+import AccessPanel from '../../components/access-panel';
+import type { AccessBoardProps } from '../../components/access-panel';
 import CopyLink from '../../components/copy-link';
 import { sectionLabel, stageLabel } from '../../place';
 
@@ -36,6 +38,7 @@ export default function GradesOverview({
     studentLink,
     adminLink,
     canManage,
+    access,
 }: {
     window: {
         open: boolean;
@@ -48,6 +51,8 @@ export default function GradesOverview({
     studentLink: string;
     adminLink: string;
     canManage: boolean;
+    /** Sign-ins and mark editing (ADR-0037); only for grades.manage. */
+    access: AccessBoardProps | null;
 }) {
     const { t } = useTranslations();
     const put = (url: string, data: Record<string, string | boolean>) =>
@@ -200,6 +205,8 @@ export default function GradesOverview({
                         />
                     </section>
                 )}
+
+                {access && <AccessPanel access={access} />}
 
                 {stages.map((stage) => {
                     const sections = Object.keys(stage.students);

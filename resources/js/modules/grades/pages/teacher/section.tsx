@@ -2,24 +2,28 @@ import { Head } from '@inertiajs/react';
 import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMarksController';
 import { useTranslations } from '@/hooks/use-translations';
 import MarkSheet from '../../components/mark-sheet';
-import WindowNotice from '../../components/window-notice';
+import AccessNotice from '../../components/access-notice';
 import { placeLabel } from '../../place';
-import type { SheetStudent } from '../../types';
+import type { EditRequest, SectionAccess, SheetStudent } from '../../types';
 
 /**
- * A teacher's sheet for one section (ADR-0034): editable while mark entry
- * is open, read-only after.
+ * A teacher's sheet for one section (ADR-0034): editable as the section's
+ * access allows (ADR-0037: mark entry open, the mode, each mark's editing
+ * time, or the department's grant), read-only otherwise, with a way to ask
+ * the department to change locked marks.
  */
 export default function TeacherSection({
-    open,
     subject,
     section,
     students,
+    access,
+    request,
 }: {
-    open: boolean;
     subject: { uuid: string; name: string; stage: number; divided: boolean };
     section: string;
     students: SheetStudent[];
+    access: SectionAccess;
+    request: EditRequest | null;
 }) {
     const { t } = useTranslations();
 
@@ -32,7 +36,7 @@ export default function TeacherSection({
                 subject={subject}
                 section={section}
                 students={students}
-                editable={open}
+                editable={access.can_write}
                 saveUrl={TeacherMarksController.save.url({
                     subject: subject.uuid,
                     section,
@@ -41,7 +45,15 @@ export default function TeacherSection({
                     href: TeacherMarksController.subjects.url(),
                     label: t('Your subjects'),
                 }}
-                notice={<WindowNotice open={open} />}
+                notice={
+                    <AccessNotice
+                        access={access}
+                        hasLocked={students.some((student) => student.locked)}
+                        request={request}
+                        subject={subject.uuid}
+                        section={section}
+                    />
+                }
             />
         </>
     );

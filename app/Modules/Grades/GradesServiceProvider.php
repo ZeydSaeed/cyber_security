@@ -11,9 +11,12 @@ use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Contracts\GradesOverview;
 use App\Modules\Grades\Domain\ResultCalculator;
 use App\Modules\Grades\Http\StudentsTable;
+use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Observability\MetricsSource;
 use App\Platform\Tables\TableRegistry;
@@ -81,6 +84,9 @@ class GradesServiceProvider extends ServiceProvider
             Subject::MORPH => Subject::class,
             Student::MORPH => Student::class,
             GradePeriod::MORPH => GradePeriod::class,
+            GradeSettings::MORPH => GradeSettings::class,
+            GradeEditRequest::MORPH => GradeEditRequest::class,
+            SubjectTeacher::MORPH => SubjectTeacher::class,
         ]);
     }
 }

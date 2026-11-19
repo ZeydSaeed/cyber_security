@@ -228,7 +228,7 @@ describe('students', function () {
 
         $this->get('/admin/students')->assertInertia(fn (Assert $page) => $page
             ->where('students.rows.0.status', 'external')
-            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status']));
+            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status', 'login_count']));
 
         $this->put("/admin/students/{$student->uuid}", ['name' => 'Ali Karim', 'stage' => 1, 'status' => '']);
         expect($student->refresh()->status)->toBeNull();
@@ -271,7 +271,7 @@ describe('students', function () {
 
         $this->get('/admin/students')->assertInertia(fn (Assert $page) => $page
             ->where('students.rows.0.code', $code)
-            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status']));
+            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status', 'login_count']));
         expect(AuditEvent::query()->where('action', 'grades.student_codes_listed')->count())->toBe(1);
 
         // Found by its code.

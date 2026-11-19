@@ -2,14 +2,19 @@
 
 namespace App\Modules\Grades\Http;
 
+use App\Modules\Grades\Application\Actions\RequestEdit;
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\Queries\TeacherSheets;
+use App\Modules\Grades\Application\SectionAccess;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,31 +29,33 @@ class TeacherMarksController
 {
     public function __construct(private readonly TeacherSheets $sheets) {}
 
-    public function subjects(): Response
+    public function subjects(Request $request): Response
     {
         $teacher = $this->teacher();
 
         return Inertia::render('modules/grades/pages/teacher/subjects', [
             'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],
-            ...$this->sheets->subjects($teacher),
+            ...$this->sheets->subjects($teacher, Period::Month1, TeacherSession::settings($request)),
         ]);
     }
 
-    public function section(Subject $subject, string $section): Response
+    public function section(Request $request, Subject $subject, string $section): Response
     {
         $teacher = $this->teacher();
-        $this->ensureOwn($teacher, $subject, $section);
+        $settings = TeacherSession::settings($request);
+        $row = $this->ensureOwn($teacher, $subject, $section, $settings);
+        $policy = SectionAccess::policy($teacher, $row, $settings, GradePeriod::for(Period::Month1));
 
         return Inertia::render('modules/grades/pages/teacher/section', [
             'portal' => ['name' => $teacher->name, 'logout' => route('grades.teacher.logout')],
-            ...$this->sheets->section($subject, Section::from($section)),
+            ...$this->sheets->section($subject, Section::from($section), Period::Month1, $policy, $teacher),
         ]);
     }
 
     public function save(SaveMarksRequest $request, Subject $subject, string $section, SaveMarks $save): RedirectResponse
     {
         $teacher = $this->teacher();
-        $this->ensureOwn($teacher, $subject, $section);
+        $this->ensureOwn($teacher, $subject, $section, TeacherSession::settings($request));
 
         $result = $save->handle($teacher, $subject, Section::from($section), Period::Month1, $request->marks());
 
@@ -58,6 +65,22 @@ class TeacherMarksController
             default => __('Saved.'),
         };
         Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return to_route('grades.teacher.section', ['subject' => $subject->uuid, 'section' => $section]);
+    }
+
+    /**
+     * Asks the owner to let the teacher change this section's marks again
+     * (ADR-0037).
+     */
+    public function requestEdit(Request $request, Subject $subject, string $section, RequestEdit $edit): RedirectResponse
+    {
+        $teacher = $this->teacher();
+        $this->ensureOwn($teacher, $subject, $section, TeacherSession::settings($request));
+        $request->validate(['reason' => ['required', 'string', 'max:'.RequestEdit::MAX_REASON * 2]]);
+
+        $edit->handle($teacher, $subject, Section::from($section), Period::Month1, (string) $request->string('reason'));
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Request sent. The department will answer it.')]);
 
         return to_route('grades.teacher.section', ['subject' => $subject->uuid, 'section' => $section]);
     }
@@ -74,12 +97,21 @@ class TeacherMarksController
         return $teacher;
     }
 
-    private function ensureOwn(Teacher $teacher, Subject $subject, string $section): void
+    private function ensureOwn(Teacher $teacher, Subject $subject, string $section, GradeSettings $settings): SubjectTeacher
     {
         // A section the stage does not have, or one another teacher teaches.
+        // A section blocked for the teacher (ADR-0037) is hidden the same way.
         $place = Section::from($section);
-        if (! $subject->stage->hasSection($place) || ! SubjectTeacher::teaches($teacher, $subject, $place)) {
+        $row = ! $subject->stage->hasSection($place) ? null : SubjectTeacher::query()
+            ->where('subject_id', $subject->id)
+            ->where('section', $place->value)
+            ->where('teacher_id', $teacher->id)
+            ->first();
+
+        if ($row === null || SectionAccess::hidden($teacher, $row, $settings)) {
             throw new NotFoundHttpException;
         }
+
+        return $row;
     }
 }

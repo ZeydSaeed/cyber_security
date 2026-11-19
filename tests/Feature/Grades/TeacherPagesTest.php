@@ -62,7 +62,7 @@ it('lists only the teacher\'s subjects, with each section\'s progress', function
         // The first stage is one group: no section B.
         ->where('subjects.0.divided', false)
         ->where('subjects.0.sections', [
-            ['section' => 'A', 'students' => 3, 'entered' => 1],
+            ['section' => 'A', 'students' => 3, 'entered' => 1, 'access' => ['state' => 'edit', 'can_write' => true, 'hours' => null, 'until' => null]],
         ])
         // Nothing of the users' application.
         ->where('auth.user', null)
