@@ -3,6 +3,7 @@
 namespace App\Modules\Grades;
 
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Console\SendAppealReminders;
 use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
 use App\Modules\Grades\Application\Jobs\NotifySectionCompleted;
 use App\Modules\Grades\Application\Metrics\GradesMetrics;
@@ -23,6 +24,7 @@ use App\Modules\Grades\Models\Teacher;
 use App\Platform\Observability\MetricsSource;
 use App\Platform\Tables\TableRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,6 +75,14 @@ class GradesServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/migrations');
         $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+
+        // Reminders about appeals, every hour (ADR-0045).
+        if ($this->app->runningInConsole()) {
+            $this->commands([SendAppealReminders::class]);
+        }
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('grades:appeal-reminders')->hourly()->withoutOverlapping()->onOneServer();
+        });
 
         // The owner's student list keeps its columns and views per person.
         $this->app->make(TableRegistry::class)->register(StudentsTable::NAME, StudentsTable::class, StudentsTable::ABILITY);

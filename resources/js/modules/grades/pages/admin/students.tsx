@@ -2,6 +2,8 @@ import { Form, Head, Link, router } from '@inertiajs/react';
 import {
     KeyRound,
     Lock,
+    MessageSquareOff,
+    MessageSquareText,
     LockOpen,
     MonitorX,
     Pencil,
@@ -50,6 +52,8 @@ type StudentRow = {
     logins: number;
     last_login_at: string | null;
     blocked: boolean;
+    /** May appeal when appeals are for chosen students (ADR-0043). */
+    appeal_allowed: boolean;
     /** Remembered devices not expired (ADR-0038). */
     devices: number;
 };
@@ -261,12 +265,15 @@ export default function GradesStudents({
     columns,
     canImport,
     places,
+    appealScope = 'all',
 }: {
     students: { rows: StudentRow[] } & PageMeta;
     state: TableState;
     columns: ColumnPrefs;
     canImport: boolean;
     places: { stage: number; section: string; divided: boolean }[];
+    /** Every student may appeal, or only those allowed here (ADR-0043). */
+    appealScope?: 'all' | 'selected';
 }) {
     const { t } = useTranslations();
     const { visit, busy } = useTableNavigation(state, TABLE_PROPS);
@@ -552,6 +559,46 @@ export default function GradesStudents({
                                               ? t('Allow signing in')
                                               : t('Stop signing in')}
                                       </Button>
+                                      {appealScope === 'selected' && (
+                                          <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className={
+                                                  student.appeal_allowed
+                                                      ? actionTone.warning
+                                                      : actionTone.info
+                                              }
+                                              aria-pressed={
+                                                  student.appeal_allowed
+                                              }
+                                              onClick={() =>
+                                                  router.put(
+                                                      AccessController.studentAppeal.url(
+                                                          student.uuid,
+                                                      ),
+                                                      {
+                                                          allowed:
+                                                              !student.appeal_allowed,
+                                                      },
+                                                      { preserveScroll: true },
+                                                  )
+                                              }
+                                              data-test="toggle-student-appeal"
+                                          >
+                                              {student.appeal_allowed ? (
+                                                  <MessageSquareOff
+                                                      aria-hidden
+                                                  />
+                                              ) : (
+                                                  <MessageSquareText
+                                                      aria-hidden
+                                                  />
+                                              )}
+                                              {student.appeal_allowed
+                                                  ? t('Withdraw the appeal')
+                                                  : t('Allow an appeal')}
+                                          </Button>
+                                      )}
                                       <ConfirmAction
                                           trigger={
                                               <Button

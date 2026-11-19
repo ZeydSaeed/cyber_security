@@ -23,7 +23,7 @@ class NotifyGradesManagers extends OutboxJob
     protected function process(array $payload): void
     {
         $kind = (string) ($payload['kind'] ?? '');
-        if (! in_array($kind, [GradesNotification::EDIT_REQUESTED, GradesNotification::APPEAL_SUBMITTED], true)) {
+        if (! in_array($kind, [GradesNotification::EDIT_REQUESTED, GradesNotification::APPEAL_SUBMITTED, GradesNotification::APPEAL_ANSWERED, GradesNotification::APPEALS_CLOSING, GradesNotification::APPEALS_OVERDUE], true)) {
             return;
         }
 

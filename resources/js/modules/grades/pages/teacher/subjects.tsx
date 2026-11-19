@@ -5,13 +5,14 @@ import TeacherResultsController from '@/actions/App/Modules/Grades/Http/TeacherR
 import EmptyState from '@/components/empty-state';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAccessLabel } from '../../components/access-notice';
+import TeacherSummary from '../../components/teacher-summary';
 import WindowNotice from '../../components/window-notice';
 import { sectionLabel, stageLabel } from '../../place';
 import type { TeacherSubject } from '../../types';
 
 /**
- * A teacher's subjects (ADR-0034), each with its two sections and how
- * many students already have a mark.
+ * A teacher's subjects (ADR-0034), each with its sections and how many
+ * students already have a mark; a subject opens on all its students.
  */
 export default function TeacherSubjects({
     open,
@@ -27,6 +28,8 @@ export default function TeacherSubjects({
         <>
             <Head title={t('Your subjects')} />
             <WindowNotice open={open} />
+            {/* What needs doing, at a glance (ADR-0045). */}
+            <TeacherSummary subjects={subjects} />
             {/* Their own students' results, when the department allows (ADR-0040). */}
             <Link
                 href={TeacherResultsController.show.url()}
@@ -55,42 +58,64 @@ export default function TeacherSubjects({
                     data-test="teacher-subjects"
                 >
                     {subjects.map((subject) => (
-                        <li
-                            key={subject.uuid}
-                            // Soft highlight cards (owner's request, 2026-11-15).
-                            className="rounded-lg border border-highlight-soft-border bg-highlight-soft bg-linear-to-b from-highlight-soft to-highlight-soft-end p-4 text-ink"
-                        >
-                            <h3 className="font-medium">
-                                <bdi>{subject.name}</bdi>
-                            </h3>
-                            <p className="mb-3 text-sm text-muted-foreground">
-                                {stageLabel(t, subject.stage)}
-                            </p>
-                            <ul className="flex flex-col gap-2">
-                                {subject.sections.map((section) => {
-                                    const done =
-                                        section.students > 0 &&
-                                        section.entered === section.students;
+                        <li key={subject.uuid}>
+                            {/* One link per subject: its page shows the
+                                students straight away, section A then B
+                                (owner's request, 2026-11-19). */}
+                            <Link
+                                href={TeacherMarksController.subject.url(
+                                    subject.uuid,
+                                )}
+                                // Soft highlight cards (owner's request, 2026-11-15).
+                                className="flex items-center gap-3 rounded-lg border border-highlight-soft-border bg-highlight-soft bg-linear-to-b from-highlight-soft to-highlight-soft-end p-4 text-ink hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                data-test={`subject-${subject.uuid}`}
+                            >
+                                <span className="flex-1">
+                                    <span className="block font-medium">
+                                        <bdi>{subject.name}</bdi>
+                                    </span>
+                                    <span className="mb-2 block text-sm text-muted-foreground">
+                                        {stageLabel(t, subject.stage)}
+                                    </span>
+                                    <span className="flex flex-col gap-1">
+                                        {subject.sections.map((section) => {
+                                            const done =
+                                                section.students > 0 &&
+                                                section.entered ===
+                                                    section.students;
 
-                                    return (
-                                        <li key={section.section}>
-                                            <Link
-                                                href={TeacherMarksController.section.url(
-                                                    {
-                                                        subject: subject.uuid,
-                                                        section:
-                                                            section.section,
-                                                    },
-                                                )}
-                                                className="flex min-h-12 items-center gap-3 rounded-md border px-3 py-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                                data-test={`section-${section.section}`}
-                                            >
-                                                <span className="flex-1">
-                                                    <span className="block font-medium">
+                                            return (
+                                                <span
+                                                    key={section.section}
+                                                    className="block text-sm"
+                                                    data-test={`section-${section.section}`}
+                                                >
+                                                    <span className="font-medium">
                                                         {sectionLabel(
                                                             t,
                                                             section.section,
                                                             subject.divided,
+                                                        )}
+                                                    </span>
+                                                    {' · '}
+                                                    <span
+                                                        className={
+                                                            done
+                                                                ? 'text-success-text'
+                                                                : 'text-muted-foreground'
+                                                        }
+                                                    >
+                                                        {t(
+                                                            ':entered of :students entered',
+                                                            {
+                                                                entered: String(
+                                                                    section.entered,
+                                                                ),
+                                                                students:
+                                                                    String(
+                                                                        section.students,
+                                                                    ),
+                                                            },
                                                         )}
                                                     </span>
                                                     {/* Only what differs from
@@ -110,34 +135,15 @@ export default function TeacherSubjects({
                                                             </span>
                                                         )}
                                                 </span>
-                                                <span
-                                                    className={
-                                                        done
-                                                            ? 'text-sm text-success-text'
-                                                            : 'text-sm text-muted-foreground'
-                                                    }
-                                                >
-                                                    {t(
-                                                        ':entered of :students entered',
-                                                        {
-                                                            entered: String(
-                                                                section.entered,
-                                                            ),
-                                                            students: String(
-                                                                section.students,
-                                                            ),
-                                                        },
-                                                    )}
-                                                </span>
-                                                <ChevronRight
-                                                    className="size-4 text-muted-foreground rtl:-scale-x-100"
-                                                    aria-hidden
-                                                />
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
+                                            );
+                                        })}
+                                    </span>
+                                </span>
+                                <ChevronRight
+                                    className="size-4 text-muted-foreground rtl:-scale-x-100"
+                                    aria-hidden
+                                />
+                            </Link>
                         </li>
                     ))}
                 </ul>

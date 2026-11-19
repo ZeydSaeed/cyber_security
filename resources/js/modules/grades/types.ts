@@ -10,6 +10,10 @@ export type TeacherSubject = {
         section: string;
         students: number;
         entered: number;
+        /** Appeals waiting for an answer (ADR-0044). */
+        appeals?: number;
+        /** Marks still changeable that lock within a day (ADR-0045). */
+        locking_soon?: number;
         access: SectionAccess;
     }[];
 };
@@ -28,8 +32,10 @@ export type SectionAccess = {
         | 'approved'
         | 'published';
     can_write: boolean;
-    /** Timed mode: hours a mark stays editable after it is entered. */
-    hours: number | null;
+    /** Limited time (ADR-0043): minutes a mark stays editable after it is entered. */
+    minutes: number | null;
+    /** Limited time: when every mark locks. */
+    deadline: string | null;
     /** Granted: until when. */
     until: string | null;
 };
@@ -111,7 +117,9 @@ export type ResultOptions = Record<
     | 'kind'
     | 'student_status'
     | 'behaviour'
-    | 'notes',
+    | 'notes'
+    | 'absences'
+    | 'appeals',
     boolean
 >;
 
@@ -135,7 +143,8 @@ export type ResultRow = {
     maximum: number | null;
     percentage: number | null;
     below: number | null;
-    absences: number;
+    /** Null on a student's card when the owner hides it (ADR-0043). */
+    absences: number | null;
     missing: number;
     complete: boolean;
     passed: boolean;

@@ -8,14 +8,17 @@ type Slot = HTMLElement | null;
 const SlotContext = createContext<{
     slot: Slot;
     setSlot: (slot: Slot) => void;
-}>({ slot: null, setSlot: () => {} });
+    navSlot: Slot;
+    setNavSlot: (slot: Slot) => void;
+}>({ slot: null, setSlot: () => {}, navSlot: null, setNavSlot: () => {} });
 
 /** Around the layout: the toolbar's slot and the pages that fill it. */
 export function PageToolbarProvider({ children }: { children: ReactNode }) {
     const [slot, setSlot] = useState<Slot>(null);
+    const [navSlot, setNavSlot] = useState<Slot>(null);
 
     return (
-        <SlotContext.Provider value={{ slot, setSlot }}>
+        <SlotContext.Provider value={{ slot, setSlot, navSlot, setNavSlot }}>
             {children}
         </SlotContext.Provider>
     );
@@ -37,6 +40,32 @@ export function PageToolbarSlot({ className }: { className?: string }) {
             data-slot="page-toolbar"
         />
     );
+}
+
+/**
+ * Beside the previous, next and home buttons: a page's own way back, such
+ * as a Close button (owner's request, 2026-11-19).
+ */
+export function PageToolbarNavSlot() {
+    const { setNavSlot } = useContext(SlotContext);
+
+    return (
+        <div
+            ref={setNavSlot}
+            className="flex items-center gap-1 empty:hidden"
+            data-slot="page-toolbar-nav"
+        />
+    );
+}
+
+/**
+ * Put a page's control beside the previous, next and home buttons.
+ * Rendered nowhere until the toolbar is on screen.
+ */
+export function PageToolbarNav({ children }: { children: ReactNode }) {
+    const { navSlot } = useContext(SlotContext);
+
+    return navSlot === null ? null : createPortal(children, navSlot);
 }
 
 /** Buttons in the toolbar's text colour, with icons in the toolbar colour. */

@@ -84,6 +84,7 @@ final class ResultSheets
             'student_status' => ['status'],
             'behaviour' => ['behaviour'],
             'notes' => ['notes'],
+            'absences' => ['absences'],
         ];
 
         foreach ($hidden as $option => $fields) {
@@ -93,6 +94,8 @@ final class ResultSheets
                 }
             }
         }
+        // The department's flag is never the student's to read (ADR-0042).
+        unset($card['student']['frequent_absence']);
 
         $card['student']['cells'] = array_map(fn (?array $cell): ?array => $cell === null ? null : [
             ...$cell,

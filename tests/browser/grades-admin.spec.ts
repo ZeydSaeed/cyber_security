@@ -50,6 +50,17 @@ async function check(page: Page, what: string, dir: string): Promise<void> {
 
 const pages = [
     '/admin',
+    // Each settings tab is a page of its own (owner's request, 2026-11-19).
+    ...[
+        'window',
+        'links',
+        'teachers',
+        'students',
+        'permissions',
+        'card',
+        'teacher-view',
+        'subjects',
+    ].map((tab) => `/admin?tab=${tab}`),
     '/admin/teachers',
     '/admin/subjects',
     '/admin/students',
@@ -92,7 +103,8 @@ test.describe('grades owner flow', () => {
     test.use({ viewport: viewports.desktop });
 
     // A section's sheet with its change history and approval (ADR-0041),
-    // reached from the overview, on a phone and a desktop.
+    // reached from the "Subjects and teachers" tab of the settings, on a
+    // phone and a desktop.
     for (const { locale, dir } of [
         { locale: 'ar', dir: 'rtl' },
         { locale: 'en', dir: 'ltr' },
@@ -102,7 +114,7 @@ test.describe('grades owner flow', () => {
                 page,
             }) => {
                 await page.setViewportSize(viewport);
-                await open(page, '/admin', locale);
+                await open(page, '/admin?tab=subjects', locale);
                 await page
                     .locator('a[href*="/admin/subjects/"]')
                     .first()
@@ -261,6 +273,51 @@ test.describe('grades owner flow', () => {
             path: 'storage/framework/screenshots/grades-teachers-details-en.png',
             fullPage: true,
         });
+    });
+
+    // "What the student sees" sits in the Students box of the access
+    // settings, itself a form; its fields join their own form through the
+    // HTML form attribute (ADR-0044). Its button saves them, and only them.
+    test('saves what the student sees from the Students box', async ({
+        page,
+    }) => {
+        await open(page, '/admin?tab=students', 'en');
+        const box = page.locator('[data-test="student-view"]');
+        await expect(box).toBeVisible();
+        await check(page, 'the Students box with what the student sees', 'ltr');
+
+        const absences = box.locator('[data-test="option-absences"]');
+        const before = await absences.getAttribute('aria-checked');
+        await absences.click();
+        await box.locator('[data-test="save-student-view"]').click();
+        await expect(
+            page.getByText('What the student sees was saved.'),
+        ).toBeVisible();
+
+        await page.reload();
+        await pageReady(page);
+        await expect(
+            page.locator(
+                '[data-test="student-view"] [data-test="option-absences"]',
+            ),
+        ).toHaveAttribute('aria-checked', before === 'true' ? 'false' : 'true');
+        await page.screenshot({
+            path: 'storage/framework/screenshots/grades-student-view-en.png',
+            fullPage: true,
+        });
+
+        // Put it back, for the other tests.
+        await page
+            .locator('[data-test="student-view"] [data-test="option-absences"]')
+            .click();
+        await page
+            .locator(
+                '[data-test="student-view"] [data-test="save-student-view"]',
+            )
+            .click();
+        await expect(
+            page.getByText('What the student sees was saved.'),
+        ).toBeVisible();
     });
 
     // The import card left the students page on 2026-11-16 (the owner adds

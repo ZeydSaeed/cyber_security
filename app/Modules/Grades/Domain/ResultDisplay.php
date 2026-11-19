@@ -26,6 +26,10 @@ final class ResultDisplay
         'student_status' => false,
         'behaviour' => false,
         'notes' => false,
+        // The number of subjects the student was absent from (ADR-0043).
+        'absences' => false,
+        // The appeal box; appeals also need a time open (ADR-0043).
+        'appeals' => true,
     ];
 
     /**

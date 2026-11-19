@@ -78,7 +78,27 @@
                 "mix": ["accent-100", 50, "accent-200"]
             },
             "highlight-soft-border": "accent-200",
-            "sheet": "linen-50"
+            "sheet": "linen-50",
+            "tile-1": "success-700",
+            "tile-1-foreground": "auto",
+            "tile-2": "info-700",
+            "tile-2-foreground": "auto",
+            "tile-3": "primary-700",
+            "tile-3-foreground": "auto",
+            "tile-4": "accent-700",
+            "tile-4-foreground": "auto",
+            "tile-5": "danger-700",
+            "tile-5-foreground": "auto",
+            "tile-6": {
+                "mix": ["primary-700", 50, "danger-700"]
+            },
+            "tile-6-foreground": "auto",
+            "tile-7": "olive-700",
+            "tile-7-foreground": "auto",
+            "tile-8": {
+                "mix": ["success-700", 50, "info-700"]
+            },
+            "tile-8-foreground": "auto"
         },
         "dark": {
             "background": "primary-950",
@@ -119,7 +139,27 @@
             "highlight-soft": "accent-950",
             "highlight-soft-end": "accent-900",
             "highlight-soft-border": "accent-800",
-            "sheet": "primary-900"
+            "sheet": "primary-900",
+            "tile-1": "success-400",
+            "tile-1-foreground": "auto",
+            "tile-2": "info-400",
+            "tile-2-foreground": "auto",
+            "tile-3": "primary-400",
+            "tile-3-foreground": "auto",
+            "tile-4": "accent-400",
+            "tile-4-foreground": "auto",
+            "tile-5": "danger-400",
+            "tile-5-foreground": "auto",
+            "tile-6": {
+                "mix": ["primary-400", 50, "danger-400"]
+            },
+            "tile-6-foreground": "auto",
+            "tile-7": "olive-400",
+            "tile-7-foreground": "auto",
+            "tile-8": {
+                "mix": ["success-400", 50, "info-400"]
+            },
+            "tile-8-foreground": "auto"
         }
     },
     "gradients": [

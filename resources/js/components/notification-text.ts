@@ -54,6 +54,37 @@ export function notificationText(t: Translate, data: NotificationData): string {
                 student: data.student ?? '',
                 subject: data.subject ?? '',
             });
+        case 'grades_appeal_answered': {
+            const facts = {
+                teacher: data.teacher ?? '',
+                student: data.student ?? '',
+                subject: data.subject ?? '',
+            };
+
+            return data.decision === 'accepted'
+                ? t(
+                      ':teacher accepted the appeal of :student in “:subject”.',
+                      facts,
+                  )
+                : t(
+                      ':teacher rejected the appeal of :student in “:subject”.',
+                      facts,
+                  );
+        }
+        case 'grades_appeals_closing':
+            return t(
+                'Appeals of stage :stage, section :section close on :time; :count still wait for an answer.',
+                {
+                    stage: data.stage ?? '',
+                    section: data.section ?? '',
+                    time: data.at ? new Date(data.at).toLocaleString() : '',
+                    count: data.count ?? '0',
+                },
+            );
+        case 'grades_appeals_overdue':
+            return t(':count appeals have waited two days or more.', {
+                count: data.count ?? '0',
+            });
         default:
             return t('Something changed in your account.');
     }

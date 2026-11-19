@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import PrintPage from '../../components/print-page';
 import ResultCard from '../../components/result-card';
+import StudentDossier from '../../components/student-dossier';
+import type {
+    AppealAccess,
+    DossierAppeal,
+    JourneyRow,
+    ResultView,
+} from '../../components/student-dossier';
 import { downloadResultCard } from '../../download-card';
 import type { ResultCardData } from '../../types';
 
@@ -14,7 +21,14 @@ import type { ResultCardData } from '../../types';
  * on a phone or a computer (ADR-0034; owner's request, 2026-11-16).
  */
 export default function PrintStudent(
-    card: ResultCardData & { code: string | null },
+    card: ResultCardData & {
+        code: string | null;
+        /** Below the card, not printed (ADR-0044). */
+        journeys?: JourneyRow[];
+        appeals?: DossierAppeal[];
+        appealAccess?: AppealAccess;
+        views?: ResultView[];
+    },
 ) {
     const { t } = useTranslations();
     const { name } = usePage<{ name: string }>().props;
@@ -61,6 +75,12 @@ export default function PrintStudent(
                 }
             >
                 <ResultCard card={card} code={card.code} />
+                <StudentDossier
+                    journeys={card.journeys ?? []}
+                    appeals={card.appeals ?? []}
+                    appealAccess={card.appealAccess ?? null}
+                    views={card.views ?? []}
+                />
             </PrintPage>
         </>
     );

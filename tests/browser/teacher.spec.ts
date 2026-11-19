@@ -96,20 +96,23 @@ for (const { locale, dir, section, first, absentWord } of [
             );
             await check(page, 'the subjects', dir);
 
+            // A subject opens on its students straight away, each section
+            // one after another (owner's request, 2026-11-19).
             await page
                 .locator(`[data-test="section-${section}"]`)
                 .first()
                 .click();
-            await page.waitForURL(
-                new RegExp(`/teacher/subjects/[0-9a-f-]{36}/${section}$`),
-            );
+            await page.waitForURL(/\/teacher\/subjects\/[0-9a-f-]{36}$/);
             await pageReady(page);
             await check(page, 'the sheet', dir);
 
-            const rows = page.locator('[data-test="student-row"]');
+            const sheet = page.locator(
+                `[data-test="subject-section-${section}"]`,
+            );
+            const rows = sheet.locator('[data-test="student-row"]');
             // Six seeded; the import test may have added one before this runs.
             expect(await rows.count()).toBeGreaterThanOrEqual(6);
-            const inputs = page.locator('[data-test="mark-input"]');
+            const inputs = sheet.locator('[data-test="mark-input"]');
 
             // Enter moves to the next student.
             await inputs.nth(0).fill(first);
@@ -129,9 +132,9 @@ for (const { locale, dir, section, first, absentWord } of [
             await inputs.nth(2).fill('64');
             await expect(inputs.nth(2)).not.toHaveAttribute('aria-invalid');
 
-            await expect(page.locator('[data-test="unsaved"]')).toBeVisible();
-            await page.click('[data-test="save-marks"]');
-            await expect(page.locator('[data-test="unsaved"]')).toHaveCount(0);
+            await expect(sheet.locator('[data-test="unsaved"]')).toBeVisible();
+            await sheet.locator('[data-test="save-marks"]').click();
+            await expect(sheet.locator('[data-test="unsaved"]')).toHaveCount(0);
 
             await page.reload();
             await pageReady(page);

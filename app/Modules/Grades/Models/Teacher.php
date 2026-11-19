@@ -31,7 +31,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $last_seen_at
  * @property int $lock_version
  * @property TeacherAccess|null $access_mode
- * @property int|null $edit_hours
+ * @property int|null $edit_minutes
+ * @property CarbonImmutable|null $edit_until
  * @property string|null $access_reason
  * @property int $login_count
  * @property CarbonImmutable|null $last_login_at
@@ -68,7 +69,8 @@ class Teacher extends Model implements Authenticatable
             'lock_version' => 'integer',
             'last_seen_at' => 'immutable_datetime',
             'access_mode' => TeacherAccess::class,
-            'edit_hours' => 'integer',
+            'edit_minutes' => 'integer',
+            'edit_until' => 'immutable_datetime',
             'login_count' => 'integer',
             'last_login_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',

@@ -4,11 +4,13 @@ namespace App\Modules\Grades\Http;
 
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ManageResults;
+use App\Modules\Grades\Domain\AppealScope;
 use App\Modules\Grades\Domain\Behaviour;
 use App\Modules\Grades\Domain\GradeBand;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\ResultDisplay;
 use App\Modules\Grades\Domain\TeacherResults;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
@@ -35,13 +37,47 @@ class ResultSettingsController
             'exempt_overall_percent' => ['nullable', ...$percent],
             'bands' => ['required', 'array:'.implode(',', $bands)],
             'bands.*' => ['required', 'integer', 'min:0', 'max:100'],
+            'tones' => ['required', 'array:'.implode(',', array_keys(ResultDisplay::TONED))],
+            'tones.*' => ['required', Rule::in(ResultDisplay::TONES)],
+            'absence_flag' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        // What the student sees and the appeals are saved from the
+        // "Students" box (studentView, ADR-0044): kept as they are here.
+        $current = GradeSettings::current();
+
+        $this->results->settings(
+            $user,
+            $request->integer('pass_percent'),
+            $request->filled('exempt_subject_percent') ? $request->integer('exempt_subject_percent') : null,
+            $request->filled('exempt_overall_percent') ? $request->integer('exempt_overall_percent') : null,
+            array_map('intval', (array) $request->input('bands')),
+            $current->options(),
+            array_map('strval', (array) $request->input('tones')),
+            $current->appeal_minutes,
+            $request->filled('absence_flag') ? $request->integer('absence_flag') : null,
+            $current->appeal_until,
+            $current->appeal_scope,
+        );
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Result settings saved.')]);
+
+        return back();
+    }
+
+    /**
+     * What the student sees in the result, and who may appeal and until
+     * when (ADR-0043, ADR-0044).
+     */
+    public function studentView(Request $request, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate([
             // Absent when none is ticked.
             'options' => ['sometimes', 'array'],
             'options.*' => [Rule::in(array_keys(ResultDisplay::OPTIONS))],
-            'tones' => ['required', 'array:'.implode(',', array_keys(ResultDisplay::TONED))],
-            'tones.*' => ['required', Rule::in(ResultDisplay::TONES)],
-            'appeal_days' => ['nullable', 'integer', 'min:1', 'max:90'],
-            'absence_flag' => ['nullable', 'integer', 'min:1', 'max:50'],
+            ...DurationInput::rules('appeal'),
+            'appeal_until' => ['nullable', 'date'],
+            'appeal_scope' => ['required', Rule::enum(AppealScope::class)],
+            'teacher_appeal_replies' => ['sometimes', 'boolean'],
         ]);
 
         // The options come as the list of those ticked.
@@ -51,18 +87,15 @@ class ResultSettingsController
             $options[$option] = in_array($option, $shown, true);
         }
 
-        $this->results->settings(
+        $this->results->studentView(
             $user,
-            $request->integer('pass_percent'),
-            $request->filled('exempt_subject_percent') ? $request->integer('exempt_subject_percent') : null,
-            $request->filled('exempt_overall_percent') ? $request->integer('exempt_overall_percent') : null,
-            array_map('intval', (array) $request->input('bands')),
             $options,
-            array_map('strval', (array) $request->input('tones')),
-            $request->filled('appeal_days') ? $request->integer('appeal_days') : null,
-            $request->filled('absence_flag') ? $request->integer('absence_flag') : null,
+            DurationInput::minutes($request, 'appeal'),
+            DurationInput::moment($request, 'appeal_until'),
+            AppealScope::from((string) $request->string('appeal_scope')),
+            $request->boolean('teacher_appeal_replies'),
         );
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Result settings saved.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('What the student sees was saved.')]);
 
         return back();
     }

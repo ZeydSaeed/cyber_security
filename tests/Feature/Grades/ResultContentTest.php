@@ -179,6 +179,8 @@ describe('the owner\'s results', function () {
             ->assertSessionHasErrors('tones.fail');
 
         $this->actingAs($this->owner)->put('/admin/results/settings', $settings(['pass_percent' => 60]))->assertSessionHasNoErrors();
+        // The card's parts are saved from the "Students" box (ADR-0044).
+        $this->actingAs($this->owner)->put('/admin/results/student-view', ['options' => ['total', 'rank'], 'appeal_scope' => 'all'])->assertSessionHasNoErrors();
 
         $this->actingAs($this->owner)->get('/admin')->assertInertia(fn (Assert $page) => $page
             ->where('resultSettings.pass_percent', 60)

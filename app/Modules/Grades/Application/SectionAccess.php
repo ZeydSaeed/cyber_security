@@ -12,8 +12,9 @@ use App\Modules\Grades\Models\Teacher;
 /**
  * What a teacher may do in one section they teach (ADR-0037). The
  * narrowest setting wins: the section's mode, else the teacher's, else the
- * department's. The editing hours are the teacher's, else the
- * department's; a grant is the section's.
+ * department's. The editing time limit (minutes and deadline, ADR-0043)
+ * is the teacher's when they have one, else the department's; a grant is
+ * the section's.
  */
 final class SectionAccess
 {
@@ -36,11 +37,18 @@ final class SectionAccess
         return new EditPolicy(
             approved: $approved,
             mode: self::mode($teacher, $row, $settings),
-            editHours: $teacher->edit_hours ?? $settings->teacher_edit_hours,
+            editMinutes: self::ownLimit($teacher) ? $teacher->edit_minutes : $settings->teacher_edit_minutes,
+            editDeadline: self::ownLimit($teacher) ? $teacher->edit_until : $settings->teacher_edit_until,
             grantUntil: $row->edit_until,
             windowOpen: $period->isOpen(),
             published: $published ?? $period->isPublished(),
             now: now(),
         );
+    }
+
+    /** The teacher's own limit replaces the department's as a whole. */
+    private static function ownLimit(Teacher $teacher): bool
+    {
+        return $teacher->edit_minutes !== null || $teacher->edit_until !== null;
     }
 }

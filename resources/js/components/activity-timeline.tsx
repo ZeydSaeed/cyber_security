@@ -177,6 +177,16 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Student appealed a mark');
         case 'grades.appeal_decided':
             return t('Appeal answered');
+        case 'grades.student_result_viewed':
+            return t('Student read their result');
+        case 'grades.student_card_viewed':
+            return t("Student's result card opened");
+        case 'grades.student_view_changed':
+            return t('What the student sees changed');
+        case 'grades.student_appeal_allowed':
+            return t('Student allowed to appeal');
+        case 'grades.student_appeal_disallowed':
+            return t('Student no longer allowed to appeal');
         case 'grades.devices_forgotten':
             return t('Remembered devices forgotten');
         case 'grades.device_token_mismatch':

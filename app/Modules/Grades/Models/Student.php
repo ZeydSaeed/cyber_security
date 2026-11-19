@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $code_encrypted
  * @property StudentStatus|null $status
  * @property bool $access_blocked
+ * @property bool $appeal_allowed
  * @property int $login_count
  * @property CarbonImmutable|null $last_login_at
  * @property CarbonImmutable $created_at
@@ -81,6 +82,7 @@ class Student extends Model implements Authenticatable
             'section' => Section::class,
             'status' => StudentStatus::class,
             'access_blocked' => 'boolean',
+            'appeal_allowed' => 'boolean',
             'login_count' => 'integer',
             'last_login_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',

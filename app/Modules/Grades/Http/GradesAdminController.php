@@ -38,11 +38,20 @@ use Inertia\Response;
  */
 class GradesAdminController
 {
-    public function overview(GradesBoard $board, AccessBoard $access, #[CurrentUser] User $user): Response
+    /**
+     * The settings' tabs, each a page of its own (owner's request,
+     * 2026-11-19); without one, /admin lists them.
+     */
+    public const TABS = ['window', 'links', 'teachers', 'students', 'permissions', 'card', 'teacher-view', 'subjects'];
+
+    public function overview(Request $request, GradesBoard $board, AccessBoard $access, #[CurrentUser] User $user): Response
     {
         $canManage = $user->can('grades.manage');
+        $tab = $request->query('tab');
 
         return Inertia::render('modules/grades/pages/admin/overview', [
+            // An unknown tab is no tab: the list of tabs.
+            'tab' => is_string($tab) && in_array($tab, self::TABS, true) ? $tab : null,
             ...$board->show(),
             // Sign-ins and mark editing (ADR-0037), for those who may change them.
             'access' => $canManage ? $access->show() : null,
@@ -70,7 +79,11 @@ class GradesAdminController
             // What teachers see of their students' results (ADR-0040).
             'teacher_results' => $settings->teacher_results->value,
             'teacher_view' => $settings->teacherView(),
-            'appeal_days' => $settings->appeal_days,
+            'appeal_minutes' => $settings->appeal_minutes,
+            'appeal_until' => $settings->appeal_until?->toIso8601String(),
+            'appeal_scope' => $settings->appeal_scope->value,
+            // Teachers may answer appeals of their subjects (ADR-0044).
+            'teacher_appeal_replies' => $settings->teacher_appeal_replies,
             'absence_flag' => $settings->absence_flag,
         ];
     }

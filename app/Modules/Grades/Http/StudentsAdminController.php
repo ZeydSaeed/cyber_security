@@ -12,6 +12,7 @@ use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\StudentStatus;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Files\FileStore;
@@ -63,6 +64,8 @@ class StudentsAdminController
                     'logins' => $student->login_count,
                     'last_login_at' => $student->last_login_at?->toIso8601String(),
                     'blocked' => $student->access_blocked,
+                    // May appeal when appeals are for chosen students (ADR-0043).
+                    'appeal_allowed' => $student->appeal_allowed,
                     'devices' => (int) $student->getAttribute('devices_count'),
                     'code' => $showCodes && $student->code_encrypted !== null ? $codes->decrypt($student->code_encrypted) : null,
                     'name' => $student->full_name,
@@ -80,6 +83,8 @@ class StudentsAdminController
             'state' => $state->toArray(),
             'columns' => TableColumns::for($viewer->id, $table),
             'canImport' => $showCodes,
+            // Whether appeals are for chosen students only (ADR-0043).
+            'appealScope' => GradeSettings::current()->appeal_scope->value,
             'places' => ResultsController::places(),
         ]);
     }

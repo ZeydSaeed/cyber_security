@@ -55,6 +55,8 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
 
         // What a result says and shows (ADR-0039).
         Route::put('results/settings', [ResultSettingsController::class, 'settings'])->middleware('throttle:30,1')->name('results.settings');
+        // What the student sees, and the appeals (ADR-0044).
+        Route::put('results/student-view', [ResultSettingsController::class, 'studentView'])->middleware('throttle:30,1')->name('results.student_view');
         Route::put('results/teacher-view', [ResultSettingsController::class, 'teacherView'])->middleware('throttle:30,1')->name('results.teacher_view');
         Route::put('results/students/{student}/note', [ResultSettingsController::class, 'note'])
             ->middleware('throttle:120,1')
@@ -89,6 +91,11 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->middleware('throttle:60,1')
             ->whereUuid('student')
             ->name('access.student');
+        // One student's appeals, when they are for chosen students (ADR-0043).
+        Route::put('access/students/{student}/appeal', [AccessController::class, 'studentAppeal'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('student')
+            ->name('access.student.appeal');
         Route::put('access/requests/{editRequest}', [AccessController::class, 'decide'])
             ->middleware('throttle:60,1')
             ->whereUuid('editRequest')
@@ -186,6 +193,10 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
         Route::get('subjects', [TeacherMarksController::class, 'subjects'])->name('subjects');
         // Their own students' results, as the owner allows (ADR-0040).
         Route::get('results', [TeacherResultsController::class, 'show'])->name('results');
+        // A whole subject: every section's sheet, one after another.
+        Route::get('subjects/{subject}', [TeacherMarksController::class, 'subject'])
+            ->whereUuid('subject')
+            ->name('subject');
         Route::get('subjects/{subject}/{section}', [TeacherMarksController::class, 'section'])
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
@@ -201,6 +212,11 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.approve');
+        // Answering an appeal, when the owner allows it (ADR-0044).
+        Route::put('appeals/{appeal}', [TeacherMarksController::class, 'answerAppeal'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('appeal')
+            ->name('appeals.answer');
         Route::post('subjects/{subject}/{section}/request', [TeacherMarksController::class, 'requestEdit'])
             ->middleware('throttle:10,1')
             ->whereUuid('subject')

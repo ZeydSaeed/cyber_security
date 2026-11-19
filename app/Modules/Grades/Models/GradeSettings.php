@@ -2,6 +2,7 @@
 
 namespace App\Modules\Grades\Models;
 
+use App\Modules\Grades\Domain\AppealScope;
 use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\ResultCalculator;
 use App\Modules\Grades\Domain\ResultDisplay;
@@ -23,7 +24,8 @@ use InvalidArgumentException;
  * @property int|null $teacher_max_logins
  * @property int|null $student_max_logins
  * @property TeacherAccess $teacher_mode
- * @property int|null $teacher_edit_hours
+ * @property int|null $teacher_edit_minutes
+ * @property CarbonImmutable|null $teacher_edit_until
  * @property StudentAccess $student_access
  * @property int $remember_days
  * @property int $pass_percent
@@ -33,7 +35,10 @@ use InvalidArgumentException;
  * @property array<string, mixed>|null $result_options
  * @property array<string, mixed>|null $mark_tones
  * @property TeacherResults $teacher_results
- * @property int|null $appeal_days
+ * @property int|null $appeal_minutes
+ * @property CarbonImmutable|null $appeal_until
+ * @property AppealScope $appeal_scope
+ * @property bool $teacher_appeal_replies
  * @property int|null $absence_flag
  * @property array<string, mixed>|null $teacher_view
  * @property CarbonImmutable $created_at
@@ -61,7 +66,8 @@ class GradeSettings extends Model
             'teacher_max_logins' => 'integer',
             'student_max_logins' => 'integer',
             'teacher_mode' => TeacherAccess::class,
-            'teacher_edit_hours' => 'integer',
+            'teacher_edit_minutes' => 'integer',
+            'teacher_edit_until' => 'immutable_datetime',
             'student_access' => StudentAccess::class,
             'remember_days' => 'integer',
             'pass_percent' => 'integer',
@@ -71,7 +77,10 @@ class GradeSettings extends Model
             'result_options' => 'array',
             'mark_tones' => 'array',
             'teacher_results' => TeacherResults::class,
-            'appeal_days' => 'integer',
+            'appeal_minutes' => 'integer',
+            'appeal_until' => 'immutable_datetime',
+            'appeal_scope' => AppealScope::class,
+            'teacher_appeal_replies' => 'boolean',
             'absence_flag' => 'integer',
             'teacher_view' => 'array',
             'created_at' => 'immutable_datetime',

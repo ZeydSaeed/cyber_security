@@ -9,10 +9,13 @@ use App\Modules\Grades\Application\Queries\MarkHistory;
 use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\Queries\TeacherSheets;
 use App\Modules\Grades\Application\ResultsWorkbook;
+use App\Modules\Grades\Application\ResultViews;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Models\GradeAppeal;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
@@ -73,11 +76,38 @@ class ResultsController
      * The owner's card shows the student's code as their ID (owner's
      * request, 2026-11-16): the card is handed to the student.
      */
-    public function printStudent(Student $student, StudentCodes $codes): Response
+    public function printStudent(Student $student, StudentCodes $codes, MarkHistory $history, ResultViews $views, #[CurrentUser] User $user): Response
     {
+        $manage = $user->can('grades.manage');
+        $views->byUser($student, $user);
+        $appeals = GradeAppeal::query()->with(['subject:id,name', 'decidedByTeacher:id,name'])
+            ->where('student_id', $student->id)->where('period', Period::Month1->value)
+            ->orderByDesc('id')->get();
+        $deciders = User::query()->whereIn('id', $appeals->pluck('decided_by_user_id')->filter()->unique())->pluck('name', 'id');
+
         return Inertia::render('modules/grades/pages/print/student', [
             ...$this->sheets->student($student),
             'code' => $student->code_encrypted === null ? null : $codes->decrypt($student->code_encrypted),
+            // Below the card, not printed (ADR-0044): each mark's journey,
+            // the student's appeals, and whether they may appeal.
+            'journeys' => $history->forStudent($student),
+            'appeals' => array_values($appeals->map(fn (GradeAppeal $appeal): array => [
+                'uuid' => $appeal->uuid,
+                'subject' => $appeal->subject?->name,
+                'reason' => $appeal->reason,
+                'status' => $appeal->status->value,
+                'response' => $appeal->response,
+                'by' => $appeal->decidedByTeacher->name ?? ($appeal->decided_by_user_id === null ? null : $deciders[$appeal->decided_by_user_id] ?? null),
+                'by_teacher' => $appeal->decided_by_teacher_id !== null,
+                'created_at' => $appeal->created_at->toIso8601String(),
+            ])->all()),
+            // Who saw the result, newest first (ADR-0045).
+            'views' => $views->of($student),
+            'appealAccess' => $manage ? [
+                'scope' => GradeSettings::current()->appeal_scope->value,
+                'allowed' => $student->appeal_allowed,
+                'uuid' => $student->uuid,
+            ] : null,
         ]);
     }
 

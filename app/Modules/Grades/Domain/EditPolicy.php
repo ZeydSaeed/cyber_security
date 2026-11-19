@@ -14,22 +14,35 @@ use DateTimeInterface;
  *   without one, approved marks are read-only.
  * - An unexpired grant (the owner's unlock, or an approved request) allows
  *   every change, even with mark entry closed or a view-only mode.
- * - Otherwise mark entry must be open, and the mode decides: Edit allows,
- *   ViewOnly and Blocked refuse, Timed allows new marks and those entered
- *   less than the given hours ago.
+ * - Otherwise mark entry must be open, and the mode decides: Edit and
+ *   Timed allow, ViewOnly and Blocked refuse.
+ * - In Edit and Timed, a time limit (ADR-0043) locks a mark once the given
+ *   minutes have passed since it was first entered, and every mark at the
+ *   deadline, whichever comes first. New marks can still be entered. Edit
+ *   may have no limit; Timed always has one (ManageAccess checks).
  */
 final readonly class EditPolicy
 {
     public function __construct(
         public TeacherAccess $mode,
-        public ?int $editHours,
+        /** Minutes a mark stays changeable after it is first entered. */
+        public ?int $editMinutes,
         public ?DateTimeInterface $grantUntil,
         public bool $windowOpen,
         public bool $published,
         public DateTimeInterface $now,
         /** The teacher approved this section's marks (ADR-0041). */
         public bool $approved = false,
+        /** A fixed moment after which no mark can be changed (ADR-0043). */
+        public ?DateTimeInterface $editDeadline = null,
     ) {}
+
+    /** Whether a time limit applies to marks already entered. */
+    public function isLimited(): bool
+    {
+        return in_array($this->mode, [TeacherAccess::Edit, TeacherAccess::Timed], true)
+            && ($this->editMinutes !== null || $this->editDeadline !== null);
+    }
 
     public function hasGrant(): bool
     {
@@ -66,20 +79,30 @@ final readonly class EditPolicy
             return false;
         }
 
-        if ($enteredAt === null || $this->hasGrant() || $this->mode !== TeacherAccess::Timed || $this->editHours === null) {
+        if ($enteredAt === null) {
             return true;
         }
 
-        return $enteredAt->getTimestamp() + $this->editHours * 3600 > $this->now->getTimestamp();
+        $until = $this->editableUntil($enteredAt);
+
+        return $until === null || $until > $this->now->getTimestamp();
     }
 
-    /** Until when a mark entered at the given time stays editable (timed mode). */
+    /** Until when a mark entered at the given time stays editable (null: no limit). */
     public function editableUntil(DateTimeInterface $enteredAt): ?int
     {
-        if ($this->hasGrant() || $this->mode !== TeacherAccess::Timed || $this->editHours === null) {
+        if ($this->hasGrant() || ! $this->isLimited()) {
             return null;
         }
 
-        return $enteredAt->getTimestamp() + $this->editHours * 3600;
+        $byTime = $this->editMinutes === null ? null : $enteredAt->getTimestamp() + $this->editMinutes * 60;
+        $byDate = $this->editDeadline?->getTimestamp();
+
+        // Whichever comes first; isLimited() means at least one is set.
+        return match (true) {
+            $byTime === null => $byDate,
+            $byDate === null => $byTime,
+            default => min($byTime, $byDate),
+        };
     }
 }

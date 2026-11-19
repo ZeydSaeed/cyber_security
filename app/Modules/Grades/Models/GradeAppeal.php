@@ -21,9 +21,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property AppealStatus $status
  * @property string|null $response
  * @property int|null $decided_by_user_id
+ * @property int|null $decided_by_teacher_id
  * @property CarbonImmutable|null $decided_at
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
+ * @property-read Teacher|null $decidedByTeacher
  */
 class GradeAppeal extends Model
 {
@@ -74,5 +76,15 @@ class GradeAppeal extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'subject_id');
+    }
+
+    /**
+     * The teacher who answered it, when the owner allows teachers to (ADR-0044).
+     *
+     * @return BelongsTo<Teacher, $this>
+     */
+    public function decidedByTeacher(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class, 'decided_by_teacher_id');
     }
 }

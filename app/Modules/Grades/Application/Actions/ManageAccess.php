@@ -15,6 +15,7 @@ use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -26,8 +27,11 @@ use Illuminate\Support\Facades\DB;
  */
 class ManageAccess
 {
-    /** The longest editing time or grant: a year, in hours. */
+    /** The longest grant: a year, in hours. */
     public const MAX_HOURS = 8760;
+
+    /** The longest editing time of a mark: a year, in minutes (ADR-0043). */
+    public const MAX_EDIT_MINUTES = 525600;
 
     public function __construct(private readonly AuditLogger $audit) {}
 
@@ -36,14 +40,21 @@ class ManageAccess
      *     teacher_attempts_per_minute: int, teacher_attempts_per_hour: int,
      *     student_attempts_per_minute: int, student_attempts_per_hour: int,
      *     teacher_max_logins: int|null, student_max_logins: int|null,
-     *     teacher_mode: TeacherAccess, teacher_edit_hours: int|null,
+     *     teacher_mode: TeacherAccess, teacher_edit_minutes: int|null,
+     *     teacher_edit_until: CarbonImmutable|null,
      *     student_access: StudentAccess, remember_days: int
      * }  $values
      */
     public function settings(User $actor, array $values): GradeSettings
     {
-        if ($values['teacher_mode'] === TeacherAccess::Timed && $values['teacher_edit_hours'] === null) {
-            throw new DomainRuleViolation(__('Give the editing time in hours for the timed mode.'), 'teacher_edit_hours');
+        $this->assertMinutes($values['teacher_edit_minutes'], 'teacher_edit_minutes');
+        if ($values['teacher_mode'] === TeacherAccess::Timed && $values['teacher_edit_minutes'] === null && $values['teacher_edit_until'] === null) {
+            throw new DomainRuleViolation(__('Give the editing time, or the date it ends, for the limited-time mode.'), 'teacher_edit_minutes');
+        }
+        // The limit is not used by read-only or no access: the page sends
+        // none then, and the saved one is kept for when it is used again.
+        if (! self::usesLimit($values['teacher_mode'])) {
+            unset($values['teacher_edit_minutes'], $values['teacher_edit_until']);
         }
 
         return DB::transaction(function () use ($actor, $values): GradeSettings {
@@ -54,7 +65,11 @@ class ManageAccess
             $changes = [];
             foreach ($values as $field => $value) {
                 $old = $settings->getAttribute($field);
-                $plain = fn (mixed $v): mixed => $v instanceof \BackedEnum ? $v->value : $v;
+                $plain = fn (mixed $v): mixed => match (true) {
+                    $v instanceof \BackedEnum => $v->value,
+                    $v instanceof \DateTimeInterface => $v->format(DATE_ATOM),
+                    default => $v,
+                };
                 if ($plain($old) !== $plain($value)) {
                     $changes[$field] = ['from' => $plain($old), 'to' => $plain($value)];
                 }
@@ -72,21 +87,30 @@ class ManageAccess
     }
 
     /**
-     * A teacher's own access: a mode (null: the department's), editing hours
-     * (null: the department's), and the reason for a lock.
+     * A teacher's own access: a mode (null: the department's), an editing
+     * time limit in minutes and/or a deadline (both null: the department's,
+     * ADR-0043), and the reason for a lock.
      */
-    public function teacher(User $actor, Teacher $teacher, ?TeacherAccess $mode, ?int $hours, ?string $reason): Teacher
+    public function teacher(User $actor, Teacher $teacher, ?TeacherAccess $mode, ?int $minutes, ?string $reason, ?CarbonImmutable $until = null): Teacher
     {
-        $this->assertHours($hours, 'edit_hours');
+        $this->assertMinutes($minutes, 'edit_minutes');
         $reason = $this->validReason($reason);
 
-        return DB::transaction(function () use ($actor, $teacher, $mode, $hours, $reason): Teacher {
+        return DB::transaction(function () use ($actor, $teacher, $mode, $minutes, $until, $reason): Teacher {
             $locked = Teacher::query()->whereKey($teacher->id)->lockForUpdate()->firstOrFail();
             EnsureManager::check($actor);
+            $settings = GradeSettings::current();
+
+            // Read-only or no access uses no limit: the saved one is kept.
+            if (! self::usesLimit($mode ?? $settings->teacher_mode)) {
+                $minutes = $locked->edit_minutes;
+                $until = $locked->edit_until;
+            }
 
             $changes = array_filter([
                 'access_mode' => ['from' => $locked->access_mode?->value, 'to' => $mode?->value],
-                'edit_hours' => ['from' => $locked->edit_hours, 'to' => $hours],
+                'edit_minutes' => ['from' => $locked->edit_minutes, 'to' => $minutes],
+                'edit_until' => ['from' => $locked->edit_until?->format(DATE_ATOM), 'to' => $until?->format(DATE_ATOM)],
                 'access_reason' => ['from' => $locked->access_reason, 'to' => $reason],
             ], fn (array $change): bool => $change['from'] !== $change['to']);
 
@@ -94,9 +118,8 @@ class ManageAccess
                 return $locked;
             }
 
-            $settings = GradeSettings::current();
             $wasBlocked = $locked->accessMode($settings) === TeacherAccess::Blocked;
-            $locked->forceFill(['access_mode' => $mode, 'edit_hours' => $hours, 'access_reason' => $reason]);
+            $locked->forceFill(['access_mode' => $mode, 'edit_minutes' => $minutes, 'edit_until' => $until, 'access_reason' => $reason]);
             if (! $wasBlocked && $locked->accessMode($settings) === TeacherAccess::Blocked) {
                 $locked->lock_version++;
             }
@@ -203,6 +226,27 @@ class ManageAccess
     }
 
     /**
+     * Whether one student may appeal when appeals are open to chosen
+     * students only (ADR-0043).
+     */
+    public function studentAppeal(User $actor, Student $student, bool $allowed): Student
+    {
+        return DB::transaction(function () use ($actor, $student, $allowed): Student {
+            $locked = Student::query()->whereKey($student->id)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            if ($locked->appeal_allowed === $allowed) {
+                return $locked;
+            }
+
+            $locked->forceFill(['appeal_allowed' => $allowed])->save();
+            $this->audit->record($allowed ? 'grades.student_appeal_allowed' : 'grades.student_appeal_disallowed', $locked, actor: $actor);
+
+            return $locked;
+        }, 3);
+    }
+
+    /**
      * Approves a pending request (the teacher's section may be edited for
      * the given hours, from now) or rejects it. A request is decided once.
      */
@@ -254,6 +298,19 @@ class ManageAccess
 
             return $locked;
         }, 3);
+    }
+
+    /** Whether a mode uses the editing time limit (ADR-0043). */
+    public static function usesLimit(TeacherAccess $mode): bool
+    {
+        return in_array($mode, [TeacherAccess::Edit, TeacherAccess::Timed], true);
+    }
+
+    private function assertMinutes(?int $minutes, string $field): void
+    {
+        if ($minutes !== null && ($minutes < 1 || $minutes > self::MAX_EDIT_MINUTES)) {
+            throw new DomainRuleViolation(__('Give an editing time from 1 minute to 365 days.'), $field);
+        }
     }
 
     private function assertHours(?int $hours, string $field): void

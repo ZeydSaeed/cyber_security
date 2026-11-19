@@ -5,6 +5,7 @@ namespace App\Modules\Grades\Http;
 use App\Modules\Grades\Application\Actions\ManageAppeals;
 use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\RememberedDevices;
+use App\Modules\Grades\Application\ResultViews;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\Period;
@@ -147,7 +148,7 @@ class StudentPortalController
         return to_route('grades.student.login');
     }
 
-    public function result(ResultSheets $sheets): Response
+    public function result(ResultSheets $sheets, ResultViews $views): Response
     {
         $student = Auth::guard(Student::GUARD)->user();
 
@@ -157,6 +158,10 @@ class StudentPortalController
 
         // This student's section, or all (ADR-0042).
         $published = GradePeriod::for(Period::Month1)->publishedFor($student->stage, $student->section);
+        // Who saw the result (ADR-0045): only a published one is a view.
+        if ($published) {
+            $views->byStudent($student);
+        }
 
         return Inertia::render('modules/grades/pages/student/result', [
             'portal' => ['name' => $student->full_name, 'logout' => route('grades.student.logout')],

@@ -69,7 +69,8 @@ function accessSettings(object $test, array $changes): GradeSettings
         'teacher_max_logins' => $settings->teacher_max_logins,
         'student_max_logins' => $settings->student_max_logins,
         'teacher_mode' => $settings->teacher_mode,
-        'teacher_edit_hours' => $settings->teacher_edit_hours,
+        'teacher_edit_minutes' => $settings->teacher_edit_minutes,
+        'teacher_edit_until' => $settings->teacher_edit_until,
         'student_access' => $settings->student_access,
         'remember_days' => $settings->remember_days,
         ...$changes,
@@ -167,7 +168,7 @@ describe('changing marks', function () {
     });
 
     it('locks each mark once its editing time is over, but takes new marks', function () {
-        accessSettings($this, ['teacher_mode' => TeacherAccess::Timed, 'teacher_edit_hours' => 24]);
+        accessSettings($this, ['teacher_mode' => TeacherAccess::Timed, 'teacher_edit_minutes' => 24 * 60]);
         [$a, $b, $c] = $this->students;
 
         teacherSaves($this, [$a->uuid => Mark::of(60)]);
@@ -188,14 +189,15 @@ describe('changing marks', function () {
         $this->post('/teacher', ['code' => 'river-stone-81']);
         $this->get(teacherSection($this))->assertInertia(fn (Assert $page) => $page
             ->where('access.state', 'timed')
-            ->where('access.hours', 24)
+            ->where('access.minutes', 24 * 60)
+            ->where('access.deadline', null)
             ->where('students', fn ($rows) => collect($rows)->firstWhere('uuid', $a->uuid)['locked'] === true
                 && collect($rows)->firstWhere('uuid', $c->uuid)['locked'] === false));
     });
 
     it('takes the teacher\'s own hours before the department\'s', function () {
-        accessSettings($this, ['teacher_mode' => TeacherAccess::Timed, 'teacher_edit_hours' => 24]);
-        $this->access->teacher($this->owner, $this->teacher, null, 2, null);
+        accessSettings($this, ['teacher_mode' => TeacherAccess::Timed, 'teacher_edit_minutes' => 24 * 60]);
+        $this->access->teacher($this->owner, $this->teacher, null, 2 * 60, null);
 
         teacherSaves($this, [$this->students[0]->uuid => Mark::of(60)]);
         $this->travel(3)->hours();
@@ -383,7 +385,7 @@ describe('the owner\'s page', function () {
             'teacher_mode' => 'timed',
             'student_access' => 'allowed',
             'remember_days' => 30,
-        ])->assertSessionHasErrors(['teacher_edit_hours' => 'Give the editing time in hours for the timed mode.']);
+        ])->assertSessionHasErrors(['teacher_edit_minutes' => 'Give the editing time, or the date it ends, for the limited-time mode.']);
 
         $this->actingAs($this->owner)->put('/admin/access', [
             'teacher_attempts_per_minute' => 3,
@@ -392,7 +394,10 @@ describe('the owner\'s page', function () {
             'student_attempts_per_hour' => 20,
             'teacher_max_logins' => '',
             'teacher_mode' => 'timed',
-            'teacher_edit_hours' => 48,
+            // Two days, as days, hours and minutes (ADR-0043).
+            'teacher_edit_days' => 1,
+            'teacher_edit_hours' => 23,
+            'teacher_edit_minutes' => 60,
             'student_access' => 'allowed',
             'remember_days' => 30,
         ])->assertSessionHasNoErrors();
@@ -400,7 +405,7 @@ describe('the owner\'s page', function () {
         $settings = GradeSettings::current();
         $audit = AuditEvent::query()->where('action', 'grades.access_settings_changed')->sole();
         expect($settings->teacher_mode)->toBe(TeacherAccess::Timed)
-            ->and($settings->teacher_edit_hours)->toBe(48)
+            ->and($settings->teacher_edit_minutes)->toBe(48 * 60)
             ->and($audit->changes['teacher_attempts_per_minute'])->toEqual(['from' => 5, 'to' => 3])
             ->and($audit->changes)->not->toHaveKey('student_attempts_per_minute');
     });

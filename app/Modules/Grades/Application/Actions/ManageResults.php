@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Grades\Domain\AppealScope;
 use App\Modules\Grades\Domain\Behaviour;
 use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\Period;
@@ -13,6 +14,7 @@ use App\Modules\Grades\Models\GradeStudentNote;
 use App\Modules\Grades\Models\Student;
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Exceptions\DomainRuleViolation;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -27,17 +29,22 @@ class ManageResults
 {
     public const MAX_NOTES = 1000;
 
+    /** The longest time appeals stay open: 90 days, in minutes (ADR-0043). */
+    public const MAX_APPEAL_MINUTES = 129600;
+
     public function __construct(private readonly AuditLogger $audit) {}
 
     /**
      * @param  array<string, mixed>  $bands  band => lowest percentage
      * @param  array<string, bool>  $options  option => shown
      * @param  array<string, string>  $tones  what => tone
+     * @param  int|null  $appealMinutes  how long appeals stay open after publication (ADR-0043)
+     * @param  CarbonImmutable|null  $appealUntil  when appeals close at the latest
      */
-    public function settings(User $actor, int $passPercent, ?int $exemptSubject, ?int $exemptOverall, array $bands, array $options, array $tones, ?int $appealDays = null, ?int $absenceFlag = null): GradeSettings
+    public function settings(User $actor, int $passPercent, ?int $exemptSubject, ?int $exemptOverall, array $bands, array $options, array $tones, ?int $appealMinutes = null, ?int $absenceFlag = null, ?CarbonImmutable $appealUntil = null, AppealScope $appealScope = AppealScope::All): GradeSettings
     {
-        if ($appealDays !== null && ($appealDays < 1 || $appealDays > 90)) {
-            throw new DomainRuleViolation(__('Give a number of days from 1 to 90.'), 'appeal_days');
+        if ($appealMinutes !== null && ($appealMinutes < 1 || $appealMinutes > self::MAX_APPEAL_MINUTES)) {
+            throw new DomainRuleViolation(__('Give a time from 1 minute to 90 days.'), 'appeal_minutes');
         }
         if ($absenceFlag !== null && ($absenceFlag < 1 || $absenceFlag > 50)) {
             throw new DomainRuleViolation(__('Give a number of subjects from 1 to 50.'), 'absence_flag');
@@ -68,7 +75,9 @@ class ManageResults
             'result_options' => ResultDisplay::options($options),
             'mark_tones' => ResultDisplay::tones($tones),
             // Appeals and the absence flag (ADR-0042).
-            'appeal_days' => $appealDays,
+            'appeal_minutes' => $appealMinutes,
+            'appeal_until' => $appealUntil?->format(DATE_ATOM),
+            'appeal_scope' => $appealScope->value,
             'absence_flag' => $absenceFlag,
         ];
 
@@ -84,7 +93,9 @@ class ManageResults
                 'grade_bands' => $settings->bands()->minimums,
                 'result_options' => $settings->options(),
                 'mark_tones' => $settings->tones(),
-                'appeal_days' => $settings->appeal_days,
+                'appeal_minutes' => $settings->appeal_minutes,
+                'appeal_until' => $settings->appeal_until?->format(DATE_ATOM),
+                'appeal_scope' => $settings->appeal_scope->value,
                 'absence_flag' => $settings->absence_flag,
             ];
             $changes = [];
@@ -100,6 +111,57 @@ class ManageResults
 
             $settings->forceFill($values)->save();
             $this->audit->record('grades.result_settings_changed', $settings, [], $changes, actor: $actor);
+
+            return $settings;
+        }, 3);
+    }
+
+    /**
+     * What the student sees in the result, and the appeals (ADR-0044):
+     * saved from the "Students" box of the settings, apart from the pass
+     * and grade rules.
+     *
+     * @param  array<string, bool>  $options
+     */
+    public function studentView(User $actor, array $options, ?int $appealMinutes, ?CarbonImmutable $appealUntil, AppealScope $appealScope, bool $teacherReplies): GradeSettings
+    {
+        if ($appealMinutes !== null && ($appealMinutes < 1 || $appealMinutes > self::MAX_APPEAL_MINUTES)) {
+            throw new DomainRuleViolation(__('Give a time from 1 minute to 90 days.'), 'appeal_minutes');
+        }
+
+        $values = [
+            'result_options' => ResultDisplay::options($options),
+            'appeal_minutes' => $appealMinutes,
+            'appeal_until' => $appealUntil?->format(DATE_ATOM),
+            'appeal_scope' => $appealScope->value,
+            'teacher_appeal_replies' => $teacherReplies,
+        ];
+
+        return DB::transaction(function () use ($actor, $values): GradeSettings {
+            GradeSettings::current();
+            $settings = GradeSettings::query()->whereKey(GradeSettings::ROW)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            $before = [
+                'result_options' => $settings->options(),
+                'appeal_minutes' => $settings->appeal_minutes,
+                'appeal_until' => $settings->appeal_until?->format(DATE_ATOM),
+                'appeal_scope' => $settings->appeal_scope->value,
+                'teacher_appeal_replies' => $settings->teacher_appeal_replies,
+            ];
+            $changes = [];
+            foreach ($values as $field => $value) {
+                if ($before[$field] !== $value) {
+                    $changes[$field] = ['from' => $before[$field], 'to' => $value];
+                }
+            }
+
+            if ($changes === []) {
+                return $settings;
+            }
+
+            $settings->forceFill($values)->save();
+            $this->audit->record('grades.student_view_changed', $settings, [], $changes, actor: $actor);
 
             return $settings;
         }, 3);

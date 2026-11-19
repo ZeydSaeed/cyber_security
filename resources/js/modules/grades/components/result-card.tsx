@@ -64,6 +64,13 @@ export default function ResultCard({
     };
 
     const facts: { label: string; value: string; test: string }[] = [];
+    if (options.absences && student.absences !== null) {
+        facts.push({
+            label: t('Absences'),
+            value: t(':count subjects', { count: String(student.absences) }),
+            test: 'card-absences',
+        });
+    }
     if (options.rank && student.rank !== null) {
         facts.push({
             label: t('Rank in the section'),
@@ -110,7 +117,13 @@ export default function ResultCard({
     const markText = (row: ResultRow, i: number) => {
         const mark = row.marks[i] ?? null;
 
-        return mark === null ? '—' : mark === 'absent' ? t('Absent') : mark;
+        if (mark === null) {
+            // The printable card leaves an unentered mark blank; its status
+            // says so (owner's request, 2026-11-19).
+            return printable ? '' : '—';
+        }
+
+        return mark === 'absent' ? t('Absent') : mark;
     };
 
     return (
@@ -127,10 +140,11 @@ export default function ResultCard({
                             test: 'card-name',
                         },
                         { label: t('Stage'), value: stageName(t, card.stage) },
-                        {
-                            label: t('Section'),
-                            value: card.divided ? card.section : '—',
-                        },
+                        // An undivided stage has no section to name
+                        // (owner's request, 2026-11-19).
+                        ...(card.divided
+                            ? [{ label: t('Section'), value: card.section }]
+                            : []),
                         {
                             label: t('Student ID'),
                             value: code ?? student.number ?? '—',
@@ -242,7 +256,9 @@ export default function ResultCard({
                                     </th>
                                     <td className="border border-grid-line p-2 text-center tabular-nums">
                                         {markText(student, i)}
-                                        {options.max_mark && (
+                                        {/* The printable card shows the mark
+                                            alone (owner's request, 2026-11-19). */}
+                                        {options.max_mark && !printable && (
                                             <span className="text-muted-foreground">
                                                 {' '}
                                                 / {subject.max}

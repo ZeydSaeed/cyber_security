@@ -9,6 +9,7 @@ use App\Modules\Grades\Application\Actions\RequestEdit;
 use App\Modules\Grades\Application\Actions\SaveMarks;
 use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
 use App\Modules\Grades\Application\StudentCodes;
+use App\Modules\Grades\Domain\AppealScope;
 use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\Mark;
@@ -25,6 +26,7 @@ use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditEvent;
 use App\Platform\Exceptions\DomainRuleViolation;
 use App\Platform\Outbox\OutboxMessage;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -62,7 +64,13 @@ beforeEach(function () {
 
 function resultExtras(object $test, ?int $appealDays, ?int $absenceFlag): void
 {
-    app(ManageResults::class)->settings($test->owner, 50, null, null, GradeBands::DEFAULTS, ResultDisplay::OPTIONS, ResultDisplay::TONED, $appealDays, $absenceFlag);
+    resultAppeals($test, $appealDays === null ? null : $appealDays * 1440, $absenceFlag);
+}
+
+/** Appeals open for minutes after publication (ADR-0043), and/or until a date, for all or chosen students. */
+function resultAppeals(object $test, ?int $minutes, ?int $absenceFlag = null, ?CarbonImmutable $until = null, AppealScope $scope = AppealScope::All, array $options = ResultDisplay::OPTIONS): void
+{
+    app(ManageResults::class)->settings($test->owner, 50, null, null, GradeBands::DEFAULTS, $options, ResultDisplay::TONED, $minutes, $absenceFlag, $until, $scope);
 }
 
 function closeEntry(object $test): void

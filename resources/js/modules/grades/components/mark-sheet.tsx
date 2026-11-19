@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
-import { placeLabel } from '../place';
+import { placeLabel, sectionLabel } from '../place';
 import type { MarkValue, SheetStudent } from '../types';
 
 const ABSENT = 'absent';
@@ -38,6 +38,7 @@ export default function MarkSheet({
     saveUrl,
     back,
     notice,
+    within = false,
 }: {
     subject: {
         uuid: string;
@@ -51,8 +52,13 @@ export default function MarkSheet({
     students: SheetStudent[];
     editable: boolean;
     saveUrl: string;
-    back: { href: string; label: string };
+    back?: { href: string; label: string };
     notice?: ReactNode;
+    /**
+     * One of several sheets on a subject's page (owner's request,
+     * 2026-11-19): the section heads it, not the subject.
+     */
+    within?: boolean;
 }) {
     const { t } = useTranslations();
     const max = subject.max ?? 100;
@@ -78,21 +84,36 @@ export default function MarkSheet({
 
     return (
         <>
-            <Link
-                href={back.href}
-                className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-                {/* Mirrored in Arabic, as elsewhere (table-pagination.tsx). */}
-                <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
-                {back.label}
-            </Link>
+            {back && (
+                <Link
+                    href={back.href}
+                    className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                >
+                    {/* Mirrored in Arabic, as elsewhere (table-pagination.tsx). */}
+                    <ChevronLeft
+                        className="size-4 rtl:-scale-x-100"
+                        aria-hidden
+                    />
+                    {back.label}
+                </Link>
+            )}
 
             <header className="mb-6">
-                <h1 className="text-xl font-semibold">
-                    <bdi>{subject.name}</bdi>
-                </h1>
+                {within ? (
+                    <h2
+                        className="text-lg font-semibold"
+                        data-test="sheet-section"
+                    >
+                        {sectionLabel(t, section, subject.divided)}
+                    </h2>
+                ) : (
+                    <h1 className="text-xl font-semibold">
+                        <bdi>{subject.name}</bdi>
+                    </h1>
+                )}
                 <p className="text-sm text-muted-foreground">
-                    {placeLabel(t, subject.stage, section, subject.divided)} ·{' '}
+                    {!within &&
+                        `${placeLabel(t, subject.stage, section, subject.divided)} · `}
                     <span data-test="entered-count">
                         {t(':entered of :students entered', {
                             entered: String(entered),
@@ -125,7 +146,9 @@ export default function MarkSheet({
                     <div className="overflow-x-auto rounded-lg border-2 border-grid-line bg-card">
                         <table className="w-full border-collapse text-sm">
                             <caption className="sr-only">
-                                {subject.name}
+                                {within
+                                    ? `${subject.name} · ${sectionLabel(t, section, subject.divided)}`
+                                    : subject.name}
                             </caption>
                             <thead>
                                 <tr>

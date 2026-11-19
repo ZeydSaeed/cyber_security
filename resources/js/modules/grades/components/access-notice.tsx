@@ -19,10 +19,34 @@ export function useMoment() {
     return (iso: string) => format.format(new Date(iso));
 }
 
+/** A length of time in minutes, as days, hours and minutes in words. */
+export function useDuration() {
+    const { t } = useTranslations();
+
+    return (total: number): string => {
+        const days = Math.floor(total / 1440);
+        const hours = Math.floor((total % 1440) / 60);
+        const minutes = total % 60;
+        const parts: string[] = [];
+        if (days > 0) {
+            parts.push(t(':count days', { count: String(days) }));
+        }
+        if (hours > 0) {
+            parts.push(t(':count hours', { count: String(hours) }));
+        }
+        if (minutes > 0) {
+            parts.push(t(':count minutes', { count: String(minutes) }));
+        }
+
+        return parts.join(' ');
+    };
+}
+
 /** One line for a section's access, as the teacher's pages show it. */
 export function useAccessLabel() {
     const { t } = useTranslations();
     const moment = useMoment();
+    const duration = useDuration();
 
     return (access: SectionAccess): string => {
         switch (access.state) {
@@ -44,11 +68,29 @@ export function useAccessLabel() {
                 );
             case 'view_only':
                 return t('You can read these marks but not change them.');
-            case 'timed':
-                return t(
-                    'Each mark can be changed for :hours hours after it is entered.',
-                    { hours: String(access.hours ?? 0) },
-                );
+            case 'timed': {
+                // ADR-0043: a time after entry, a date, or both.
+                const parts: string[] = [];
+                if (access.minutes !== null) {
+                    parts.push(
+                        t(
+                            'Each mark can be changed for :time after it is entered.',
+                            {
+                                time: duration(access.minutes),
+                            },
+                        ),
+                    );
+                }
+                if (access.deadline !== null) {
+                    parts.push(
+                        t('Marks can be changed until :time.', {
+                            time: moment(access.deadline),
+                        }),
+                    );
+                }
+
+                return parts.join(' ');
+            }
             default:
                 return t('You can enter and change the marks.');
         }
@@ -142,11 +184,11 @@ export default function AccessNotice({
                 >
                     {({ errors, processing }) => (
                         <>
-                            <Label htmlFor="edit-reason">
+                            <Label htmlFor={`edit-reason-${section}`}>
                                 {t('Ask the department to change marks')}
                             </Label>
                             <Textarea
-                                id="edit-reason"
+                                id={`edit-reason-${section}`}
                                 name="reason"
                                 required
                                 minLength={5}

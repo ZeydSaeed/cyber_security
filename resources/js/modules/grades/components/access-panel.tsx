@@ -19,6 +19,76 @@ import { useTranslations } from '@/hooks/use-translations';
 import { placeLabel } from '../place';
 import type { TeacherMode } from '../types';
 import { useMoment } from './access-notice';
+import { DurationFields, MomentField } from './duration-fields';
+import type { ResultSettings } from './result-settings-panel';
+import { StudentViewFields, StudentViewForm } from './student-view-fields';
+
+/** The modes a time limit applies to (ADR-0043). */
+const usesLimit = (mode: TeacherMode) => mode === 'edit' || mode === 'timed';
+
+/**
+ * How long a mark stays changeable, and the date every mark locks
+ * (ADR-0043). Only "Enter and change" and "Change for a limited time" use
+ * them; otherwise the fields are disabled and the saved values kept.
+ */
+function EditLimitFields({
+    id,
+    prefix,
+    minutes,
+    until,
+    enabled,
+    errors,
+    inherited = false,
+}: {
+    id: string;
+    prefix: 'teacher_edit' | 'edit';
+    minutes: number | null;
+    until: string | null;
+    enabled: boolean;
+    errors: Record<string, string | undefined>;
+    /** A teacher's fields: empty means the department's. */
+    inherited?: boolean;
+}) {
+    const { t } = useTranslations();
+    const hint = !enabled
+        ? t(
+              'Used only with "Enter and change" and "Change for a limited time".',
+          )
+        : inherited
+          ? t(
+                "Counted from when each mark is first entered. Empty here and in the date: the department's.",
+            )
+          : t('Counted from when each mark is first entered. Empty: no limit.');
+
+    return (
+        <div className="grid gap-3" data-test={`${prefix}-limit`}>
+            <DurationFields
+                id={`${id}-time`}
+                prefix={prefix}
+                legend={t('Time a mark stays changeable')}
+                value={minutes}
+                disabled={!enabled}
+                hint={hint}
+                error={errors[`${prefix}_minutes`]}
+            />
+            <MomentField
+                id={`${id}-until`}
+                name={`${prefix}_until`}
+                label={t('Or until a date')}
+                value={until}
+                disabled={!enabled}
+                hint={
+                    enabled
+                        ? t(
+                              'Every mark locks at this moment, even if its time is not over. Empty: no date.',
+                          )
+                        : undefined
+                }
+                error={errors[`${prefix}_until`]}
+            />
+        </div>
+    );
+}
 
 export type AccessSettings = {
     teacher_attempts_per_minute: number;
@@ -28,7 +98,10 @@ export type AccessSettings = {
     teacher_max_logins: number | null;
     student_max_logins: number | null;
     teacher_mode: TeacherMode;
-    teacher_edit_hours: number | null;
+    /** Minutes a mark stays changeable (ADR-0043); null: no limit. */
+    teacher_edit_minutes: number | null;
+    /** When every mark locks; null: no date. */
+    teacher_edit_until: string | null;
     student_access: 'allowed' | 'blocked';
     /** Days a device stays remembered (ADR-0038); 0: off. */
     remember_days: number;
@@ -51,7 +124,8 @@ type AccessTeacher = {
     active: boolean;
     mode: TeacherMode | null;
     effective_mode: TeacherMode;
-    edit_hours: number | null;
+    edit_minutes: number | null;
+    edit_until: string | null;
     reason: string | null;
     logins: number;
     last_login_at: string | null;
@@ -175,7 +249,14 @@ function NumberField({
 }
 
 /** The department's rules for signing in and changing marks. */
-function SettingsForm({ settings }: { settings: AccessSettings }) {
+function SettingsForm({
+    settings,
+    who,
+}: {
+    settings: AccessSettings;
+    /** Each side has its own tab; the server keeps the other's values. */
+    who: 'teachers' | 'students';
+}) {
     const { t } = useTranslations();
     const [mode, setMode] = useState<TeacherMode>(settings.teacher_mode);
 
@@ -183,13 +264,13 @@ function SettingsForm({ settings }: { settings: AccessSettings }) {
         <Form
             {...AccessController.settings.form()}
             options={{ preserveScroll: true }}
-            className="grid gap-4"
-            data-test="access-settings"
+            className="grid max-w-3xl gap-4"
+            data-test={`access-settings-${who}`}
         >
             {({ errors, processing }) => (
                 <>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <fieldset className="grid gap-3 rounded-md border p-3">
+                    {who === 'teachers' && (
+                        <fieldset className="grid content-start gap-3 rounded-md border p-3">
                             <legend className="px-1 text-sm font-semibold">
                                 {t('Teachers')}
                             </legend>
@@ -240,16 +321,13 @@ function SettingsForm({ settings }: { settings: AccessSettings }) {
                                 </select>
                                 <InputError message={errors.teacher_mode} />
                             </div>
-                            <NumberField
-                                id="teacher-edit-hours"
-                                name="teacher_edit_hours"
-                                label={t('Hours a mark stays changeable')}
-                                value={settings.teacher_edit_hours}
-                                max={8760}
-                                hint={t(
-                                    'Counted from when each mark is first entered (24 = a day, 168 = a week). Used by the limited-time mode.',
-                                )}
-                                error={errors.teacher_edit_hours}
+                            <EditLimitFields
+                                id="teacher-edit"
+                                prefix="teacher_edit"
+                                minutes={settings.teacher_edit_minutes}
+                                until={settings.teacher_edit_until}
+                                enabled={usesLimit(mode)}
+                                errors={errors}
                             />
                             {mode === 'blocked' && (
                                 <p className="text-sm text-destructive-text">
@@ -259,7 +337,9 @@ function SettingsForm({ settings }: { settings: AccessSettings }) {
                                 </p>
                             )}
                         </fieldset>
+                    )}
 
+                    {who === 'students' && (
                         <fieldset className="grid content-start gap-3 rounded-md border p-3">
                             <legend className="px-1 text-sm font-semibold">
                                 {t('Students')}
@@ -310,27 +390,29 @@ function SettingsForm({ settings }: { settings: AccessSettings }) {
                                 <InputError message={errors.student_access} />
                             </div>
                         </fieldset>
-                    </div>
-                    <div className="max-w-sm">
-                        <NumberField
-                            id="remember-days"
-                            name="remember_days"
-                            label={t('Remember a device for (days)')}
-                            value={settings.remember_days}
-                            min={0}
-                            max={365}
-                            hint={t(
-                                'Teachers and students who tick "Remember this device" go straight in for this many days, until their code changes. 0 turns it off.',
-                            )}
-                            error={errors.remember_days}
-                        />
-                    </div>
+                    )}
+                    {who === 'teachers' && (
+                        <div className="max-w-sm">
+                            <NumberField
+                                id="remember-days"
+                                name="remember_days"
+                                label={t('Remember a device for (days)')}
+                                value={settings.remember_days}
+                                min={0}
+                                max={365}
+                                hint={t(
+                                    'Teachers and students who tick "Remember this device" go straight in for this many days, until their code changes. 0 turns it off.',
+                                )}
+                                error={errors.remember_days}
+                            />
+                        </div>
+                    )}
                     <Button
                         className="self-start"
                         disabled={processing}
                         data-test="save-access-settings"
                     >
-                        {t('Save the access settings')}
+                        {t('Save')}
                     </Button>
                 </>
             )}
@@ -448,12 +530,15 @@ function SectionForm({ section }: { section: AccessSection }) {
 /** A teacher's own access, their sections, and their sign-in count. */
 function TeacherAccessDialog({
     teacher,
+    departmentMode,
     onClose,
 }: {
     teacher: AccessTeacher;
+    departmentMode: TeacherMode;
     onClose: () => void;
 }) {
     const { t } = useTranslations();
+    const [mode, setMode] = useState<TeacherMode | ''>(teacher.mode ?? '');
 
     return (
         <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -478,7 +563,7 @@ function TeacherAccessDialog({
                 >
                     {({ errors, processing }) => (
                         <>
-                            <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
                                 <div className="grid gap-1">
                                     <Label htmlFor="access-mode">
                                         {t('The teacher may')}
@@ -486,7 +571,14 @@ function TeacherAccessDialog({
                                     <select
                                         id="access-mode"
                                         name="mode"
-                                        defaultValue={teacher.mode ?? ''}
+                                        value={mode}
+                                        onChange={(event) =>
+                                            setMode(
+                                                event.target.value as
+                                                    | TeacherMode
+                                                    | '',
+                                            )
+                                        }
                                         className={selectClass}
                                         data-test="teacher-access-mode"
                                     >
@@ -495,15 +587,6 @@ function TeacherAccessDialog({
                                         />
                                     </select>
                                 </div>
-                                <NumberField
-                                    id="access-hours"
-                                    name="edit_hours"
-                                    label={t('Hours a mark stays changeable')}
-                                    value={teacher.edit_hours}
-                                    max={8760}
-                                    hint={t('Empty: as the department.')}
-                                    error={errors.edit_hours}
-                                />
                                 <div className="grid gap-1">
                                     <Label htmlFor="access-reason">
                                         {t('Reason')}
@@ -519,6 +602,15 @@ function TeacherAccessDialog({
                                     <InputError message={errors.reason} />
                                 </div>
                             </div>
+                            <EditLimitFields
+                                id="access-edit"
+                                prefix="edit"
+                                minutes={teacher.edit_minutes}
+                                until={teacher.edit_until}
+                                enabled={usesLimit(mode || departmentMode)}
+                                errors={errors}
+                                inherited
+                            />
                             <InputError message={errors.mode} />
                             <Button
                                 className="self-start"
@@ -768,11 +860,24 @@ function RequestRow({
 }
 
 /**
- * Who may sign in and change marks (ADR-0037), on the owner's overview:
- * the department's rules, requests waiting for an answer, each teacher's
- * sign-ins and access, and the students' sign-ins.
+ * Who may sign in and change marks (ADR-0037), on the owner's settings,
+ * one part per tab (owner's request, 2026-11-19):
+ *
+ * - teachers: their sign-in rules and editing time;
+ * - students: their sign-in rules, what they see in the result, appeals
+ *   waiting, and their sign-ins;
+ * - permissions: requests to change marks, and each teacher's access.
  */
-export default function AccessPanel({ access }: { access: AccessBoardProps }) {
+export default function AccessPanel({
+    access,
+    studentView = null,
+    part,
+}: {
+    access: AccessBoardProps;
+    /** What the student sees and the appeals (ADR-0044). */
+    studentView?: ResultSettings | null;
+    part: 'teachers' | 'students' | 'permissions';
+}) {
     const { t } = useTranslations();
     const moment = useMoment();
     const modeLabel = useModeLabel();
@@ -788,23 +893,40 @@ export default function AccessPanel({ access }: { access: AccessBoardProps }) {
             <header className="flex flex-wrap items-center gap-3">
                 <ShieldCheck className="size-5" aria-hidden />
                 <h2 id="access-title" className="font-semibold">
-                    {t('Signing in and changing marks')}
+                    {part === 'teachers'
+                        ? t("Teachers' sign-in and mark editing")
+                        : part === 'students'
+                          ? t("Students' sign-in and what they see")
+                          : t("Teachers' permissions")}
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                    {t(
-                        'Last 24 hours: :teachers refused teacher sign-ins, :students refused student sign-ins, :lockouts lockouts.',
-                        {
-                            teachers: String(access.failed.teachers),
-                            students: String(access.failed.students),
-                            lockouts: String(access.failed.lockouts),
-                        },
-                    )}
-                </p>
+                {part !== 'permissions' && (
+                    <p className="text-sm text-muted-foreground">
+                        {t(
+                            'Last 24 hours: :teachers refused teacher sign-ins, :students refused student sign-ins, :lockouts lockouts.',
+                            {
+                                teachers: String(access.failed.teachers),
+                                students: String(access.failed.students),
+                                lockouts: String(access.failed.lockouts),
+                            },
+                        )}
+                    </p>
+                )}
             </header>
 
-            <SettingsForm settings={access.settings} />
+            {part !== 'permissions' && (
+                <SettingsForm settings={access.settings} who={part} />
+            )}
 
-            {access.appeals.length > 0 && (
+            {/* Saved on its own form (ADR-0044), after the access form:
+                forms cannot nest. */}
+            {part === 'students' && studentView && (
+                <section className="grid max-w-3xl rounded-md border p-3">
+                    <StudentViewForm />
+                    <StudentViewFields settings={studentView} />
+                </section>
+            )}
+
+            {part === 'students' && access.appeals.length > 0 && (
                 <section className="grid gap-2" aria-labelledby="appeals">
                     <h3
                         id="appeals"
@@ -821,7 +943,7 @@ export default function AccessPanel({ access }: { access: AccessBoardProps }) {
                 </section>
             )}
 
-            {access.requests.length > 0 && (
+            {part === 'permissions' && access.requests.length > 0 && (
                 <section className="grid gap-2" aria-labelledby="requests">
                     <h3
                         id="requests"
@@ -838,206 +960,218 @@ export default function AccessPanel({ access }: { access: AccessBoardProps }) {
                 </section>
             )}
 
-            <section className="grid gap-2" aria-labelledby="teacher-access">
-                <h3 id="teacher-access" className="font-semibold">
-                    {t("Teachers' access")}
-                </h3>
-                {access.teachers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                        {t('No teachers yet.')}
-                    </p>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <caption className="sr-only">
-                                {t("Teachers' access")}
-                            </caption>
-                            <thead>
-                                <tr className="text-muted-foreground">
-                                    <th
-                                        scope="col"
-                                        className="p-2 text-start font-medium"
-                                    >
-                                        {t('Name')}
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="p-2 text-start font-medium"
-                                    >
-                                        {t('Access')}
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="p-2 text-start font-medium"
-                                    >
-                                        {t('Sign-ins')}
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="p-2 text-start font-medium"
-                                    >
-                                        {t('Last sign-in')}
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="p-2 text-start font-medium"
-                                    >
-                                        {t('Refused (24 h)')}
-                                    </th>
-                                    <th scope="col" className="p-2">
-                                        <span className="sr-only">
-                                            {t('Actions')}
-                                        </span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {access.teachers.map((teacher) => {
-                                    const special = teacher.sections.filter(
-                                        (section) =>
-                                            section.mode !== null ||
-                                            section.edit_until !== null,
-                                    ).length;
-
-                                    return (
-                                        <tr
-                                            key={teacher.uuid}
-                                            className="border-t"
-                                            data-test="teacher-access-row"
+            {part === 'permissions' && (
+                <section
+                    className="grid gap-2"
+                    aria-labelledby="teacher-access"
+                >
+                    <h3 id="teacher-access" className="font-semibold">
+                        {t("Teachers' access")}
+                    </h3>
+                    {access.teachers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            {t('No teachers yet.')}
+                        </p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <caption className="sr-only">
+                                    {t("Teachers' access")}
+                                </caption>
+                                <thead>
+                                    <tr className="text-muted-foreground">
+                                        <th
+                                            scope="col"
+                                            className="p-2 text-start font-medium"
                                         >
-                                            <th
-                                                scope="row"
-                                                className="p-2 text-start font-medium"
+                                            {t('Name')}
+                                        </th>
+                                        <th
+                                            scope="col"
+                                            className="p-2 text-start font-medium"
+                                        >
+                                            {t('Access')}
+                                        </th>
+                                        <th
+                                            scope="col"
+                                            className="p-2 text-start font-medium"
+                                        >
+                                            {t('Sign-ins')}
+                                        </th>
+                                        <th
+                                            scope="col"
+                                            className="p-2 text-start font-medium"
+                                        >
+                                            {t('Last sign-in')}
+                                        </th>
+                                        <th
+                                            scope="col"
+                                            className="p-2 text-start font-medium"
+                                        >
+                                            {t('Refused (24 h)')}
+                                        </th>
+                                        <th scope="col" className="p-2">
+                                            <span className="sr-only">
+                                                {t('Actions')}
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {access.teachers.map((teacher) => {
+                                        const special = teacher.sections.filter(
+                                            (section) =>
+                                                section.mode !== null ||
+                                                section.edit_until !== null,
+                                        ).length;
+
+                                        return (
+                                            <tr
+                                                key={teacher.uuid}
+                                                className="border-t"
+                                                data-test="teacher-access-row"
                                             >
-                                                <bdi>{teacher.name}</bdi>
-                                                {!teacher.active && (
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="ms-2"
-                                                    >
-                                                        {t('Stopped')}
-                                                    </Badge>
-                                                )}
-                                            </th>
-                                            <td className="p-2">
-                                                <span
-                                                    className={
-                                                        teacher.effective_mode ===
-                                                        'blocked'
-                                                            ? 'text-destructive-text'
-                                                            : undefined
-                                                    }
+                                                <th
+                                                    scope="row"
+                                                    className="p-2 text-start font-medium"
                                                 >
-                                                    {modeLabel(
-                                                        teacher.effective_mode,
+                                                    <bdi>{teacher.name}</bdi>
+                                                    {!teacher.active && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="ms-2"
+                                                        >
+                                                            {t('Stopped')}
+                                                        </Badge>
                                                     )}
-                                                </span>
-                                                {teacher.mode === null && (
-                                                    <span className="block text-xs text-muted-foreground">
-                                                        {t('As the department')}
-                                                    </span>
-                                                )}
-                                                {special > 0 && (
-                                                    <span className="block text-xs text-muted-foreground">
-                                                        {t(
-                                                            ':count sections set apart',
-                                                            {
-                                                                count: String(
-                                                                    special,
-                                                                ),
-                                                            },
+                                                </th>
+                                                <td className="p-2">
+                                                    <span
+                                                        className={
+                                                            teacher.effective_mode ===
+                                                            'blocked'
+                                                                ? 'text-destructive-text'
+                                                                : undefined
+                                                        }
+                                                    >
+                                                        {modeLabel(
+                                                            teacher.effective_mode,
                                                         )}
                                                     </span>
-                                                )}
-                                            </td>
-                                            <td className="p-2 tabular-nums">
-                                                {teacher.logins}
-                                            </td>
-                                            <td className="p-2">
-                                                {teacher.last_login_at
-                                                    ? moment(
-                                                          teacher.last_login_at,
-                                                      )
-                                                    : t('Never')}
-                                            </td>
-                                            <td className="p-2 tabular-nums">
-                                                {teacher.refused}
-                                            </td>
-                                            <td className="p-2 text-end">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() =>
-                                                        setOpen(teacher.uuid)
-                                                    }
-                                                    data-test="open-teacher-access"
-                                                >
-                                                    <KeyRound aria-hidden />
-                                                    {/* The visible word starts
+                                                    {teacher.mode === null && (
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            {t(
+                                                                'As the department',
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                    {special > 0 && (
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            {t(
+                                                                ':count sections set apart',
+                                                                {
+                                                                    count: String(
+                                                                        special,
+                                                                    ),
+                                                                },
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-2 tabular-nums">
+                                                    {teacher.logins}
+                                                </td>
+                                                <td className="p-2">
+                                                    {teacher.last_login_at
+                                                        ? moment(
+                                                              teacher.last_login_at,
+                                                          )
+                                                        : t('Never')}
+                                                </td>
+                                                <td className="p-2 tabular-nums">
+                                                    {teacher.refused}
+                                                </td>
+                                                <td className="p-2 text-end">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            setOpen(
+                                                                teacher.uuid,
+                                                            )
+                                                        }
+                                                        data-test="open-teacher-access"
+                                                    >
+                                                        <KeyRound aria-hidden />
+                                                        {/* The visible word starts
                                                         the accessible name
                                                         (WCAG 2.5.3); the name
                                                         tells the rows apart. */}
-                                                    {t('Access')}
-                                                    <span className="sr-only">
-                                                        {' '}
-                                                        <bdi>
-                                                            {teacher.name}
-                                                        </bdi>
-                                                    </span>
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
+                                                        {t('Access')}
+                                                        <span className="sr-only">
+                                                            {' '}
+                                                            <bdi>
+                                                                {teacher.name}
+                                                            </bdi>
+                                                        </span>
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
+            )}
 
-            <section
-                className="flex flex-wrap items-center gap-3 border-t pt-4"
-                aria-labelledby="student-sign-ins"
-                data-test="student-sign-ins"
-            >
-                <h3 id="student-sign-ins" className="font-semibold">
-                    {t("Students' sign-ins")}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                    {t(
-                        ':signed of :total students signed in, :logins sign-ins in all; :blocked stopped.',
-                        {
-                            signed: String(access.students.signed_in),
-                            total: String(access.students.total),
-                            logins: String(access.students.logins),
-                            blocked: String(access.students.blocked),
-                        },
-                    )}
-                </p>
-                <ConfirmAction
-                    trigger={
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={access.students.logins === 0}
-                            data-test="reset-student-logins"
-                        >
-                            {t('Count from zero')}
-                        </Button>
-                    }
-                    title={t("Count the students' sign-ins from zero?")}
-                    description={t(
-                        "Every student's count goes back to 0, so a cap on sign-ins starts again.",
-                    )}
-                    confirmLabel={t('Count from zero')}
-                    tone="default"
-                    form={AccessController.resetStudentLogins.form()}
-                />
-            </section>
+            {part === 'students' && (
+                <section
+                    className="flex flex-wrap items-center gap-3 border-t pt-4"
+                    aria-labelledby="student-sign-ins"
+                    data-test="student-sign-ins"
+                >
+                    <h3 id="student-sign-ins" className="font-semibold">
+                        {t("Students' sign-ins")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        {t(
+                            ':signed of :total students signed in, :logins sign-ins in all; :blocked stopped.',
+                            {
+                                signed: String(access.students.signed_in),
+                                total: String(access.students.total),
+                                logins: String(access.students.logins),
+                                blocked: String(access.students.blocked),
+                            },
+                        )}
+                    </p>
+                    <ConfirmAction
+                        trigger={
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={access.students.logins === 0}
+                                data-test="reset-student-logins"
+                            >
+                                {t('Count from zero')}
+                            </Button>
+                        }
+                        title={t("Count the students' sign-ins from zero?")}
+                        description={t(
+                            "Every student's count goes back to 0, so a cap on sign-ins starts again.",
+                        )}
+                        confirmLabel={t('Count from zero')}
+                        tone="default"
+                        form={AccessController.resetStudentLogins.form()}
+                    />
+                </section>
+            )}
 
             {current && (
                 <TeacherAccessDialog
                     teacher={current}
+                    departmentMode={access.settings.teacher_mode}
                     onClose={() => setOpen(null)}
                 />
             )}
