@@ -18,7 +18,7 @@ export type StudentAppeal = {
 };
 
 const selectClass =
-    'h-9 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
+    'h-9 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50 focus:outline-2 focus:outline-solid focus:outline-ring md:text-sm';
 
 /**
  * A student appeals a mark (ADR-0042): while the department allows it

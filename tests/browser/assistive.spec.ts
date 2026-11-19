@@ -103,8 +103,18 @@ for (const locale of ['ar', 'en']) {
                 page,
             }) => {
                 // About 115 stops at ~0.4 s each in WebKit: 41 s measured
-                // alone (review, 2026-11-19), past the 30 s default.
-                test.slow(path === '/admin/users');
+                // alone (review, 2026-11-19), past the 30 s default. The
+                // grades overview gained its access and result-card forms
+                // (ADR-0037 to ADR-0042), and /dashboard and /notifications
+                // show the same panels to this user: past 30 s too.
+                test.slow(
+                    [
+                        '/admin/users',
+                        '/admin',
+                        '/dashboard',
+                        '/notifications',
+                    ].includes(path),
+                );
 
                 await page
                     .context()
