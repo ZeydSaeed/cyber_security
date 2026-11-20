@@ -98,6 +98,21 @@
     --color-highlight-soft-end: var(--highlight-soft-end);
     --color-highlight-soft-border: var(--highlight-soft-border);
     /* One colour per settings card (owner's request, 2026-11-19). */
+    --color-status-good: var(--status-good);
+    --color-status-good-foreground: var(--status-good-foreground);
+    --color-status-good-soft: var(--status-good-soft);
+    --color-status-wait: var(--status-wait);
+    --color-status-wait-foreground: var(--status-wait-foreground);
+    --color-status-wait-soft: var(--status-wait-soft);
+    --color-status-bad: var(--status-bad);
+    --color-status-bad-foreground: var(--status-bad-foreground);
+    --color-status-bad-soft: var(--status-bad-soft);
+    --color-status-info: var(--status-info);
+    --color-status-info-foreground: var(--status-info-foreground);
+    --color-status-info-soft: var(--status-info-soft);
+    --color-status-final: var(--status-final);
+    --color-status-final-foreground: var(--status-final-foreground);
+    --color-status-final-soft: var(--status-final-soft);
     --color-tile-1: var(--tile-1);
     --color-tile-1-foreground: var(--tile-1-foreground);
     --color-tile-1-soft: var(--tile-1-soft);
@@ -122,6 +137,9 @@
     --color-tile-8: var(--tile-8);
     --color-tile-8-foreground: var(--tile-8-foreground);
     --color-tile-8-soft: var(--tile-8-soft);
+    --color-tile-9: var(--tile-9);
+    --color-tile-9-foreground: var(--tile-9-foreground);
+    --color-tile-9-soft: var(--tile-9-soft);
 
     /* L3 component tokens. */
     --color-button-primary: var(--button-primary);

@@ -3,6 +3,7 @@
 use App\Modules\Grades\Http\AccessController;
 use App\Modules\Grades\Http\AppealsController;
 use App\Modules\Grades\Http\GradesAdminController;
+use App\Modules\Grades\Http\ReportsController;
 use App\Modules\Grades\Http\ResultsController;
 use App\Modules\Grades\Http\ResultSettingsController;
 use App\Modules\Grades\Http\StudentPortalController;
@@ -28,12 +29,14 @@ use Illuminate\Support\Facades\Route;
 /*
 | The owner's pages: reading needs grades.view_results, every change
 | grades.manage; the actions check the permission again inside their
-| transactions. (/admin/users and /admin/reports are the platform's.)
+| transactions. (/admin/users is the platform's.)
 */
 Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.admin.')->group(function () {
     Route::middleware('can:grades.view_results')->group(function () {
         Route::get('/', [GradesAdminController::class, 'overview'])->name('overview');
         Route::get('students', [StudentsAdminController::class, 'index'])->name('students');
+        // The academic reports (owner's request, 2026-11-20).
+        Route::get('reports', ReportsController::class)->name('reports');
         Route::get('results', [ResultsController::class, 'index'])->name('results');
         Route::get('results/print', [ResultsController::class, 'printSection'])->name('results.print');
         Route::get('results/export', [ResultsController::class, 'export'])
@@ -52,11 +55,14 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->whereUuid('appeal')
             ->name('appeals.decide');
         Route::put('publish/section', [GradesAdminController::class, 'publishSection'])->middleware('throttle:60,1')->name('publish.section');
+        Route::put('publish/sections', [GradesAdminController::class, 'publishSections'])->middleware('throttle:60,1')->name('publish.sections');
 
         // What a result says and shows (ADR-0039).
         Route::put('results/settings', [ResultSettingsController::class, 'settings'])->middleware('throttle:30,1')->name('results.settings');
         // What the student sees, and the appeals (ADR-0044).
         Route::put('results/student-view', [ResultSettingsController::class, 'studentView'])->middleware('throttle:30,1')->name('results.student_view');
+        // Students' appeals: their own tab (owner's request, 2026-11-20).
+        Route::put('results/appeals', [ResultSettingsController::class, 'appeals'])->middleware('throttle:30,1')->name('results.appeals');
         Route::put('results/teacher-view', [ResultSettingsController::class, 'teacherView'])->middleware('throttle:30,1')->name('results.teacher_view');
         Route::put('results/students/{student}/note', [ResultSettingsController::class, 'note'])
             ->middleware('throttle:120,1')

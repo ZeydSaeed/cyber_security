@@ -5,6 +5,7 @@ namespace App\Modules\Grades\Application\Actions;
 use App\Models\User;
 use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
 use App\Modules\Grades\Application\Notifications\GradesNotification;
+use App\Modules\Grades\Application\SectionAccess;
 use App\Modules\Grades\Domain\AppealScope;
 use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\Period;
@@ -55,15 +56,30 @@ class ManageAppeals
         }
 
         $published = $window->publishedAtFor($student->stage, $student->section);
-        $until = $published === null ? null : self::closesAt($settings, $published);
+        if ($published === null || self::opensAt($settings, $published)->isFuture()) {
+            return null;
+        }
+        $until = self::closesAt($settings, $published);
 
         return $until !== null && $until->isFuture() ? $until : null;
     }
 
     /**
+     * When appeals open for results published at the given moment: at
+     * publication, or at the opening date when that is later (appeals tab,
+     * 2026-11-20).
+     */
+    public static function opensAt(GradeSettings $settings, CarbonImmutable $published): CarbonImmutable
+    {
+        $from = $settings->appeal_from;
+
+        return $from !== null && $from->isAfter($published) ? $from : $published;
+    }
+
+    /**
      * When appeals close for results published at the given moment: the
-     * given minutes after it or the closing date, whichever comes first
-     * (null: appeals are off). Also used by the reminders (ADR-0045).
+     * given minutes after they open, or the closing date, whichever comes
+     * first (null: appeals are off). Also used by the reminders (ADR-0045).
      */
     public static function closesAt(GradeSettings $settings, CarbonImmutable $published): ?CarbonImmutable
     {
@@ -71,7 +87,7 @@ class ManageAppeals
             return null;
         }
 
-        $byTime = $settings->appeal_minutes === null ? null : $published->addMinutes($settings->appeal_minutes);
+        $byTime = $settings->appeal_minutes === null ? null : self::opensAt($settings, $published)->addMinutes($settings->appeal_minutes);
         $byDate = $settings->appeal_until;
 
         return match (true) {
@@ -167,17 +183,22 @@ class ManageAppeals
         return DB::transaction(function () use ($teacher, $appeal, $accept, $response): GradeAppeal {
             $locked = GradeAppeal::query()->whereKey($appeal->id)->lockForUpdate()->firstOrFail();
 
-            if (! GradeSettings::current()->teacher_appeal_replies) {
+            $settings = GradeSettings::current();
+            if (! $settings->teacher_appeal_replies) {
                 throw new DomainRuleViolation(__('The department answers the appeals.'), 'appeal');
             }
 
             $student = Student::query()->whereKey($locked->student_id)->first(['id', 'full_name', 'section']);
-            $teaches = $student !== null && SubjectTeacher::query()
+            $row = $student === null ? null : SubjectTeacher::query()
                 ->where('subject_id', $locked->subject_id)
                 ->where('section', $student->section->value)
                 ->where('teacher_id', $teacher->id)
-                ->exists();
-            if (! $teaches) {
+                ->first();
+            // A section blocked for the teacher is not theirs (ADR-0037),
+            // here as on the sheets: its appeals are the department's
+            // (flow audit, 2026-11-20).
+            $fresh = Teacher::query()->whereKey($teacher->id)->first();
+            if ($row === null || $fresh === null || ! $fresh->is_active || SectionAccess::hidden($fresh, $row, $settings)) {
                 throw new DomainRuleViolation(__('This appeal is not of a section you teach.'), 'appeal');
             }
 

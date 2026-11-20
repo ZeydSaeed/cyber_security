@@ -10,12 +10,14 @@ use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\Queries\AccessBoard;
 use App\Modules\Grades\Application\Queries\GradesBoard;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\TeachingKind;
 use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
@@ -42,7 +44,7 @@ class GradesAdminController
      * The settings' tabs, each a page of its own (owner's request,
      * 2026-11-19); without one, /admin lists them.
      */
-    public const TABS = ['window', 'links', 'teachers', 'students', 'permissions', 'card', 'teacher-view', 'subjects'];
+    public const TABS = ['window', 'links', 'teachers', 'students', 'permissions', 'card', 'teacher-view', 'subjects', 'appeals'];
 
     public function overview(Request $request, GradesBoard $board, AccessBoard $access, #[CurrentUser] User $user): Response
     {
@@ -57,6 +59,8 @@ class GradesAdminController
             'access' => $canManage ? $access->show() : null,
             // What a result says and shows (ADR-0039).
             'resultSettings' => $canManage ? self::resultSettings(GradeSettings::current()) : null,
+            // Students' appeals at a glance (appeals tab, 2026-11-20).
+            'appealCounts' => $canManage ? self::appealCounts() : null,
             'teacherLink' => route('grades.teacher.login'),
             'studentLink' => route('grades.student.login'),
             'adminLink' => route('grades.admin.overview'),
@@ -80,11 +84,40 @@ class GradesAdminController
             'teacher_results' => $settings->teacher_results->value,
             'teacher_view' => $settings->teacherView(),
             'appeal_minutes' => $settings->appeal_minutes,
+            'appeal_from' => $settings->appeal_from?->toIso8601String(),
             'appeal_until' => $settings->appeal_until?->toIso8601String(),
             'appeal_scope' => $settings->appeal_scope->value,
             // Teachers may answer appeals of their subjects (ADR-0044).
             'teacher_appeal_replies' => $settings->teacher_appeal_replies,
             'absence_flag' => $settings->absence_flag,
+        ];
+    }
+
+    /**
+     * The appeals of this period by status, and who answered them.
+     *
+     * @return array{pending: int, accepted: int, rejected: int, by_teacher: int, by_department: int}
+     */
+    private static function appealCounts(): array
+    {
+        $byStatus = GradeAppeal::query()
+            ->where('period', Period::Month1->value)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+        $answered = GradeAppeal::query()
+            ->where('period', Period::Month1->value)
+            ->where('status', '!=', AppealStatus::Pending->value)
+            ->selectRaw('count(decided_by_teacher_id) as by_teacher, count(*) as total')
+            ->first();
+        $byTeacher = (int) ($answered->by_teacher ?? 0);
+
+        return [
+            'pending' => (int) ($byStatus[AppealStatus::Pending->value] ?? 0),
+            'accepted' => (int) ($byStatus[AppealStatus::Accepted->value] ?? 0),
+            'rejected' => (int) ($byStatus[AppealStatus::Rejected->value] ?? 0),
+            'by_teacher' => $byTeacher,
+            'by_department' => (int) ($answered->total ?? 0) - $byTeacher,
         ];
     }
 
@@ -115,6 +148,34 @@ class GradesAdminController
         Inertia::flash('toast', ['type' => 'success', 'message' => $shown
             ? __('This section\'s results are published to its students.')
             : __('This section\'s results are hidden from its students.')]);
+
+        return back();
+    }
+
+    /**
+     * Publishes the ticked stages and sections together (owner's request,
+     * 2026-11-20). Each place is "stage|section", as the page names them.
+     */
+    public function publishSections(Request $request, PublishResults $publish, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate([
+            'places' => ['required', 'array', 'min:1', 'max:12'],
+            'places.*' => ['required', 'string', 'distinct', 'regex:/^[1-9]\|[A-Z]$/'],
+        ]);
+
+        $places = [];
+        foreach ((array) $request->input('places') as $place) {
+            [$stage, $section] = explode('|', (string) $place);
+            $stage = Stage::tryFrom((int) $stage);
+            $section = Section::tryFrom($section);
+            if ($stage === null || $section === null) {
+                throw ValidationException::withMessages(['places' => __('This stage has no such section.')]);
+            }
+            $places[] = [$stage, $section];
+        }
+
+        $publish->sections($user, Period::Month1, $places);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Results published to the students of the chosen sections (:count).', ['count' => count($places)])]);
 
         return back();
     }

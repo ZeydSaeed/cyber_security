@@ -122,3 +122,18 @@ export const SubjectsIcon: SettingsIcon = (props) => (
         />
     </Frame>
 );
+
+/** Students' appeals: a speech bubble with a question about a mark. */
+export const AppealsIcon: SettingsIcon = (props) => (
+    <Frame {...props}>
+        <path
+            d="M8 10h32a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H22l-8 7v-7H8a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z"
+            {...wash}
+        />
+        <path
+            className={detail}
+            d="M20 18a4 4 0 1 1 5 3.9c-.6.2-1 .8-1 1.4V25"
+        />
+        <circle cx="24" cy="28.5" r="1" fill="currentColor" />
+    </Frame>
+);

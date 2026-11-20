@@ -126,6 +126,8 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `tile-7-foreground`: olive-50 = oklch(0.98 0.015 128.5). Set in palette.json "roles".
 - `tile-8`: mix(success-700 50%, info-700) = oklch(0.45 0.106 192.5). Set in palette.json "roles".
 - `tile-8-foreground`: success-50 = oklch(0.98 0.031 150). Set in palette.json "roles".
+- `tile-9`: mix(accent-700 50%, danger-700) = oklch(0.435 0.123 51.8). Set in palette.json "roles".
+- `tile-9-foreground`: accent-50 = oklch(0.98 0.015 74.1). Set in palette.json "roles".
 - `tile-1-soft`: success-100 = oklch(0.955 0.055 150). Set in palette.json "roles".
 - `tile-2-soft`: info-100 = oklch(0.955 0.025 235). Set in palette.json "roles".
 - `tile-3-soft`: primary-100 = oklch(0.955 0.021 262.8). Set in palette.json "roles".
@@ -134,6 +136,22 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `tile-6-soft`: mix(primary-100 50%, danger-100) = oklch(0.955 0.021 326.1). Set in palette.json "roles".
 - `tile-7-soft`: olive-100 = oklch(0.955 0.016 128.5). Set in palette.json "roles".
 - `tile-8-soft`: mix(success-100 50%, info-100) = oklch(0.955 0.04 192.5). Set in palette.json "roles".
+- `tile-9-soft`: mix(accent-100 50%, danger-100) = oklch(0.955 0.029 51.8). Set in palette.json "roles".
+- `status-good`: success-700 = oklch(0.45 0.117 150). Set in palette.json "roles".
+- `status-good-foreground`: success-50 = oklch(0.98 0.031 150). Set in palette.json "roles".
+- `status-good-soft`: success-100 = oklch(0.955 0.055 150). Set in palette.json "roles".
+- `status-wait`: warning-500 = oklch(0.62 0.128 80). Set in palette.json "roles".
+- `status-wait-foreground`: warning-950 = oklch(0.2 0.042 80). Set in palette.json "roles".
+- `status-wait-soft`: warning-50 = oklch(0.98 0.017 80). Set in palette.json "roles".
+- `status-bad`: mix(danger-600 50%, danger-700) = oklch(0.476 0.143 29.5). Set in palette.json "roles".
+- `status-bad-foreground`: danger-50 = oklch(0.98 0.009 29.5). Set in palette.json "roles".
+- `status-bad-soft`: danger-100 = oklch(0.955 0.022 29.5). Set in palette.json "roles".
+- `status-info`: info-500 = oklch(0.62 0.12 235). Set in palette.json "roles".
+- `status-info-foreground`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
+- `status-info-soft`: info-100 = oklch(0.955 0.025 235). Set in palette.json "roles".
+- `status-final`: mix(info-500 50%, danger-600) = oklch(0.575 0.127 312.3). Set in palette.json "roles".
+- `status-final-foreground`: neutral-0 = oklch(1 0 0). Set in palette.json "roles".
+- `status-final-soft`: mix(info-100 50%, danger-100) = oklch(0.955 0.024 312.3). Set in palette.json "roles".
 - gradient `page`: weakest stop 9.74:1 with foreground.
 - gradient `table-head`: weakest stop 7.23:1 with highlight-foreground.
 - gradient `toolbar`: weakest stop 7.23:1 with highlight-foreground.
@@ -243,6 +261,36 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 11.13:1 (min 4.5) foreground on tile-8-soft
 - PASS 6.62:1 (min 4.5) muted-foreground on tile-8-soft
 - PASS 6.01:1 (min 3) tile-8 on tile-8-soft
+- PASS 7.82:1 (min 4.5) tile-9-foreground on tile-9
+- PASS 8.29:1 (min 3) tile-9 on card
+- PASS 10.85:1 (min 4.5) foreground on tile-9-soft
+- PASS 6.46:1 (min 4.5) muted-foreground on tile-9-soft
+- PASS 7.20:1 (min 3) tile-9 on tile-9-soft
+- PASS 6.72:1 (min 4.5) status-good-foreground on status-good
+- PASS 6.30:1 (min 3) status-good on status-good-soft
+- PASS 7.05:1 (min 3) status-good on card
+- PASS 11.17:1 (min 4.5) foreground on status-good-soft
+- PASS 6.65:1 (min 4.5) muted-foreground on status-good-soft
+- PASS 4.91:1 (min 4.5) status-wait-foreground on status-wait
+- PASS 3.49:1 (min 3) status-wait on status-wait-soft
+- PASS 3.70:1 (min 3) status-wait on card
+- PASS 11.80:1 (min 4.5) foreground on status-wait-soft
+- PASS 7.02:1 (min 4.5) muted-foreground on status-wait-soft
+- PASS 6.73:1 (min 4.5) status-bad-foreground on status-bad
+- PASS 6.22:1 (min 3) status-bad on status-bad-soft
+- PASS 7.15:1 (min 3) status-bad on card
+- PASS 10.89:1 (min 4.5) foreground on status-bad-soft
+- PASS 6.48:1 (min 4.5) muted-foreground on status-bad-soft
+- PASS 5.06:1 (min 4.5) status-info-foreground on status-info
+- PASS 3.14:1 (min 3) status-info on status-info-soft
+- PASS 3.56:1 (min 3) status-info on card
+- PASS 11.02:1 (min 4.5) foreground on status-info-soft
+- PASS 6.56:1 (min 4.5) muted-foreground on status-info-soft
+- PASS 4.64:1 (min 4.5) status-final-foreground on status-final
+- PASS 4.04:1 (min 3) status-final on status-final-soft
+- PASS 4.64:1 (min 3) status-final on card
+- PASS 10.89:1 (min 4.5) foreground on status-final-soft
+- PASS 6.48:1 (min 4.5) muted-foreground on status-final-soft
 
 ## Roles: dark
 
@@ -316,6 +364,8 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `tile-7-foreground`: olive-950 = oklch(0.2 0.025 128.5). Set in palette.json "roles".
 - `tile-8`: mix(success-400 50%, info-400) = oklch(0.72 0.107 192.5). Set in palette.json "roles".
 - `tile-8-foreground`: success-950 = oklch(0.2 0.056 150). Set in palette.json "roles".
+- `tile-9`: mix(accent-400 50%, danger-400) = oklch(0.72 0.112 51.8). Set in palette.json "roles".
+- `tile-9-foreground`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
 - `tile-1-soft`: success-950 = oklch(0.2 0.056 150). Set in palette.json "roles".
 - `tile-2-soft`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
 - `tile-3-soft`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
@@ -324,6 +374,22 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `tile-6-soft`: mix(primary-950 50%, danger-950) = oklch(0.2 0.069 326.1). Set in palette.json "roles".
 - `tile-7-soft`: olive-950 = oklch(0.2 0.025 128.5). Set in palette.json "roles".
 - `tile-8-soft`: mix(success-950 50%, info-950) = oklch(0.2 0.05 192.5). Set in palette.json "roles".
+- `tile-9-soft`: mix(accent-950 50%, danger-950) = oklch(0.2 0.063 51.8). Set in palette.json "roles".
+- `status-good`: mix(success-500 50%, success-600) = oklch(0.575 0.134 150). Set in palette.json "roles".
+- `status-good-foreground`: neutral-1000 = oklch(0 0 0). Set in palette.json "roles".
+- `status-good-soft`: success-950 = oklch(0.2 0.056 150). Set in palette.json "roles".
+- `status-wait`: accent-300 = oklch(0.828 0.133 74.1). Set in palette.json "roles".
+- `status-wait-foreground`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
+- `status-wait-soft`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
+- `status-bad`: mix(danger-400 50%, danger-500) = oklch(0.67 0.108 29.5). Set in palette.json "roles".
+- `status-bad-foreground`: danger-950 = oklch(0.2 0.082 29.5). Set in palette.json "roles".
+- `status-bad-soft`: danger-950 = oklch(0.2 0.082 29.5). Set in palette.json "roles".
+- `status-info`: mix(info-400 50%, info-500) = oklch(0.67 0.109 235). Set in palette.json "roles".
+- `status-info-foreground`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
+- `status-info-soft`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
+- `status-final`: mix(info-300 50%, danger-600) = oklch(0.68 0.104 312.3). Set in palette.json "roles".
+- `status-final-foreground`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
+- `status-final-soft`: mix(info-950 50%, danger-950) = oklch(0.2 0.063 312.3). Set in palette.json "roles".
 - gradient `table-head`: weakest stop 10.50:1 with highlight-foreground.
 - gradient `toolbar`: weakest stop 10.50:1 with highlight-foreground.
 - gradient `heading`: weakest stop 10.50:1 with highlight-foreground.
@@ -432,3 +498,33 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 16.67:1 (min 4.5) foreground on tile-8-soft
 - PASS 10.51:1 (min 4.5) muted-foreground on tile-8-soft
 - PASS 7.46:1 (min 3) tile-8 on tile-8-soft
+- PASS 7.09:1 (min 4.5) tile-9-foreground on tile-9
+- PASS 5.74:1 (min 3) tile-9 on card
+- PASS 17.26:1 (min 4.5) foreground on tile-9-soft
+- PASS 10.89:1 (min 4.5) muted-foreground on tile-9-soft
+- PASS 7.13:1 (min 3) tile-9 on tile-9-soft
+- PASS 5.10:1 (min 4.5) status-good-foreground on status-good
+- PASS 4.34:1 (min 3) status-good on status-good-soft
+- PASS 3.57:1 (min 3) status-good on card
+- PASS 16.86:1 (min 4.5) foreground on status-good-soft
+- PASS 10.63:1 (min 4.5) muted-foreground on status-good-soft
+- PASS 10.51:1 (min 4.5) status-wait-foreground on status-wait
+- PASS 10.51:1 (min 3) status-wait on status-wait-soft
+- PASS 8.51:1 (min 3) status-wait on card
+- PASS 17.15:1 (min 4.5) foreground on status-wait-soft
+- PASS 10.82:1 (min 4.5) muted-foreground on status-wait-soft
+- PASS 5.89:1 (min 4.5) status-bad-foreground on status-bad
+- PASS 5.89:1 (min 3) status-bad on status-bad-soft
+- PASS 4.69:1 (min 3) status-bad on card
+- PASS 17.42:1 (min 4.5) foreground on status-bad-soft
+- PASS 10.99:1 (min 4.5) muted-foreground on status-bad-soft
+- PASS 6.14:1 (min 4.5) status-info-foreground on status-info
+- PASS 6.14:1 (min 3) status-info on status-info-soft
+- PASS 5.02:1 (min 3) status-info on card
+- PASS 17.01:1 (min 4.5) foreground on status-info-soft
+- PASS 10.73:1 (min 4.5) muted-foreground on status-info-soft
+- PASS 6.00:1 (min 4.5) status-final-foreground on status-final
+- PASS 6.12:1 (min 3) status-final on status-final-soft
+- PASS 4.90:1 (min 3) status-final on card
+- PASS 17.34:1 (min 4.5) foreground on status-final-soft
+- PASS 10.94:1 (min 4.5) muted-foreground on status-final-soft

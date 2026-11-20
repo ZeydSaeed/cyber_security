@@ -115,6 +115,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Teacher code not recognised');
         case 'grades.results_exported':
             return t('Results exported');
+        case 'grades.reports_viewed':
+            return t('Academic reports opened');
         case 'grades.results_published':
             return t('Results published to the students');
         case 'grades.results_unpublished':
@@ -183,6 +185,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t("Student's result card opened");
         case 'grades.student_view_changed':
             return t('What the student sees changed');
+        case 'grades.appeal_settings_changed':
+            return t('Appeal settings changed');
         case 'grades.student_appeal_allowed':
             return t('Student allowed to appeal');
         case 'grades.student_appeal_disallowed':

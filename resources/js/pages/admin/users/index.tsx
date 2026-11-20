@@ -324,6 +324,8 @@ export default function UsersIndex({
                     state={state}
                     busy={busy}
                     filtered={filtered}
+                    bordered
+                    numberFrom={users.from ?? 1}
                     onClearFilters={() => visit({ search: '', filters: {} })}
                     onSort={(column) =>
                         visit({

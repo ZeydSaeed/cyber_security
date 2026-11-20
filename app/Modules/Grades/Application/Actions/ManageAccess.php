@@ -79,6 +79,15 @@ class ManageAccess
                 return $settings;
             }
 
+            // Clearing the department's limit must not leave a teacher or
+            // a section in limited-time mode with no limit at all, which
+            // would edit without one (flow audit, 2026-11-20).
+            $minutes = array_key_exists('teacher_edit_minutes', $values) ? $values['teacher_edit_minutes'] : $settings->teacher_edit_minutes;
+            $until = array_key_exists('teacher_edit_until', $values) ? $values['teacher_edit_until'] : $settings->teacher_edit_until;
+            if ($minutes === null && $until === null && self::timedWithoutOwnLimit()) {
+                throw new DomainRuleViolation(__('Some teachers or sections are in the limited-time mode with no time of their own. Give them one, or keep a time here.'), 'teacher_edit_minutes');
+            }
+
             $settings->forceFill($values)->save();
             $this->audit->record('grades.access_settings_changed', $settings, [], $changes, actor: $actor);
 
@@ -105,6 +114,12 @@ class ManageAccess
             if (! self::usesLimit($mode ?? $settings->teacher_mode)) {
                 $minutes = $locked->edit_minutes;
                 $until = $locked->edit_until;
+            }
+            // Limited time needs a limit: the teacher's own or the
+            // department's (flow audit, 2026-11-20).
+            $timedSections = SubjectTeacher::query()->where('teacher_id', $locked->id)->where('access_mode', TeacherAccess::Timed->value)->exists();
+            if ((($mode ?? $settings->teacher_mode) === TeacherAccess::Timed || $timedSections) && $minutes === null && $until === null && ! self::departmentLimited($settings)) {
+                throw new DomainRuleViolation(__('Give the editing time, or the date it ends, for the limited-time mode.'), 'edit_minutes');
             }
 
             $changes = array_filter([
@@ -153,6 +168,16 @@ class ManageAccess
 
             if ($row === null) {
                 throw new DomainRuleViolation(__('This section has no teacher yet.'), 'section');
+            }
+
+            // Limited time needs a limit: the teacher's own or the
+            // department's (flow audit, 2026-11-20).
+            if ($mode === TeacherAccess::Timed) {
+                $teacher = Teacher::query()->whereKey($row->teacher_id)->first(['id', 'edit_minutes', 'edit_until']);
+                $own = $teacher !== null && ($teacher->edit_minutes !== null || $teacher->edit_until !== null);
+                if (! $own && ! self::departmentLimited(GradeSettings::current())) {
+                    throw new DomainRuleViolation(__('This section\'s teacher has no editing time, nor has the department. Give one first.'), 'mode');
+                }
             }
 
             $until = match (true) {
@@ -298,6 +323,26 @@ class ManageAccess
 
             return $locked;
         }, 3);
+    }
+
+    private static function departmentLimited(GradeSettings $settings): bool
+    {
+        return $settings->teacher_edit_minutes !== null || $settings->teacher_edit_until !== null;
+    }
+
+    /** A teacher, or a section, in limited-time mode that relies on the department's limit. */
+    private static function timedWithoutOwnLimit(): bool
+    {
+        $teachers = Teacher::query()
+            ->where('access_mode', TeacherAccess::Timed->value)
+            ->whereNull('edit_minutes')
+            ->whereNull('edit_until')
+            ->exists();
+
+        return $teachers || SubjectTeacher::query()
+            ->where('access_mode', TeacherAccess::Timed->value)
+            ->whereHas('teacher', fn ($query) => $query->whereNull('edit_minutes')->whereNull('edit_until'))
+            ->exists();
     }
 
     /** Whether a mode uses the editing time limit (ADR-0043). */

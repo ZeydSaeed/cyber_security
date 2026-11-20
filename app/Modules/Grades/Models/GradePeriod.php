@@ -107,7 +107,18 @@ class GradePeriod extends Model
     /** When one section's results reached its students (null: not yet). */
     public function publishedAtFor(Stage $stage, Section $section): ?CarbonImmutable
     {
-        return $this->results_published_at ?? ($this->publishedSections()[$stage->value.'|'.$section->value] ?? null);
+        // A section published on its own before the whole period keeps
+        // its own moment: publishing everything later must not restart
+        // the appeal time of results its students have read since (flow
+        // audit, 2026-11-20).
+        $own = $this->publishedSections()[$stage->value.'|'.$section->value] ?? null;
+        $all = $this->results_published_at;
+
+        return match (true) {
+            $all === null => $own,
+            $own === null => $all,
+            default => $own->min($all),
+        };
     }
 
     /** Whether one section's students may see their results (ADR-0042). */

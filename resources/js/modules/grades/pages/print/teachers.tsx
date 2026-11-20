@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { useTranslations } from '@/hooks/use-translations';
 import PrintPage from '../../components/print-page';
 import { stageLabel } from '../../place';
+import { teachesPractical, teachesTheory } from '../../types';
+import type { TeachingKind } from '../../types';
 
 type TeacherSlip = {
     uuid: string;
@@ -14,8 +16,8 @@ type TeacherSlip = {
         stage: number;
         divided: boolean;
         sections: string[];
-        /** "theory", "practical", or null: ticked by hand. */
-        kind: 'theory' | 'practical' | null;
+        /** "theory", "practical", "both", or null: ticked by hand. */
+        kind: TeachingKind | null;
         /** The assistant's name, or null: written by hand. */
         assistant: string | null;
     }[];
@@ -121,17 +123,15 @@ export default function PrintTeachers({
                                                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
                                                     <Tick
                                                         label={t('Practical')}
-                                                        ticked={
-                                                            subject?.kind ===
-                                                            'practical'
-                                                        }
+                                                        ticked={teachesPractical(
+                                                            subject?.kind,
+                                                        )}
                                                     />
                                                     <Tick
                                                         label={t('Theoretical')}
-                                                        ticked={
-                                                            subject?.kind ===
-                                                            'theory'
-                                                        }
+                                                        ticked={teachesTheory(
+                                                            subject?.kind,
+                                                        )}
                                                     />
                                                 </div>
                                                 <div className="flex flex-wrap gap-x-32 gap-y-1">

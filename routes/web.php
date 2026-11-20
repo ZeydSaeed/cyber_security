@@ -47,8 +47,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where(['table' => '[a-z-]+', 'view' => '[0-9]+'])
         ->name('tables.views.destroy');
 
-    // Reports: for those who may read the audit trail (ADR-0029).
-    Route::redirect('admin/reports', '/admin')->name('admin.reports');
+    // /admin/reports is the Grades module's academic reports since
+    // 2026-11-20 (owner's request); the platform's redirect is gone.
 
     Route::middleware('can:roles.manage')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');

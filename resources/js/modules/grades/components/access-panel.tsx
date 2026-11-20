@@ -21,6 +21,9 @@ import type { TeacherMode } from '../types';
 import { useMoment } from './access-notice';
 import { DurationFields, MomentField } from './duration-fields';
 import type { ResultSettings } from './result-settings-panel';
+import { AppealsIcon } from './settings-icons';
+import { tabHref } from './settings-tabs';
+import { TileBadge } from './status-tiles';
 import { StudentViewFields, StudentViewForm } from './student-view-fields';
 
 /** The modes a time limit applies to (ADR-0043). */
@@ -702,7 +705,7 @@ function TeacherAccessDialog({
 }
 
 /** A student's appeal: accept or reject, with an answer they read. */
-function AppealRow({
+export function AppealRow({
     appeal,
 }: {
     appeal: AccessBoardProps['appeals'][number];
@@ -955,21 +958,31 @@ export default function AccessPanel({
                 </section>
             )}
 
-            {part === 'students' && access.appeals.length > 0 && (
-                <section className="grid gap-2" aria-labelledby="appeals">
-                    <h3
-                        id="appeals"
-                        className="flex items-center gap-2 font-semibold"
-                    >
-                        {t("Students' appeals")}
-                        <Badge>{access.appeals.length}</Badge>
-                    </h3>
-                    <ul className="grid gap-2">
-                        {access.appeals.map((appeal) => (
-                            <AppealRow key={appeal.uuid} appeal={appeal} />
-                        ))}
-                    </ul>
-                </section>
+            {/* The appeals have a tab of their own (owner's request,
+                2026-11-20): reached from here too. */}
+            {part === 'students' && (
+                <Link
+                    prefetch
+                    href={tabHref('appeals')}
+                    className="flex max-w-3xl items-center gap-4 rounded-xl border border-tile-9/30 bg-tile-9-soft p-4 transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    data-test="appeals-link"
+                >
+                    <TileBadge tile={9} icon={AppealsIcon} />
+                    <span className="grid flex-1 gap-1">
+                        <span className="font-semibold">
+                            {t("Students' appeals")}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                            {t(
+                                'Who answers, how long appeals stay open, and the appeals waiting.',
+                            )}
+                        </span>
+                    </span>
+                    <span className="text-2xl font-bold tabular-nums">
+                        <span className="sr-only">{t('waiting:')} </span>
+                        {access.appeals.length}
+                    </span>
+                </Link>
             )}
 
             {part === 'permissions' && access.requests.length > 0 && (

@@ -36,6 +36,7 @@ use InvalidArgumentException;
  * @property array<string, mixed>|null $mark_tones
  * @property TeacherResults $teacher_results
  * @property int|null $appeal_minutes
+ * @property CarbonImmutable|null $appeal_from
  * @property CarbonImmutable|null $appeal_until
  * @property AppealScope $appeal_scope
  * @property bool $teacher_appeal_replies
@@ -78,6 +79,7 @@ class GradeSettings extends Model
             'mark_tones' => 'array',
             'teacher_results' => TeacherResults::class,
             'appeal_minutes' => 'integer',
+            'appeal_from' => 'immutable_datetime',
             'appeal_until' => 'immutable_datetime',
             'appeal_scope' => AppealScope::class,
             'teacher_appeal_replies' => 'boolean',

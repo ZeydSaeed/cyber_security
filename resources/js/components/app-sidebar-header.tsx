@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, House } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { ArrowLeft, ArrowRight, House, X } from 'lucide-react';
 import { overview as gradesOverview } from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import {
@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 /**
@@ -18,8 +19,10 @@ import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
  * the toolbar's own colour. Since 2026-11-16 each page puts its title and
  * controls here (PageToolbar), the previous, next and home buttons sit at
  * the end (the left in Arabic), and the search button is gone: the command
- * search still opens with Ctrl+K. A page's own Close button sits beside
- * them (PageToolbarNav). The toolbar grows to a second line when its
+ * search still opens with Ctrl+K. Since 2026-11-20 every page but the
+ * dashboard has a Close button beside them, back to the dashboard (owner's
+ * request); a page may add its own controls there (PageToolbarNav). The
+ * toolbar grows to a second line when its
  * contents do not fit.
  */
 export function AppSidebarHeader({
@@ -28,6 +31,15 @@ export function AppSidebarHeader({
     breadcrumbs?: BreadcrumbItemType[];
 }) {
     const { t } = useTranslations();
+    // The dashboard is the control panel's cards (/admin with no tab open):
+    // every other page has a Close button back to it (owner's request,
+    // 2026-11-20); the dashboard itself has none.
+    const dashboardHref = gradesOverview.url();
+    const { url } = usePage();
+    const [path, query = ''] = url.split('?');
+    const onDashboard =
+        path.replace(/\/+$/, '') === dashboardHref &&
+        !new URLSearchParams(query).has('tab');
 
     return (
         <header className="flex min-h-10 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-sidebar-border/50 bg-toolbar bg-gradient-toolbar px-4 py-1.5 font-semibold text-toolbar-foreground [--color-foreground:var(--toolbar-foreground)] [--color-muted-foreground:var(--toolbar-foreground)] md:px-3">
@@ -42,6 +54,20 @@ export function AppSidebarHeader({
                 className="ms-auto flex shrink-0 items-center gap-1"
             >
                 <PageToolbarNavSlot />
+                {!onDashboard && (
+                    <Link
+                        prefetch
+                        href={dashboardHref}
+                        className={cn(
+                            'inline-flex h-7 items-center gap-1 rounded-md border px-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                            toolButton,
+                        )}
+                        data-test="close-page"
+                    >
+                        <X className="size-4" aria-hidden />
+                        {t('Close')}
+                    </Link>
+                )}
                 {/* Arrows mirrored in Arabic, as elsewhere (table-pagination.tsx). */}
                 <Button
                     variant="outline"
@@ -73,7 +99,7 @@ export function AppSidebarHeader({
                 >
                     <Link
                         prefetch
-                        href={gradesOverview()}
+                        href={dashboardHref}
                         aria-label={t('Home')}
                         title={t('Home')}
                         data-test="home"

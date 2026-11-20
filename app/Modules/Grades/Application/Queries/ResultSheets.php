@@ -2,6 +2,7 @@
 
 namespace App\Modules\Grades\Application\Queries;
 
+use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\ResultCalculator;
 use App\Modules\Grades\Domain\Section;
@@ -145,15 +146,33 @@ final class ResultSheets
             'notes' => ['notes'],
         ];
 
+        $flag = $sheet['absence_flag'];
         $sheet['subjects'] = $pick($sheet['subjects']);
         $sheet['stats'] = $pick($sheet['stats']);
-        $sheet['students'] = array_map(function (array $row) use ($pick, $hidden, $view): array {
+        $sheet['students'] = array_map(function (array $row) use ($pick, $hidden, $view, $flag): array {
             $row['marks'] = $pick($row['marks']);
+            $row['cells'] = $pick($row['cells']);
+
+            // Without the other subjects, the figures that count every
+            // subject (absences, missing marks, complete, passed, the
+            // absence flag) would tell what those subjects hold: they
+            // are counted again over the subjects shown (flow audit,
+            // 2026-11-20).
+            if (! $view['other_subjects']) {
+                $absences = count(array_filter($row['marks'], fn (mixed $mark): bool => $mark === Mark::ABSENT));
+                $missing = count(array_filter($row['marks'], fn (mixed $mark): bool => $mark === null));
+                $row['absences'] = $absences;
+                $row['missing'] = $missing;
+                $row['complete'] = $missing === 0;
+                $row['passed'] = $missing === 0 && array_filter($row['cells'], fn (?array $cell): bool => $cell === null || ! $cell['passed']) === [];
+                $row['frequent_absence'] = $flag !== null && $absences >= $flag;
+            }
+
             $row['cells'] = array_map(fn (?array $cell): ?array => $cell === null ? null : [
                 ...$cell,
                 'band' => $view['mark_grade'] ? $cell['band'] : null,
                 'exempt' => $view['exemption'] && $cell['exempt'],
-            ], $pick($row['cells']));
+            ], $row['cells']);
 
             foreach ($hidden as $option => $fields) {
                 if (! $view[$option]) {
@@ -165,6 +184,13 @@ final class ResultSheets
 
             return $row;
         }, $sheet['students']);
+        if (! $view['other_subjects']) {
+            $sheet['summary'] = [
+                'students' => count($sheet['students']),
+                'complete' => count(array_filter($sheet['students'], fn (array $row): bool => $row['complete'])),
+                'passed_all' => count(array_filter($sheet['students'], fn (array $row): bool => $row['passed'])),
+            ];
+        }
         $sheet['view'] = $view;
 
         return $sheet;

@@ -65,8 +65,9 @@ class ResultSettingsController
     }
 
     /**
-     * What the student sees in the result, and who may appeal and until
-     * when (ADR-0043, ADR-0044).
+     * What the student sees in the result (ADR-0044). The appeals have
+     * their own tab since 2026-11-20 (appeals()): kept as they are here,
+     * the appeal box included.
      */
     public function studentView(Request $request, #[CurrentUser] User $user): RedirectResponse
     {
@@ -74,28 +75,57 @@ class ResultSettingsController
             // Absent when none is ticked.
             'options' => ['sometimes', 'array'],
             'options.*' => [Rule::in(array_keys(ResultDisplay::OPTIONS))],
-            ...DurationInput::rules('appeal'),
-            'appeal_until' => ['nullable', 'date'],
-            'appeal_scope' => ['required', Rule::enum(AppealScope::class)],
-            'teacher_appeal_replies' => ['sometimes', 'boolean'],
         ]);
 
         // The options come as the list of those ticked.
         $shown = array_map('strval', (array) $request->input('options', []));
+        $current = GradeSettings::current();
         $options = [];
         foreach (array_keys(ResultDisplay::OPTIONS) as $option) {
-            $options[$option] = in_array($option, $shown, true);
+            $options[$option] = $option === 'appeals'
+                ? $current->options()['appeals']
+                : in_array($option, $shown, true);
         }
 
         $this->results->studentView(
             $user,
             $options,
-            DurationInput::minutes($request, 'appeal'),
-            DurationInput::moment($request, 'appeal_until'),
-            AppealScope::from((string) $request->string('appeal_scope')),
-            $request->boolean('teacher_appeal_replies'),
+            $current->appeal_minutes,
+            $current->appeal_until,
+            $current->appeal_scope,
+            $current->teacher_appeal_replies,
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => __('What the student sees was saved.')]);
+
+        return back();
+    }
+
+    /**
+     * Students' appeals (appeals tab, owner's request 2026-11-20): on or
+     * off, how long after publication (days, hours, minutes), from and
+     * until which dates, who may appeal, and who answers.
+     */
+    public function appeals(Request $request, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate([
+            'enabled' => ['sometimes', 'boolean'],
+            ...DurationInput::rules('appeal'),
+            'appeal_from' => ['nullable', 'date'],
+            'appeal_until' => ['nullable', 'date'],
+            'appeal_scope' => ['required', Rule::enum(AppealScope::class)],
+            'answered_by' => ['required', Rule::in(['teacher', 'department'])],
+        ]);
+
+        $this->results->appeals(
+            $user,
+            $request->boolean('enabled'),
+            DurationInput::minutes($request, 'appeal'),
+            DurationInput::moment($request, 'appeal_from'),
+            DurationInput::moment($request, 'appeal_until'),
+            AppealScope::from((string) $request->string('appeal_scope')),
+            $request->string('answered_by')->toString() === 'teacher',
+        );
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Appeal settings saved.')]);
 
         return back();
     }

@@ -3,6 +3,8 @@
 namespace App\Modules\Grades;
 
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Console\CheckReports;
+use App\Modules\Grades\Application\Console\FlowCheck;
 use App\Modules\Grades\Application\Console\SendAppealReminders;
 use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
 use App\Modules\Grades\Application\Jobs\NotifySectionCompleted;
@@ -78,7 +80,7 @@ class GradesServiceProvider extends ServiceProvider
 
         // Reminders about appeals, every hour (ADR-0045).
         if ($this->app->runningInConsole()) {
-            $this->commands([SendAppealReminders::class]);
+            $this->commands([SendAppealReminders::class, CheckReports::class, FlowCheck::class]);
         }
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->command('grades:appeal-reminders')->hourly()->withoutOverlapping()->onOneServer();

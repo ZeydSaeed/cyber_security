@@ -329,3 +329,54 @@ See `docs/evidence/grades-audit/2026-11-20-full-size-audit.md`.
   a confirmation that says how many marks are still missing (in how many
   sections) and how many subject sections their teacher has not approved,
   or that everything is entered and approved. Hiding does not ask.
+- **A section's type is two boxes, theoretical and practical.** Either or
+  both may be ticked; none is "not stated". `TeachingKind` gains `both`
+  ("Theoretical and practical"); PostgreSQL's check accepts it
+  (migration `2026_11_20_100000_teaching_kind_both`). The print slip ticks
+  both boxes for such a section.
+- **Publishing chooses its stages and sections, then shows what is
+  missing.** The window tab ticks stages and sections (several, or all;
+  a published section shows "Published" with Hide). A button lists, for
+  what is ticked, each subject section with no teacher, with marks still
+  missing, or not approved, with its subject, teacher and section.
+  Publishing opens a dialog with that list; with shortages its button is
+  "Publish anyway", and Cancel changes nothing. Several sections publish
+  together in one transaction (`PUT /admin/publish/sections`,
+  `PublishResults::sections`); all of them publishes the whole period.
+- **"Settings" is called "Control panel"; academic reports at
+  /admin/reports.** The sidebar's last item opens the academic reports
+  (`ReportsController`, `AcademicReports`, `ReportAdvice`): results by
+  section and stage (passed, failed, exempt, incomplete, rates, means),
+  the top ten of each stage, subjects compared within their stage,
+  teachers' progress and sign-ins, students' sign-ins and views, appeals
+  with their teachers and answers, the marks' dates and corrections, and
+  recommendations by fixed rules. Read with grades.view_results; opening
+  it is audited (`grades.reports_viewed`). The platform's old redirect of
+  /admin/reports is gone. Checked two ways: hand-worked data
+  (`ReportsCheckSeeder`, `AcademicReportsTest`) and an independent recount
+  (`php artisan grades:reports-check`).
+- **Students' appeals have a tab of their own; the control panel's cards
+  follow the owner's picture (2026-11-20).** Each card is a soft tile with
+  a faint border, a solid round badge, its label, a large number and a
+  line of state; a ninth tile colour (`tile-9`, `palette.json`) serves the
+  appeals. The appeals tab (`/admin?tab=appeals`, also linked from the
+  students' tab) shows the appeals by status in the picture's layout (a
+  bar by share, a legend, a card per status, and who answered), then
+  their settings, saved on their own (`PUT /admin/results/appeals`,
+  `ManageResults::appeals`, audited `grades.appeal_settings_changed`):
+  appeals on or off; who answers, the subject's teacher (on their sheet,
+  the department told and still able to answer) or the administration
+  alone; open from a date (`appeal_from`, migration
+  `2026_11_20_200000_appeal_opens_from`; empty: at publication), closed at
+  a date, and/or kept open for days, hours or minutes counted from when
+  they open (the earlier close applies); and who may appeal. "What the
+  student sees" no longer carries the appeals or the appeal box.
+- **The reports' figures as status boards** (owner's picture, 2026-11-20):
+  a bar split into the states' shares, a legend with each share in
+  words, and a soft card per state with a round icon, its name and its
+  number (`StatusBoard`). Its colours are the palette roles
+  `status-good`, `-wait`, `-bad`, `-info` and `-final` (each with
+  `-foreground` and `-soft`), chosen with the colour-blindness validator
+  for the bar's orders (worst adjacent ΔE 12.7 light, 16.4 dark) and
+  contrast-tested in pairs.json. Dark mode lets the amber go above the
+  validator's lightness band (0.83) to keep 3:1 on the dark card.

@@ -56,7 +56,8 @@ function MarkedName({
  * of the stage, then the total, the percentage, subjects below the pass
  * mark and absences. A mark below the pass mark or an absence is marked
  * with words, not colour alone. Inner and outer grid lines (owner's
- * layout, 2026-11-16). Used on screen and in print. On screen, the parts
+ * layout, 2026-11-16); every column is as wide as its content
+ * (owner's request, 2026-11-20). Used on screen and in print. On screen, the parts
  * of the names that match a search are marked (`terms`, from
  * name-search.ts), and `current` names the match the page moved to.
  */
@@ -117,14 +118,14 @@ export default function ResultsTable({
     return (
         // Scrolls sideways on a phone: reachable by keyboard, and named.
         <div
-            className="overflow-x-auto rounded-lg border border-grid-line bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:overflow-visible"
+            className="w-fit max-w-full overflow-x-auto rounded-lg border border-grid-line bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:overflow-visible"
             tabIndex={0}
             role="region"
             aria-label={t('Results')}
         >
             <table
                 // The outer line is the region's own border.
-                className="w-full border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line"
+                className="border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_td]:whitespace-nowrap [&_th]:border [&_th]:border-grid-line [&_th]:whitespace-nowrap"
                 data-test="results-table"
             >
                 <caption className="sr-only">
