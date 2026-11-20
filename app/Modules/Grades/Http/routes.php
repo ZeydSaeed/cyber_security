@@ -156,15 +156,6 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->whereUuid('student')
             ->name('students.destroy');
 
-        // The file to fill for the import.
-        Route::get('students/import/template', [StudentsAdminController::class, 'template'])
-            ->middleware('throttle:20,1')
-            ->name('students.template');
-        Route::post('students/import', [StudentsAdminController::class, 'upload'])->middleware('throttle:20,1')->name('students.upload');
-        Route::get('students/import', [StudentsAdminController::class, 'preview'])->name('students.preview');
-        Route::post('students/import/apply', [StudentsAdminController::class, 'apply'])->middleware('throttle:20,1')->name('students.apply');
-        Route::delete('students/import', [StudentsAdminController::class, 'cancel'])->name('students.cancel');
-
         // Students' codes: issue the missing ones, replace a lost one, print a section's.
         Route::post('students/codes', [StudentsAdminController::class, 'issueCodes'])->middleware('throttle:20,1')->name('students.codes.issue');
         Route::post('students/{student}/code', [StudentsAdminController::class, 'replaceCode'])

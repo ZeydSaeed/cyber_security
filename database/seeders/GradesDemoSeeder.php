@@ -5,15 +5,16 @@ namespace Database\Seeders;
 use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
-use App\Modules\Grades\Application\Actions\ImportStudents;
 use App\Modules\Grades\Application\Actions\IssueStudentCodes;
 use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Actions\SaveStudent;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
+use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\Student;
@@ -68,7 +69,7 @@ class GradesDemoSeeder extends Seeder
     public function run(
         SaveTeacher $teachers,
         SaveSubject $subjects,
-        ImportStudents $import,
+        SaveStudent $students,
         ChangeEntryWindow $window,
         SaveMarks $marks,
         PublishResults $publish,
@@ -107,21 +108,13 @@ class GradesDemoSeeder extends Seeder
         }
 
         // 12 students in the first stage (no sections), 10 in each section of the second.
-        $lines = ['name,stage,section'];
         foreach (self::NAMES as $i => $name) {
-            $lines[] = match (true) {
-                $i < 12 => "{$name},1,",
-                $i < 22 => "{$name},2,A",
-                default => "{$name},2,B",
+            [$stage, $section] = match (true) {
+                $i < 12 => [Stage::First, null],
+                $i < 22 => [Stage::Second, Section::A],
+                default => [Stage::Second, Section::B],
             };
-        }
-        $csv = storage_path('app/private/demo-students-'.bin2hex(random_bytes(6)).'.csv');
-        File::ensureDirectoryExists(dirname($csv));
-        File::put($csv, implode("\n", $lines));
-        try {
-            $import->apply($owner, $csv, 'csv', 'demo-students.csv');
-        } finally {
-            File::delete($csv);
+            $students->create($owner, $name, $stage, $section);
         }
 
         // Students entered before codes existed get theirs too.

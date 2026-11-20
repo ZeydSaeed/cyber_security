@@ -15,7 +15,6 @@ use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-use OpenSpout\Reader\XLSX\Reader;
 use Tests\Support\Grades\GradesFixtures;
 
 /*
@@ -294,27 +293,7 @@ describe('students', function () {
         expect(Student::query()->count())->toBe(1);
     });
 
-    it('gives a file to fill whose first sheet holds only headers the import reads', function () {
-        $response = $this->actingAs($this->owner)->get('/admin/students/import/template')->assertOk();
-        $path = $response->baseResponse->getFile()->getPathname();
-
-        $reader = new Reader;
-        $reader->open($path);
-        $sheets = [];
-        foreach ($reader->getSheetIterator() as $sheet) {
-            $rows = [];
-            foreach ($sheet->getRowIterator() as $row) {
-                $rows[] = $row->toArray();
-            }
-            $sheets[] = $rows;
-        }
-        $reader->close();
-
-        expect($sheets)->toHaveCount(2)
-            ->and($sheets[0])->toBe([['Name', 'Stage', 'Section', 'Student number']]);
-    });
-
     it('is for managers only', function () {
-        $this->get('/admin/students/import/template')->assertRedirect('/login');
+        $this->post('/admin/students', ['name' => 'Sara Nabil', 'stage' => 1])->assertRedirect('/login');
     });
 });

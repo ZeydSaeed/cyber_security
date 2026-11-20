@@ -134,6 +134,31 @@ function StudentDialog({
                                 />
                                 <InputError message={errors.name} />
                             </div>
+                            {/* Printed on the result card in place of the
+                                sign-in code (owner's decision, 2026-11-20). */}
+                            <div className="grid gap-2">
+                                <Label htmlFor="student-number">
+                                    {t('Student number')}
+                                </Label>
+                                <Input
+                                    id="student-number"
+                                    name="number"
+                                    defaultValue={student?.number ?? ''}
+                                    maxLength={40}
+                                    autoComplete="off"
+                                    dir="ltr"
+                                    aria-describedby="student-number-hint"
+                                />
+                                <p
+                                    id="student-number-hint"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    {t(
+                                        'Optional. Shown on the printed result card; it must not repeat.',
+                                    )}
+                                </p>
+                                <InputError message={errors.number} />
+                            </div>
                             {student === null ? (
                                 <p className="text-sm text-muted-foreground">
                                     {t(
@@ -263,14 +288,14 @@ export default function GradesStudents({
     students,
     state,
     columns,
-    canImport,
+    canManage,
     places,
     appealScope = 'all',
 }: {
     students: { rows: StudentRow[] } & PageMeta;
     state: TableState;
     columns: ColumnPrefs;
-    canImport: boolean;
+    canManage: boolean;
     places: { stage: number; section: string; divided: boolean }[];
     /** Every student may appeal, or only those allowed here (ADR-0043). */
     appealScope?: 'all' | 'selected';
@@ -391,7 +416,7 @@ export default function GradesStudents({
                     }
                     onClear={() => visit({ search: '', filters: {} })}
                 />
-                {canImport && (
+                {canManage && (
                     <Button
                         variant="outline"
                         size="sm"
@@ -405,7 +430,7 @@ export default function GradesStudents({
                 )}
                 {/* The code slips, on a page of their own (owner,
                     2026-11-17), as the teachers' page prints its slips. */}
-                {canImport && (
+                {canManage && (
                     <Button
                         variant="outline"
                         size="sm"
@@ -448,7 +473,7 @@ export default function GradesStudents({
                     filtered={filtered}
                     bordered
                     numberFrom={students.from ?? 1}
-                    actionsLabel={canImport ? t('Actions') : undefined}
+                    actionsLabel={canManage ? t('Actions') : undefined}
                     onClearFilters={() => visit({ search: '', filters: {} })}
                     onSort={(column) =>
                         visit({
@@ -461,7 +486,7 @@ export default function GradesStudents({
                         })
                     }
                     rowAction={
-                        canImport
+                        canManage
                             ? (student) => (
                                   <div className="flex flex-wrap justify-start gap-2">
                                       <Button

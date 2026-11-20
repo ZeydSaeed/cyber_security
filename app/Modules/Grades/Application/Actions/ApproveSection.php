@@ -80,7 +80,7 @@ class ApproveSection
     }
 
     /**
-     * A student who joins a section (added, imported or moved there) has
+     * A student who joins a section (added or moved there) has
      * no mark in it yet, so the section's approvals of the subjects they
      * lack a mark in no longer say "every student has a mark": they are
      * withdrawn, and the teacher approves again once the mark is in

@@ -12,7 +12,4 @@ return [
     // The key of the teacher-code digests (TeacherCodes). Empty: derived
     // from APP_KEY.
     'code_key' => env('GRADES_CODE_KEY', ''),
-
-    // The largest student import, in rows.
-    'import_max_rows' => 2000,
 ];

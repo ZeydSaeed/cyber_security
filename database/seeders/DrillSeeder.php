@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
-use App\Modules\Grades\Application\Actions\ImportStudents;
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Actions\SaveStudent;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Domain\Mark;
@@ -25,7 +25,7 @@ use RuntimeException;
  * Data for a restore drill on a disposable machine (operations.yml): a
  * department made through the Grades module's own actions (ADR-0034), so
  * audit records, outbox messages and notifications exist as in real use:
- * eight teachers and sixteen subjects, students imported from a file, and
+ * eight teachers and sixteen subjects, students added one by one, and
  * marks for most sections. Attached files come from people's documents.
  * Refuses to run in production or staging.
  *
@@ -37,7 +37,7 @@ class DrillSeeder extends Seeder
     public function run(
         SaveTeacher $teachers,
         SaveSubject $subjects,
-        ImportStudents $import,
+        SaveStudent $students,
         ChangeEntryWindow $window,
         SaveMarks $marks,
         FileStore $files,
@@ -63,20 +63,11 @@ class DrillSeeder extends Seeder
         }
 
         $count = (int) config('platform.performance.drill_students');
-        // A private, unpredictable name in the application's own storage.
-        $csv = storage_path('app/private/drill-students-'.bin2hex(random_bytes(8)).'.csv');
-        $lines = ['name,stage,section,number'];
         for ($i = 1; $i <= $count; $i++) {
             // The first stage has no sections: its section is left empty.
-            $stage = $i % 2 + 1;
-            $lines[] = "Drill Student {$i},{$stage},".($stage === 1 ? '' : ($i % 4 < 2 ? 'A' : 'B')).",D{$i}";
-        }
-        file_put_contents($csv, implode("\n", $lines));
-
-        try {
-            $import->apply($owner, $csv, 'csv', 'drill.csv');
-        } finally {
-            @unlink($csv);
+            $stage = Stage::from($i % 2 + 1);
+            $section = $stage === Stage::First ? null : ($i % 4 < 2 ? Section::A : Section::B);
+            $students->create($owner, "Drill Student {$i}", $stage, $section, null, "D{$i}");
         }
 
         $window->handle($owner, Period::Month1, WindowStatus::Open);

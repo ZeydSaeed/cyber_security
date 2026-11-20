@@ -10,7 +10,6 @@ use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\Queries\TeacherSheets;
 use App\Modules\Grades\Application\ResultsWorkbook;
 use App\Modules\Grades\Application\ResultViews;
-use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -73,10 +72,12 @@ class ResultsController
     }
 
     /**
-     * The owner's card shows the student's code as their ID (owner's
-     * request, 2026-11-16): the card is handed to the student.
+     * The owner's printable card. It shows the student number, never the
+     * sign-in code (owner's decision, 2026-11-20): a card posted or passed
+     * around must not open the student's result page. Codes are printed
+     * only on the code slips.
      */
-    public function printStudent(Student $student, StudentCodes $codes, MarkHistory $history, ResultViews $views, #[CurrentUser] User $user): Response
+    public function printStudent(Student $student, MarkHistory $history, ResultViews $views, #[CurrentUser] User $user): Response
     {
         $manage = $user->can('grades.manage');
         $views->byUser($student, $user);
@@ -87,7 +88,6 @@ class ResultsController
 
         return Inertia::render('modules/grades/pages/print/student', [
             ...$this->sheets->student($student),
-            'code' => $student->code_encrypted === null ? null : $codes->decrypt($student->code_encrypted),
             // Below the card, not printed (ADR-0044): each mark's journey,
             // the student's appeals, and whether they may appeal.
             'journeys' => $history->forStudent($student),

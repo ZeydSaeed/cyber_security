@@ -6,10 +6,7 @@ import type { MarkValue, ResultCardData } from './types';
 
 type Translate = ReturnType<typeof useTranslations>['t'];
 
-export type CardData = ResultCardData & {
-    /** The student's code, shown as their ID on the owner's card. */
-    code?: string | null;
-};
+export type CardData = ResultCardData;
 
 /**
  * Saves one student's result card as a PNG image (owner's request,
@@ -145,7 +142,8 @@ export async function downloadResultCard(
         [t('Name'), student.name],
         [t('Stage'), stageName(t, card.stage)],
         [t('Section'), card.divided ? card.section : '—'],
-        [t('Student ID'), card.code ?? student.number ?? '—'],
+        // The number, never the sign-in code (owner, 2026-11-20).
+        [t('Student number'), student.number ?? '—'],
     ].map(([label, value]) => `${label}: ${value}`);
     ctx.font = `600 26px ${font}`;
     const widths = details.map((item) => ctx.measureText(item).width);

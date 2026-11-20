@@ -550,12 +550,36 @@ test('3. the owner allows a change, closes entry and checks every result', async
         await expect(page.locator('#app')).not.toBeEmpty();
     }
 
-    // Publish section by section.
+    // The printed card shows the student number, never the sign-in code
+    // (owner's decision, 2026-11-20).
+    const seeded = data.students[0];
+    await visit(page, '/admin/results?stage=1&section=A');
+    const cardLink = page
+        .locator('[data-test="result-row"]', { hasText: seeded.name })
+        .locator('a[href*="/admin/results/students/"]');
+    await visit(page, (await cardLink.getAttribute('href')) ?? '');
+    await expect(page.locator('[data-test="card-number"]')).toHaveText(
+        /^CS-1-\d{3}$/,
+    );
+    await expect(page.locator('body')).not.toContainText(seeded.code);
+
+    // Publish section by section. Each asks first and says what is not
+    // ready: in 1A the teacher's change under the grant cleared one
+    // approval (step 3), every other section is complete and approved.
     await visit(page, '/admin?tab=window');
     const buttons = page.locator('[data-test="publish-section"]');
     await expect(buttons).toHaveCount(5);
     for (let i = 0; i < 5; i++) {
         await buttons.nth(i).click();
+        const dialog = page.locator('[data-slot="confirm-action"]');
+        await expect(dialog).toBeVisible();
+        await expect(dialog).toContainText(
+            i === 0
+                ? '1 من شعب المواد لم يعتمدها مدرّسها بعد.'
+                : 'كل الدرجات مُدخلة ومعتمدة.',
+        );
+        await dialog.locator('[data-test="confirm-action-button"]').click();
+        await expect(dialog).toBeHidden();
         await expect(buttons.nth(i)).toHaveAttribute('aria-pressed', 'true');
     }
     await page.context().close();

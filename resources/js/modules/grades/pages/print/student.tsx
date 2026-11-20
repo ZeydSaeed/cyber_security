@@ -22,7 +22,6 @@ import type { ResultCardData } from '../../types';
  */
 export default function PrintStudent(
     card: ResultCardData & {
-        code: string | null;
         /** Below the card, not printed (ADR-0044). */
         journeys?: JourneyRow[];
         appeals?: DossierAppeal[];
@@ -74,7 +73,7 @@ export default function PrintStudent(
                     </Button>
                 }
             >
-                <ResultCard card={card} code={card.code} />
+                <ResultCard card={card} printable />
                 <StudentDossier
                     journeys={card.journeys ?? []}
                     appeals={card.appeals ?? []}

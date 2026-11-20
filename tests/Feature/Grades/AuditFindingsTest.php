@@ -21,6 +21,7 @@ use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\Support\Grades\GradesFixtures;
 
 /*
@@ -102,4 +103,49 @@ it('shows the owner the appealed mark and the sheet to correct it on', function 
         ->and($appeal['max'])->toBe(100)
         ->and($appeal['sheet'])->toBe(route('grades.admin.sheet', ['subject' => $this->subject->uuid, 'section' => 'A']));
     expect(GradePeriod::for(Period::Month1)->status)->toBe(WindowStatus::Closed);
+});
+
+/*
+| Owner's decisions of 2026-11-20: the printed card shows the student
+| number, never the sign-in code; the number is entered on the student's
+| form (the import that set it is gone); publishing asks first.
+*/
+it('prints the student number on the card, never the sign-in code', function () {
+    $this->ali->forceFill(['student_number' => 'CS-2-017'])->save();
+
+    $this->actingAs($this->owner)->get("/admin/results/students/{$this->ali->uuid}")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('modules/grades/pages/print/student')
+            ->missing('code')
+            ->where('student.number', 'CS-2-017'));
+});
+
+it('adds, changes and removes a student number, unique across students', function () {
+    $this->actingAs($this->owner)
+        ->post('/admin/students', ['name' => 'Sara Nabil', 'stage' => 2, 'section' => 'A', 'number' => ' CS-2-001 '])
+        ->assertSessionHasNoErrors();
+    $sara = Student::query()->where('full_name', 'Sara Nabil')->sole();
+    expect($sara->student_number)->toBe('CS-2-001');
+
+    // Another student cannot take it.
+    $this->post('/admin/students', ['name' => 'Huda Ali', 'stage' => 2, 'section' => 'B', 'number' => 'CS-2-001'])
+        ->assertSessionHasErrors(['number' => 'Another student already has this number.']);
+
+    // Changed, then removed (an empty field), each recorded.
+    $this->put("/admin/students/{$sara->uuid}", ['name' => 'Sara Nabil', 'stage' => 2, 'section' => 'A', 'number' => 'CS-2-002'])->assertSessionHasNoErrors();
+    expect($sara->fresh()?->student_number)->toBe('CS-2-002');
+    $this->put("/admin/students/{$sara->uuid}", ['name' => 'Sara Nabil', 'stage' => 2, 'section' => 'A', 'number' => ''])->assertSessionHasNoErrors();
+    expect($sara->fresh()?->student_number)->toBeNull();
+
+    $changes = AuditEvent::query()->where('action', 'grades.student_updated')->orderBy('id')->get()->pluck('changes.student_number');
+    expect($changes->all())->toEqual([['from' => 'CS-2-001', 'to' => 'CS-2-002'], ['from' => 'CS-2-002', 'to' => null]]);
+});
+
+it('no longer offers the student import', function () {
+    $this->actingAs($this->owner);
+
+    $this->get('/admin/students/import')->assertNotFound();
+    $this->get('/admin/students/import/template')->assertNotFound();
+    $this->post('/admin/students/import')->assertNotFound();
 });

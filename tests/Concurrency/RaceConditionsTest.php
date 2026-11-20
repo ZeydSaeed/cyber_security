@@ -196,24 +196,13 @@ it('either saves before the window closes or refuses, never after', function () 
     }
 });
 
-it('imports each student once when two imports of one file race', function () {
+it('adds a student once when two owners add the same student at once', function () {
     $admin = newAdministrator();
-    $file = sys_get_temp_dir().DIRECTORY_SEPARATOR.'students-'.bin2hex(random_bytes(6)).'.csv';
-    $lines = ['name,stage,section'];
-    foreach (range(1, 40) as $n) {
-        $stage = $n % 2 + 1;
-        $lines[] = "Student number {$n},{$stage},".($stage === 1 ? '' : ($n % 3 === 0 ? 'B' : 'A'));
-    }
-    file_put_contents($file, implode("\n", $lines));
 
-    try {
-        $results = Parallel::run('import-students', [[$admin->id, $file], [$admin->id, $file]]);
-    } finally {
-        @unlink($file);
-    }
+    $results = Parallel::run('add-student', [[$admin->id, 'Ali Hassan Jaber'], [$admin->id, 'Ali Hassan Jaber']]);
 
-    expect(array_column($results, 'ok'))->toBe([true, true])
-        ->and(Student::query()->count())->toBe(40)
-        ->and(array_sum(array_column($results, 'created')))->toBe(40)
-        ->and(AuditEvent::query()->where('action', 'grades.students_imported')->count())->toBe(1);
+    // One is added; the other is refused, by the check or by the database.
+    expect(array_column($results, 'ok'))->toEqualCanonicalizing([true, false])
+        ->and(Student::query()->count())->toBe(1)
+        ->and(AuditEvent::query()->where('action', 'grades.student_created')->count())->toBe(1);
 });

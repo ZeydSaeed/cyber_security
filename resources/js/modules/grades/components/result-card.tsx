@@ -20,20 +20,20 @@ import type { ResultCardData, ResultRow } from '../types';
 export default function ResultCard({
     card,
     showName = true,
-    code,
+    printable = false,
 }: {
     card: ResultCardData;
     /** The student's own page shows the name at the top already. */
     showName?: boolean;
     /**
-     * On the owner's printable card: the name, stage, section and code
-     * spread across one line (owner's request, 2026-11-16).
+     * The owner's printable card: the name, stage, section and student
+     * number spread across one line (owner's request, 2026-11-16). Never
+     * the sign-in code (owner's decision, 2026-11-20).
      */
-    code?: string | null;
+    printable?: boolean;
 }) {
     const { t } = useTranslations();
     const { student, subjects, options, tones } = card;
-    const printable = code !== undefined;
 
     const status = (i: number) => {
         const mark = student.marks[i] ?? null;
@@ -146,8 +146,9 @@ export default function ResultCard({
                             ? [{ label: t('Section'), value: card.section }]
                             : []),
                         {
-                            label: t('Student ID'),
-                            value: code ?? student.number ?? '—',
+                            label: t('Student number'),
+                            value: student.number ?? '—',
+                            test: 'card-number',
                         },
                     ].map((item) => (
                         <div key={item.label} className="flex gap-2">

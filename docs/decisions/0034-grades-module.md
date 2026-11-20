@@ -303,3 +303,29 @@ Later months add a `Period` case, not new tables.
   still gets one made by the application. The teachers' page shows the
   employee numbers directly (each visit audited).
 - Stages are shown by name ("First", "Second"), never as a number.
+
+## Amendment, 2026-11-20 (owner's decisions after the full-size audit)
+
+See `docs/evidence/grades-audit/2026-11-20-full-size-audit.md`.
+
+- **The student import is removed.** No page had reached it since the
+  import card left the students page (2026-11-16). Gone: the upload,
+  template, preview, apply and cancel routes, `ImportStudents`, the
+  `Application/Import` classes, the preview page, `Stage::fromText`,
+  `Section::fromText` and `grades.import_max_rows`. The sections above
+  that describe the import are history. Students are added one at a
+  time (`SaveStudent`); the seeders use it too. The race test now has two
+  owners add the same student at once: one student, one refusal.
+  `openspout` stays, for the Excel export of results. Old
+  `grades.students_imported` audit records keep their label.
+- **The student number is entered on the student's form** (optional, at
+  most 40 characters, unique, audited as a change); it was set only by the
+  import before.
+- **The printed result card shows the student number, never the sign-in
+  code.** This replaces "on the owner's result card as the student's ID"
+  above. A card posted or passed around must not open the student's
+  result page. Codes are printed only on the code slips.
+- **Publishing asks first.** Publishing all results, or one section, opens
+  a confirmation that says how many marks are still missing (in how many
+  sections) and how many subject sections their teacher has not approved,
+  or that everything is entered and approved. Hiding does not ask.

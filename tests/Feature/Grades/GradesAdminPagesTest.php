@@ -18,16 +18,14 @@ use App\Modules\Grades\Models\Teacher;
 use App\Platform\Access\RoleAssignment;
 use App\Platform\Audit\AuditEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use OpenSpout\Reader\XLSX\Reader;
 use Tests\Support\Grades\GradesFixtures;
 
 /*
 | The owner's pages (ADR-0034): who may open them, the set-up of teachers
-| and subjects, the student import, the results (checked against figures
+| and subjects, the students, the results (checked against figures
 | worked out by hand), printing, the Excel file, and corrections.
 */
 
@@ -53,7 +51,7 @@ describe('access', function () {
         ['GET', '/admin/teachers'],
         ['POST', '/admin/teachers'],
         ['PUT', '/admin/window'],
-        ['POST', '/admin/students/import'],
+        ['POST', '/admin/students'],
     ]);
 
     it('keeps teachers out of the owner\'s pages', function () {
@@ -156,40 +154,7 @@ describe('students', function () {
             ->assertInertia(fn (Assert $page) => $page->where('students.total', 1)->where('students.rows.0.number', '501'));
         $this->get('/admin/students?search=501')->assertInertia(fn (Assert $page) => $page->where('students.total', 1));
         $this->get('/admin/students?filter[stage]=2&filter[section]=B')
-            ->assertInertia(fn (Assert $page) => $page->where('students.total', 1)->where('students.rows.0.name', 'Sara Kamal Yousif')->where('canImport', true));
-    });
-
-    it('imports in two steps: the upload is checked and previewed, and only apply saves', function () {
-        Storage::fake((string) config('platform.files.disk'));
-        $csv = "name,stage,section\nAli Hassan Jaber,1,A\nMona Salim Faraj,2,B\nX,9,Z\n";
-
-        $this->actingAs($this->owner)
-            ->post('/admin/students/import', ['file' => UploadedFile::fake()->createWithContent('students.csv', $csv)])
-            ->assertRedirect('/admin/students/import');
-
-        $this->get('/admin/students/import')->assertInertia(fn (Assert $page) => $page
-            ->component('modules/grades/pages/admin/import-preview')
-            ->where('file', 'students.csv')
-            ->where('counts.created', 2)
-            ->where('counts.rejected', 1)
-            ->where('rejected.0.row', 4));
-        expect(Student::query()->count())->toBe(0);
-
-        $this->post('/admin/students/import/apply')->assertRedirect('/admin/students');
-        expect(Student::query()->count())->toBe(2)
-            ->and(AuditEvent::query()->where('action', 'file.uploaded')->count())->toBe(1)
-            ->and(AuditEvent::query()->where('action', 'grades.students_imported')->count())->toBe(1);
-
-        // Done: the preview is gone.
-        $this->get('/admin/students/import')->assertRedirect('/admin/students');
-    });
-
-    it('refuses other file types before reading them', function () {
-        Storage::fake((string) config('platform.files.disk'));
-
-        $this->actingAs($this->owner)->from('/admin/students')
-            ->post('/admin/students/import', ['file' => UploadedFile::fake()->createWithContent('students.pdf', "%PDF-1.4\n%%EOF\n")])
-            ->assertSessionHasErrors(['file' => 'This type of file is not accepted.']);
+            ->assertInertia(fn (Assert $page) => $page->where('students.total', 1)->where('students.rows.0.name', 'Sara Kamal Yousif')->where('canManage', true));
     });
 });
 

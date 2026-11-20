@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Eye, EyeOff, Lock, LockOpen } from 'lucide-react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
+import ConfirmAction from '@/components/confirm-action';
 import PageToolbar from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,74 @@ type Stage = {
         approved: Record<string, boolean>;
     }[];
 };
+
+type Readiness = { missing: number; sections: number; unapproved: number };
+
+/**
+ * What is not ready before publishing (audit of 2026-11-20): the marks
+ * still missing, in how many sections, and the subject sections their
+ * teacher has not approved. All sections, or one.
+ */
+function readiness(
+    stages: Stage[],
+    onlyStage?: number,
+    onlySection?: string,
+): Readiness {
+    const result: Readiness = { missing: 0, sections: 0, unapproved: 0 };
+
+    for (const stage of stages) {
+        if (onlyStage !== undefined && stage.stage !== onlyStage) {
+            continue;
+        }
+        for (const [section, students] of Object.entries(stage.students)) {
+            if (onlySection !== undefined && section !== onlySection) {
+                continue;
+            }
+            let missing = 0;
+            for (const subject of stage.subjects) {
+                missing += Math.max(
+                    0,
+                    students - (subject.sections[section] ?? 0),
+                );
+                if (!subject.approved[section]) {
+                    result.unapproved++;
+                }
+            }
+            result.missing += missing;
+            result.sections += missing > 0 ? 1 : 0;
+        }
+    }
+
+    return result;
+}
+
+function readinessText(
+    t: ReturnType<typeof useTranslations>['t'],
+    ready: Readiness,
+): string {
+    if (ready.missing === 0 && ready.unapproved === 0) {
+        return t(
+            'Every mark is entered and approved. Each student will see their own result with their code.',
+        );
+    }
+
+    return [
+        ready.missing > 0
+            ? t(':missing marks are still missing, in :sections sections.', {
+                  missing: String(ready.missing),
+                  sections: String(ready.sections),
+              })
+            : null,
+        ready.unapproved > 0
+            ? t(':count subject sections are not approved by their teacher.', {
+                  count: String(ready.unapproved),
+              })
+            : null,
+        t('Students will see these results as they are.'),
+    ]
+        .filter((line): line is string => line !== null)
+        .join(' ');
+}
 
 /**
  * The owner's settings (ADR-0034, called "Settings" since 2026-11-19), in
@@ -272,19 +341,26 @@ export default function GradesOverview({
                                         {t('Hide the results')}
                                     </Button>
                                 ) : (
-                                    <Button
-                                        className="self-start"
-                                        disabled={window.open}
-                                        onClick={() =>
-                                            put(
-                                                GradesAdminController.publish.url(),
-                                                { published: true },
-                                            )
+                                    <ConfirmAction
+                                        trigger={
+                                            <Button
+                                                className="self-start"
+                                                disabled={window.open}
+                                                data-test="publish"
+                                            >
+                                                {t('Publish the results')}
+                                            </Button>
                                         }
-                                        data-test="publish"
-                                    >
-                                        {t('Publish the results')}
-                                    </Button>
+                                        title={t('Publish the results?')}
+                                        description={readinessText(
+                                            t,
+                                            readiness(stages),
+                                        )}
+                                        confirmLabel={t('Publish')}
+                                        tone="default"
+                                        form={GradesAdminController.publish.form()}
+                                        fields={{ published: '1' }}
+                                    />
                                 ))}
                             {/* One section at a time (ADR-0042), while not all are. */}
                             {canManage && !window.published && (
@@ -299,6 +375,61 @@ export default function GradesOverview({
                                                     window.sections_published.includes(
                                                         `${stage.stage}|${section}`,
                                                     );
+                                                const place = placeLabel(
+                                                    t,
+                                                    stage.stage,
+                                                    section,
+                                                    stage.divided,
+                                                );
+
+                                                // Publishing asks first, with what
+                                                // is not ready; hiding does not.
+                                                if (!shown) {
+                                                    return (
+                                                        <ConfirmAction
+                                                            key={`${stage.stage}${section}`}
+                                                            trigger={
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    disabled={
+                                                                        window.open
+                                                                    }
+                                                                    aria-pressed={
+                                                                        false
+                                                                    }
+                                                                    data-test="publish-section"
+                                                                >
+                                                                    {place}
+                                                                </Button>
+                                                            }
+                                                            title={t(
+                                                                'Publish the results of :place?',
+                                                                { place },
+                                                            )}
+                                                            description={readinessText(
+                                                                t,
+                                                                readiness(
+                                                                    stages,
+                                                                    stage.stage,
+                                                                    section,
+                                                                ),
+                                                            )}
+                                                            confirmLabel={t(
+                                                                'Publish',
+                                                            )}
+                                                            tone="default"
+                                                            form={GradesAdminController.publishSection.form()}
+                                                            fields={{
+                                                                stage: String(
+                                                                    stage.stage,
+                                                                ),
+                                                                section,
+                                                                published: '1',
+                                                            }}
+                                                        />
+                                                    );
+                                                }
 
                                                 return (
                                                     <Button

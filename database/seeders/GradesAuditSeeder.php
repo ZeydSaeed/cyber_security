@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
-use App\Modules\Grades\Application\Actions\ImportStudents;
 use App\Modules\Grades\Application\Actions\IssueStudentCodes;
+use App\Modules\Grades\Application\Actions\SaveStudent;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\StudentCodes;
@@ -70,7 +70,7 @@ class GradesAuditSeeder extends Seeder
         Google2FA $google2fa,
         SaveTeacher $teachers,
         SaveSubject $subjects,
-        ImportStudents $import,
+        SaveStudent $saveStudent,
         IssueStudentCodes $issue,
         ChangeEntryWindow $window,
         StudentCodes $studentCodes,
@@ -129,23 +129,15 @@ class GradesAuditSeeder extends Seeder
             }
         }
 
-        $lines = ['name,stage,section'];
         $i = 0;
         foreach (self::STUDENTS as $place => $count) {
-            $stage = (int) $place[0];
-            $section = $stage === 1 ? '' : $place[1];
+            $stage = Stage::from((int) $place[0]);
             foreach (range(1, $count) as $n) {
-                $lines[] = sprintf('%s %s %s,%d,%s', self::FIRST[$i % 20], self::FATHER[intdiv($i, 20) % 20 + 0], self::GRAND[($i * 7) % 15], $stage, $section);
+                $name = sprintf('%s %s %s', self::FIRST[$i % 20], self::FATHER[intdiv($i, 20) % 20], self::GRAND[($i * 7) % 15]);
+                // Every student has a number, as the printed card shows it.
+                $saveStudent->create($owner, $name, $stage, Section::from($place[1]), null, sprintf('CS-%d-%03d', $stage->value, $i + 1));
                 $i++;
             }
-        }
-        $csv = storage_path('app/private/audit-students-'.bin2hex(random_bytes(6)).'.csv');
-        File::ensureDirectoryExists(dirname($csv));
-        File::put($csv, implode("\n", $lines));
-        try {
-            $import->apply($owner, $csv, 'csv', 'audit-students.csv');
-        } finally {
-            File::delete($csv);
         }
         $issue->missing($owner);
 

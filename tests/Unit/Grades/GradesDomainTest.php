@@ -5,8 +5,6 @@ use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\NameKey;
 use App\Modules\Grades\Domain\ResultCalculator;
-use App\Modules\Grades\Domain\Section;
-use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\SubjectScale;
 use App\Modules\Grades\Domain\WindowStatus;
 
@@ -51,35 +49,6 @@ describe('mark', function () {
             ->and(Mark::absent()->equals(Mark::absent()))->toBeTrue()
             ->and(Mark::of(70)->equals(null))->toBeFalse();
     });
-});
-
-describe('stage and section', function () {
-    it('reads a stage as people write it', function (string|int $text, ?Stage $stage) {
-        expect(Stage::fromText($text))->toBe($stage);
-    })->with([
-        [1, Stage::First],
-        ['2', Stage::Second],
-        ['first', Stage::First],
-        ['Second', Stage::Second],
-        ["\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}", Stage::First], // the first
-        ["\u{0627}\u{0644}\u{0635}\u{0641} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}", Stage::Second], // the second year
-        ["\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}", Stage::First], // the first stage
-        ['4', null],
-        ['3', Stage::Third],
-        ['', null],
-    ]);
-
-    it('reads a section as people write it', function (string $text, ?Section $section) {
-        expect(Section::fromText($text))->toBe($section);
-    })->with([
-        ['A', Section::A],
-        ['b', Section::B],
-        ['Section A', Section::A],
-        ["\u{0623}", Section::A], // alef with hamza
-        ["\u{0634}\u{0639}\u{0628}\u{0629} \u{0628}", Section::B], // section beh
-        ['C', null],
-        ['', null],
-    ]);
 });
 
 describe('name key', function () {

@@ -3,11 +3,8 @@
 namespace App\Modules\Grades\Http;
 
 use App\Models\User;
-use App\Modules\Grades\Application\Actions\ImportStudents;
 use App\Modules\Grades\Application\Actions\IssueStudentCodes;
 use App\Modules\Grades\Application\Actions\SaveStudent;
-use App\Modules\Grades\Application\Import\StudentImportPlan;
-use App\Modules\Grades\Application\Import\StudentImportTemplate;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -15,31 +12,22 @@ use App\Modules\Grades\Domain\StudentStatus;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use App\Platform\Audit\AuditLogger;
-use App\Platform\Files\FileStore;
-use App\Platform\Files\StoredFile;
 use App\Platform\Tables\TableColumns;
 use App\Platform\Tables\TableState;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Students (ADR-0034): the list, one student added, changed or deleted by
- * hand (SaveStudent), and the import in two steps, with a file to fill. The file goes
- * through FileStore (type from its bytes, random stored name, audited
- * upload), its id is kept in the session, the preview reads it, and only
- * "apply" changes the students, planning again from the same file.
+ * hand (SaveStudent), and their codes. The spreadsheet import was removed
+ * on 2026-11-20 (owner's decision): no page had reached it since 2026-11-16.
  */
 class StudentsAdminController
 {
-    private const SESSION = 'grades.import';
-
     /**
      * The list shows each student's code to those who manage the grades
      * (owner's request, 2026-11-16); each such showing is audited.
@@ -82,7 +70,7 @@ class StudentsAdminController
             ],
             'state' => $state->toArray(),
             'columns' => TableColumns::for($viewer->id, $table),
-            'canImport' => $showCodes,
+            'canManage' => $showCodes,
             // Whether appeals are for chosen students only (ADR-0043).
             'appealScope' => GradeSettings::current()->appeal_scope->value,
             'places' => ResultsController::places(),
@@ -100,8 +88,8 @@ class StudentsAdminController
     public function update(Request $request, Student $student, SaveStudent $save, #[CurrentUser] User $user): RedirectResponse
     {
         $request->validate(['code' => ['nullable', 'string', 'max:40']]);
-        [$name, $stage, $section, $status] = $this->studentFields($request);
-        $save->update($user, $student, $name, $stage, $section, $status, $request->filled('code') ? (string) $request->string('code') : null);
+        [$name, $stage, $section, $status, $number] = $this->studentFields($request);
+        $save->update($user, $student, $name, $stage, $section, $status, $request->filled('code') ? (string) $request->string('code') : null, $number);
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Changes saved.')]);
 
         return back();
@@ -113,51 +101,6 @@ class StudentsAdminController
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Student deleted.')]);
 
         return back();
-    }
-
-    /**
-     * The file to fill for the import: headers on the first sheet, how to
-     * fill each column and an example on the second.
-     */
-    public function template(StudentImportTemplate $template): BinaryFileResponse
-    {
-        $path = storage_path('app/private/exports/students-template-'.bin2hex(random_bytes(8)).'.xlsx');
-        @mkdir(dirname($path), 0700, true);
-        $arabic = App::getLocale() === 'ar';
-
-        $template->write($path, [
-            'sheet' => __('Students'),
-            'help' => __('How to fill it'),
-            'name' => __('Name'),
-            'stage' => __('Stage'),
-            'section' => __('Section'),
-            'number' => __('Student number'),
-            'column' => __('Column'),
-            'how' => __('What to write'),
-            'rules' => [
-                'name' => __('The full name of the student, at least 3 letters.'),
-                'stage' => __('1 for the first stage, 2 for the second, 3 for the third.'),
-                'section' => __('A or B for the second and third stages; leave it empty for the first stage.'),
-                'number' => __('Optional: the number of the student at the school. If you write it, it must not repeat.'),
-            ],
-            'example' => __('Example'),
-            'examples' => $arabic ? [
-                ['أحمد علي حسن', '1', '', ''],
-                ['سارة محمد كريم', '2', 'A', '2024017'],
-                ['علي حسين جاسم', '2', 'B', ''],
-            ] : [
-                ['Ahmed Ali Hassan', '1', '', ''],
-                ['Sara Mohammed Karim', '2', 'A', '2024017'],
-                ['Ali Hussein Jasim', '2', 'B', ''],
-            ],
-            'notes' => [
-                __('Write the students on the first sheet, one per row, under its headers.'),
-                __('Keep the headers. The columns may be in any order.'),
-                __('Save the file as Excel (.xlsx) or CSV, then upload it. You will see what changes before anything is saved.'),
-            ],
-        ], $arabic);
-
-        return response()->download($path, 'students-template.xlsx')->deleteFileAfterSend();
     }
 
     /**
@@ -218,59 +161,8 @@ class StudentsAdminController
         ]);
     }
 
-    public function upload(Request $request, FileStore $files, #[CurrentUser] User $user): RedirectResponse
-    {
-        $request->validate(['file' => ['required', 'file']]);
-
-        $types = array_intersect_key((array) config('platform.files.types'), array_flip(['xlsx', 'csv']));
-        $stored = $files->store($request->file('file'), $types, $user, $user);
-        $request->session()->put(self::SESSION, $stored->uuid);
-
-        return to_route('grades.admin.students.preview');
-    }
-
-    public function preview(Request $request, ImportStudents $import, #[CurrentUser] User $user): Response|RedirectResponse
-    {
-        $file = $this->pending($request, $user);
-
-        if ($file === null) {
-            return to_route('grades.admin.students');
-        }
-
-        return Inertia::render('modules/grades/pages/admin/import-preview', [
-            'file' => $file->original_name,
-            ...$this->present($import->preview($user, $this->path($file), $file->extension)),
-        ]);
-    }
-
-    public function apply(Request $request, ImportStudents $import, #[CurrentUser] User $user): RedirectResponse
-    {
-        $file = $this->pending($request, $user);
-
-        if ($file === null) {
-            return to_route('grades.admin.students');
-        }
-
-        $plan = $import->apply($user, $this->path($file), $file->extension, $file->original_name);
-        $request->session()->forget(self::SESSION);
-
-        $counts = $plan->counts();
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Import done: :created added, :updated updated, :rejected not imported.', [
-            'created' => $counts['created'], 'updated' => $counts['updated'], 'rejected' => $counts['rejected'],
-        ])]);
-
-        return to_route('grades.admin.students');
-    }
-
-    public function cancel(Request $request): RedirectResponse
-    {
-        $request->session()->forget(self::SESSION);
-
-        return to_route('grades.admin.students');
-    }
-
     /**
-     * @return array{0: string, 1: Stage, 2: Section|null, 3: StudentStatus|null}
+     * @return array{0: string, 1: Stage, 2: Section|null, 3: StudentStatus|null, 4: string|null}
      */
     private function studentFields(Request $request): array
     {
@@ -279,6 +171,7 @@ class StudentsAdminController
             'stage' => ['required', Rule::enum(Stage::class)],
             'section' => ['nullable', Rule::enum(Section::class)],
             'status' => ['nullable', Rule::enum(StudentStatus::class)],
+            'number' => ['nullable', 'string', 'max:40'],
         ]);
         $section = $request->input('section');
         $status = $request->input('status');
@@ -288,40 +181,7 @@ class StudentsAdminController
             Stage::from($request->integer('stage')),
             is_string($section) && $section !== '' ? Section::from($section) : null,
             is_string($status) && $status !== '' ? StudentStatus::from($status) : null,
-        ];
-    }
-
-    /**
-     * The file this person uploaded for the import in progress, if any.
-     */
-    private function pending(Request $request, User $user): ?StoredFile
-    {
-        $uuid = $request->session()->get(self::SESSION);
-
-        return is_string($uuid)
-            ? StoredFile::query()->where('uuid', $uuid)->where('uploaded_by', $user->id)->first()
-            : null;
-    }
-
-    private function path(StoredFile $file): string
-    {
-        return Storage::disk($file->disk)->path($file->path);
-    }
-
-    /**
-     * @return array{counts: array{created: int, updated: int, unchanged: int, rejected: int, not_in_file: int}, creates: list<array{row: int, name: string, stage: int, section: string, number: string|null}>, updates: list<array{row: int, name: string, changes: array<string, array{from: string|int|null, to: string|int|null}>}>, rejected: list<array{row: int, reason: string}>}
-     */
-    private function present(StudentImportPlan $plan): array
-    {
-        return [
-            'counts' => $plan->counts(),
-            'creates' => array_map(fn (array $row): array => [
-                'row' => $row['row'], 'name' => $row['full_name'], 'stage' => $row['stage'], 'section' => $row['section'], 'number' => $row['student_number'],
-            ], $plan->creates),
-            'updates' => array_map(fn (array $row): array => [
-                'row' => $row['row'], 'name' => $row['full_name'], 'changes' => $row['changes'],
-            ], $plan->updates),
-            'rejected' => $plan->rejected,
+            $request->filled('number') ? (string) $request->string('number') : null,
         ];
     }
 }
