@@ -98,7 +98,19 @@
             "tile-8": {
                 "mix": ["success-700", 50, "info-700"]
             },
-            "tile-8-foreground": "auto"
+            "tile-8-foreground": "auto",
+            "tile-1-soft": "success-100",
+            "tile-2-soft": "info-100",
+            "tile-3-soft": "primary-100",
+            "tile-4-soft": "accent-100",
+            "tile-5-soft": "danger-100",
+            "tile-6-soft": {
+                "mix": ["primary-100", 50, "danger-100"]
+            },
+            "tile-7-soft": "olive-100",
+            "tile-8-soft": {
+                "mix": ["success-100", 50, "info-100"]
+            }
         },
         "dark": {
             "background": "primary-950",
@@ -159,7 +171,19 @@
             "tile-8": {
                 "mix": ["success-400", 50, "info-400"]
             },
-            "tile-8-foreground": "auto"
+            "tile-8-foreground": "auto",
+            "tile-1-soft": "success-950",
+            "tile-2-soft": "info-950",
+            "tile-3-soft": "primary-950",
+            "tile-4-soft": "accent-950",
+            "tile-5-soft": "danger-950",
+            "tile-6-soft": {
+                "mix": ["primary-950", 50, "danger-950"]
+            },
+            "tile-7-soft": "olive-950",
+            "tile-8-soft": {
+                "mix": ["success-950", 50, "info-950"]
+            }
         }
     },
     "gradients": [

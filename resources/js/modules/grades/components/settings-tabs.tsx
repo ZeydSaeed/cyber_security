@@ -1,21 +1,20 @@
 import { Link } from '@inertiajs/react';
-import {
-    BookOpen,
-    ChevronRight,
-    Eye,
-    FileText,
-    GraduationCap,
-    KeyRound,
-    Link2,
-    LockOpen,
-    UserRound,
-    X,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { X } from 'lucide-react';
 import { overview } from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { PageToolbarNav, toolButton } from '@/components/page-toolbar';
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
+import {
+    LinksIcon,
+    PermissionsIcon,
+    ResultCardIcon,
+    StudentAccessIcon,
+    SubjectsIcon,
+    TeacherAccessIcon,
+    TeacherViewIcon,
+    WindowIcon,
+} from './settings-icons';
+import type { SettingsIcon } from './settings-icons';
 
 export type SettingsTab =
     | 'window'
@@ -30,7 +29,9 @@ export type SettingsTab =
 export type TabInfo = {
     key: SettingsTab;
     label: string;
-    icon: LucideIcon;
+    /** A second line under the label on the landing card. */
+    subtitle?: string;
+    icon: SettingsIcon;
     /** One line on the landing card: the tab's state at a glance. */
     summary: string;
     /** Something waits for the owner here (requests, appeals). */
@@ -55,32 +56,45 @@ export function useSettingsTabs(
     const all: Omit<TabInfo, 'summary' | 'attention'>[] = [
         {
             key: 'window',
-            label: t('Mark entry and publication'),
-            icon: LockOpen,
+            label: t('Open mark entry to the teaching staff'),
+            subtitle: t('Announce the results to students'),
+            icon: WindowIcon,
         },
         {
             key: 'links',
-            label: t('Teachers’ and students’ links'),
-            icon: Link2,
+            label: t('Sign-in links for teachers and students'),
+            icon: LinksIcon,
         },
         {
             key: 'teachers',
-            label: t('Teachers: sign-in and editing'),
-            icon: UserRound,
+            label: t('Teachers’ sign-in and mark editing'),
+            icon: TeacherAccessIcon,
         },
         {
             key: 'students',
-            label: t('Students: sign-in and the result'),
-            icon: GraduationCap,
+            label: t('Students’ sign-in and results'),
+            icon: StudentAccessIcon,
         },
         {
             key: 'permissions',
-            label: t("Teachers' permissions"),
-            icon: KeyRound,
+            label: t('Each teacher’s own permissions'),
+            icon: PermissionsIcon,
         },
-        { key: 'card', label: t('The result card'), icon: FileText },
-        { key: 'teacher-view', label: t('What teachers see'), icon: Eye },
-        { key: 'subjects', label: t('Subjects and teachers'), icon: BookOpen },
+        {
+            key: 'card',
+            label: t('Students’ results: layout and settings'),
+            icon: ResultCardIcon,
+        },
+        {
+            key: 'teacher-view',
+            label: t('What teachers see'),
+            icon: TeacherViewIcon,
+        },
+        {
+            key: 'subjects',
+            label: t('Subjects and teachers'),
+            icon: SubjectsIcon,
+        },
     ];
 
     return all
@@ -122,18 +136,19 @@ export function SettingsClose() {
 }
 
 /**
- * Each card's own colour (owner's request, 2026-11-19), in the tabs' order:
- * a stripe and the icon's square. Written out whole so Tailwind finds them.
+ * Each card's own colour, in the tabs' order: a light solid background and
+ * the picture's outline (owner's request, 2026-11-20; no stripe, no arrow).
+ * Written out whole so Tailwind finds them.
  */
 const tileColours = [
-    'border-t-tile-1 [&_[data-tile]]:bg-tile-1 [&_[data-tile]]:text-tile-1-foreground',
-    'border-t-tile-2 [&_[data-tile]]:bg-tile-2 [&_[data-tile]]:text-tile-2-foreground',
-    'border-t-tile-3 [&_[data-tile]]:bg-tile-3 [&_[data-tile]]:text-tile-3-foreground',
-    'border-t-tile-4 [&_[data-tile]]:bg-tile-4 [&_[data-tile]]:text-tile-4-foreground',
-    'border-t-tile-5 [&_[data-tile]]:bg-tile-5 [&_[data-tile]]:text-tile-5-foreground',
-    'border-t-tile-6 [&_[data-tile]]:bg-tile-6 [&_[data-tile]]:text-tile-6-foreground',
-    'border-t-tile-7 [&_[data-tile]]:bg-tile-7 [&_[data-tile]]:text-tile-7-foreground',
-    'border-t-tile-8 [&_[data-tile]]:bg-tile-8 [&_[data-tile]]:text-tile-8-foreground',
+    'bg-tile-1-soft [&_[data-tile]]:text-tile-1',
+    'bg-tile-2-soft [&_[data-tile]]:text-tile-2',
+    'bg-tile-3-soft [&_[data-tile]]:text-tile-3',
+    'bg-tile-4-soft [&_[data-tile]]:text-tile-4',
+    'bg-tile-5-soft [&_[data-tile]]:text-tile-5',
+    'bg-tile-6-soft [&_[data-tile]]:text-tile-6',
+    'bg-tile-7-soft [&_[data-tile]]:text-tile-7',
+    'bg-tile-8-soft [&_[data-tile]]:text-tile-8',
 ] as const;
 
 /** The tabs' order fixes each one's colour, whoever sees them. */
@@ -148,46 +163,45 @@ const tileOrder: SettingsTab[] = [
     'subjects',
 ];
 
-/** /admin without a tab: one card per tab, with its state at a glance. */
+/**
+ * /admin without a tab: one card per tab, centred on the page, the picture
+ * above the label and the tab's state at a glance below it.
+ */
 export function SettingsLanding({ tabs }: { tabs: TabInfo[] }) {
     const { t } = useTranslations();
 
     return (
         <ul
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            className="mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-4"
             data-test="settings-landing"
         >
             {tabs.map((tab) => (
-                <li key={tab.key}>
+                <li key={tab.key} className="w-full sm:w-64">
                     <Link
                         prefetch
                         href={tabHref(tab.key)}
                         className={cn(
-                            'flex h-full flex-col gap-2 rounded-lg border border-t-4 border-border bg-card p-4 shadow-xs transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                            'relative flex h-full flex-col items-center gap-2 rounded-lg p-5 text-center shadow-xs transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                             tileColours[tileOrder.indexOf(tab.key)],
                         )}
                         data-test={`card-${tab.key}`}
                     >
-                        <span className="flex items-center gap-2 font-semibold text-foreground">
-                            <span
-                                className="grid size-8 place-items-center rounded-md"
-                                data-tile
-                            >
-                                <tab.icon className="size-4" aria-hidden />
-                            </span>
-                            <span className="flex-1">{tab.label}</span>
-                            {tab.attention ? (
-                                <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground tabular-nums">
-                                    <span className="sr-only">
-                                        {t('waiting:')}{' '}
-                                    </span>
-                                    {tab.attention}
+                        {tab.attention ? (
+                            <span className="absolute end-3 top-3 rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground tabular-nums">
+                                <span className="sr-only">
+                                    {t('waiting:')}{' '}
                                 </span>
-                            ) : null}
-                            <ChevronRight
-                                className="size-4 text-muted-foreground rtl:-scale-x-100"
-                                aria-hidden
-                            />
+                                {tab.attention}
+                            </span>
+                        ) : null}
+                        <span data-tile>
+                            <tab.icon className="size-14" />
+                        </span>
+                        <span className="font-semibold text-foreground">
+                            {tab.label}
+                            {tab.subtitle && (
+                                <span className="block">{tab.subtitle}</span>
+                            )}
                         </span>
                         {tab.summary && (
                             <span className="text-sm text-muted-foreground">

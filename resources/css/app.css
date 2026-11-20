@@ -100,20 +100,28 @@
     /* One colour per settings card (owner's request, 2026-11-19). */
     --color-tile-1: var(--tile-1);
     --color-tile-1-foreground: var(--tile-1-foreground);
+    --color-tile-1-soft: var(--tile-1-soft);
     --color-tile-2: var(--tile-2);
     --color-tile-2-foreground: var(--tile-2-foreground);
+    --color-tile-2-soft: var(--tile-2-soft);
     --color-tile-3: var(--tile-3);
     --color-tile-3-foreground: var(--tile-3-foreground);
+    --color-tile-3-soft: var(--tile-3-soft);
     --color-tile-4: var(--tile-4);
     --color-tile-4-foreground: var(--tile-4-foreground);
+    --color-tile-4-soft: var(--tile-4-soft);
     --color-tile-5: var(--tile-5);
     --color-tile-5-foreground: var(--tile-5-foreground);
+    --color-tile-5-soft: var(--tile-5-soft);
     --color-tile-6: var(--tile-6);
     --color-tile-6-foreground: var(--tile-6-foreground);
+    --color-tile-6-soft: var(--tile-6-soft);
     --color-tile-7: var(--tile-7);
     --color-tile-7-foreground: var(--tile-7-foreground);
+    --color-tile-7-soft: var(--tile-7-soft);
     --color-tile-8: var(--tile-8);
     --color-tile-8-foreground: var(--tile-8-foreground);
+    --color-tile-8-soft: var(--tile-8-soft);
 
     /* L3 component tokens. */
     --color-button-primary: var(--button-primary);

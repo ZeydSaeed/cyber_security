@@ -390,5 +390,125 @@
         "fg": "tile-8",
         "bg": "card",
         "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-1-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-1-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-1",
+        "bg": "tile-1-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-2-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-2-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-2",
+        "bg": "tile-2-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-3-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-3-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-3",
+        "bg": "tile-3-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-4-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-4-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-4",
+        "bg": "tile-4-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-5-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-5-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-5",
+        "bg": "tile-5-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-6-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-6-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-6",
+        "bg": "tile-6-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-7-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-7-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-7",
+        "bg": "tile-7-soft",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-8-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-8-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-8",
+        "bg": "tile-8-soft",
+        "min": 3
     }
 ]
