@@ -3,7 +3,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import { matchRanges } from '../name-search';
 import { placeLabel } from '../place';
-import type { MarkValue, ResultSheet } from '../types';
+import { bandLabel, markTone, toneClass } from '../result-words';
+import type { MarkValue, ResultCell, ResultSheet } from '../types';
 
 /**
  * The name with the searched parts marked in yellow (the palette's
@@ -64,33 +65,52 @@ export default function ResultsTable({
     action,
     terms = [],
     current = null,
+    columns = {},
 }: {
     sheet: ResultSheet;
     action?: (student: ResultSheet['students'][number]) => React.ReactNode;
     terms?: string[];
     current?: string | null;
+    /** Summary columns to leave out (a teacher's view, ADR-0040). */
+    columns?: Partial<
+        Record<'total' | 'percentage' | 'failed' | 'rank' | 'grade', boolean>
+    >;
 }) {
     const { t } = useTranslations();
+    const show = {
+        total: columns.total ?? true,
+        percentage: columns.percentage ?? true,
+        failed: columns.failed ?? true,
+        rank: columns.rank ?? true,
+        grade: columns.grade ?? true,
+    };
 
-    const cell = (mark: MarkValue) => {
+    // A mark in its tone (ADR-0039), always with words for what the colour
+    // says: below the pass mark, exempt.
+    const cell = (mark: MarkValue, result: ResultCell) => {
         if (mark === null) {
             return <span className="text-muted-foreground">—</span>;
         }
+        const tone = toneClass(markTone(mark, result, sheet.tones));
         if (mark === 'absent') {
-            return (
-                <span className="font-medium text-destructive-text">
-                    {t('Absent')}
-                </span>
-            );
+            return <span className={tone}>{t('Absent')}</span>;
         }
 
-        return mark < sheet.pass_mark ? (
-            <span className="font-semibold text-destructive-text">
+        return (
+            <span className={tone}>
                 {mark}
-                <span className="sr-only"> ({t('below the pass mark')})</span>
+                {result && !result.passed && (
+                    <span className="sr-only">
+                        {' '}
+                        ({t('below the pass mark')})
+                    </span>
+                )}
+                {result?.exempt && (
+                    <span className="block text-xs font-normal">
+                        {t('Exempt')}
+                    </span>
+                )}
             </span>
-        ) : (
-            mark
         );
     };
 
@@ -128,22 +148,54 @@ export default function ResultsTable({
                                 className="p-2 text-center font-medium"
                             >
                                 <bdi>{subject.name}</bdi>
+                                <span className="block text-xs font-normal text-muted-foreground tabular-nums">
+                                    / {subject.max}
+                                </span>
                             </th>
                         ))}
-                        <th scope="col" className="p-2 text-center font-medium">
-                            {t('Total')}
-                        </th>
-                        <th scope="col" className="p-2 text-center font-medium">
-                            %
-                        </th>
-                        <th scope="col" className="p-2 text-center font-medium">
-                            {t('Below :mark', {
-                                mark: String(sheet.pass_mark),
-                            })}
-                        </th>
+                        {show.total && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Total')}
+                            </th>
+                        )}
+                        {show.percentage && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                %
+                            </th>
+                        )}
+                        {show.failed && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Failed subjects')}
+                            </th>
+                        )}
                         <th scope="col" className="p-2 text-center font-medium">
                             {t('Absences')}
                         </th>
+                        {show.rank && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Rank')}
+                            </th>
+                        )}
+                        {show.grade && (
+                            <th
+                                scope="col"
+                                className="p-2 text-center font-medium"
+                            >
+                                {t('Grade')}
+                            </th>
+                        )}
                         {action && (
                             <th scope="col" className="p-2 print:hidden">
                                 <span className="sr-only">
@@ -173,37 +225,77 @@ export default function ResultsTable({
                                     terms={terms}
                                     current={current === student.uuid}
                                 />
+                                {student.frequent_absence && (
+                                    <span
+                                        className="block text-xs font-normal text-warning-text"
+                                        data-test="frequent-absence"
+                                    >
+                                        {t('Frequently absent')}
+                                    </span>
+                                )}
                             </th>
                             {student.marks.map((mark, i) => (
                                 <td
                                     key={sheet.subjects[i]?.uuid ?? i}
                                     className="p-2 text-center tabular-nums"
                                 >
-                                    {cell(mark)}
+                                    {cell(mark, student.cells[i] ?? null)}
                                 </td>
                             ))}
-                            <td className="p-2 text-center font-semibold tabular-nums">
-                                {student.complete ? (
-                                    `${student.total} / ${student.maximum}`
-                                ) : (
-                                    <span className="text-muted-foreground">
-                                        {t('Incomplete (:missing missing)', {
-                                            missing: String(student.missing),
-                                        })}
-                                    </span>
-                                )}
-                            </td>
-                            <td className="p-2 text-center tabular-nums">
-                                {student.complete
-                                    ? student.percentage.toFixed(2)
-                                    : '—'}
-                            </td>
-                            <td className="p-2 text-center tabular-nums">
-                                {student.below}
-                            </td>
+                            {show.total && (
+                                <td className="p-2 text-center font-semibold tabular-nums">
+                                    {student.complete ? (
+                                        `${student.total} / ${student.maximum}`
+                                    ) : (
+                                        <span className="text-muted-foreground">
+                                            {t(
+                                                'Incomplete (:missing missing)',
+                                                {
+                                                    missing: String(
+                                                        student.missing,
+                                                    ),
+                                                },
+                                            )}
+                                        </span>
+                                    )}
+                                </td>
+                            )}
+                            {show.percentage && (
+                                <td className="p-2 text-center tabular-nums">
+                                    {student.complete &&
+                                    student.percentage !== null
+                                        ? student.percentage.toFixed(2)
+                                        : '—'}
+                                </td>
+                            )}
+                            {show.failed && (
+                                <td className="p-2 text-center tabular-nums">
+                                    {student.below ?? '—'}
+                                </td>
+                            )}
                             <td className="p-2 text-center tabular-nums">
                                 {student.absences}
                             </td>
+                            {show.rank && (
+                                <td
+                                    className="p-2 text-center tabular-nums"
+                                    data-test="result-rank"
+                                >
+                                    {student.rank ?? '—'}
+                                </td>
+                            )}
+                            {show.grade && (
+                                <td className="p-2 text-center">
+                                    {student.band
+                                        ? bandLabel(t, student.band)
+                                        : '—'}
+                                    {student.exempt_all && (
+                                        <span className="block text-xs">
+                                            {t('Exempt')}
+                                        </span>
+                                    )}
+                                </td>
+                            )}
                             {action && (
                                 <td className="p-2 print:hidden">
                                     {action(student)}

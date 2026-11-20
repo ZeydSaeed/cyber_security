@@ -86,6 +86,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         <div className="flex flex-col space-y-4">
                                             {mainNavItems.map((item) => (
                                                 <Link
+                                                    prefetch
                                                     key={item.title}
                                                     href={item.href}
                                                     className="flex items-center space-x-2 font-medium"
@@ -138,6 +139,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         className="relative flex h-full items-center"
                                     >
                                         <Link
+                                            prefetch
                                             href={item.href}
                                             className={cn(
                                                 navigationMenuTriggerStyle(),

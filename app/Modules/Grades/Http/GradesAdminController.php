@@ -7,13 +7,16 @@ use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
 use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
+use App\Modules\Grades\Application\Queries\AccessBoard;
 use App\Modules\Grades\Application\Queries\GradesBoard;
 use App\Modules\Grades\Application\TeacherCodes;
+use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\TeachingKind;
 use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
@@ -35,15 +38,54 @@ use Inertia\Response;
  */
 class GradesAdminController
 {
-    public function overview(GradesBoard $board, #[CurrentUser] User $user): Response
+    /**
+     * The settings' tabs, each a page of its own (owner's request,
+     * 2026-11-19); without one, /admin lists them.
+     */
+    public const TABS = ['window', 'links', 'teachers', 'students', 'permissions', 'card', 'teacher-view', 'subjects'];
+
+    public function overview(Request $request, GradesBoard $board, AccessBoard $access, #[CurrentUser] User $user): Response
     {
+        $canManage = $user->can('grades.manage');
+        $tab = $request->query('tab');
+
         return Inertia::render('modules/grades/pages/admin/overview', [
+            // An unknown tab is no tab: the list of tabs.
+            'tab' => is_string($tab) && in_array($tab, self::TABS, true) ? $tab : null,
             ...$board->show(),
+            // Sign-ins and mark editing (ADR-0037), for those who may change them.
+            'access' => $canManage ? $access->show() : null,
+            // What a result says and shows (ADR-0039).
+            'resultSettings' => $canManage ? self::resultSettings(GradeSettings::current()) : null,
             'teacherLink' => route('grades.teacher.login'),
             'studentLink' => route('grades.student.login'),
             'adminLink' => route('grades.admin.overview'),
-            'canManage' => $user->can('grades.manage'),
+            'canManage' => $canManage,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function resultSettings(GradeSettings $settings): array
+    {
+        return [
+            'pass_percent' => $settings->pass_percent,
+            'exempt_subject_percent' => $settings->exempt_subject_percent,
+            'exempt_overall_percent' => $settings->exempt_overall_percent,
+            'bands' => $settings->bands()->minimums,
+            'options' => $settings->options(),
+            'tones' => $settings->tones(),
+            // What teachers see of their students' results (ADR-0040).
+            'teacher_results' => $settings->teacher_results->value,
+            'teacher_view' => $settings->teacherView(),
+            'appeal_minutes' => $settings->appeal_minutes,
+            'appeal_until' => $settings->appeal_until?->toIso8601String(),
+            'appeal_scope' => $settings->appeal_scope->value,
+            // Teachers may answer appeals of their subjects (ADR-0044).
+            'teacher_appeal_replies' => $settings->teacher_appeal_replies,
+            'absence_flag' => $settings->absence_flag,
+        ];
     }
 
     public function window(Request $request, ChangeEntryWindow $window, #[CurrentUser] User $user): RedirectResponse
@@ -55,6 +97,24 @@ class GradesAdminController
         Inertia::flash('toast', ['type' => 'success', 'message' => $target === WindowStatus::Open
             ? __('Mark entry is open. Teachers can enter marks.')
             : __('Mark entry is closed. Teachers can no longer change marks.')]);
+
+        return back();
+    }
+
+    /** Shows or hides one section's results (ADR-0042). */
+    public function publishSection(Request $request, PublishResults $publish, #[CurrentUser] User $user): RedirectResponse
+    {
+        $request->validate([
+            'stage' => ['required', Rule::enum(Stage::class)],
+            'section' => ['required', Rule::enum(Section::class)],
+            'published' => ['required', 'boolean'],
+        ]);
+        $shown = $request->boolean('published');
+
+        $publish->section($user, Period::Month1, Stage::from($request->integer('stage')), Section::from((string) $request->string('section')), $shown);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $shown
+            ? __('This section\'s results are published to its students.')
+            : __('This section\'s results are hidden from its students.')]);
 
         return back();
     }
@@ -373,6 +433,10 @@ class GradesAdminController
                 'subjects' => array_values($subjects->filter(fn (Subject $s): bool => $s->stage === $stage)->map(fn (Subject $subject): array => [
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
+                    // Out of what, and its own pass and exemption marks (ADR-0039).
+                    'max_mark' => $subject->max_mark,
+                    'pass_mark' => $subject->pass_mark,
+                    'exempt_mark' => $subject->exempt_mark,
                 ])->all()),
             ], Stage::cases()),
             // No teachers here: a teacher's subjects are chosen on the
@@ -416,8 +480,20 @@ class GradesAdminController
             'name' => ['sometimes', 'required', 'string', 'max:120'],
             'teacher' => ['sometimes', 'nullable', 'uuid', Rule::exists('grade_teachers', 'uuid')],
             'stage' => ['sometimes', 'required', Rule::enum(Stage::class)],
+            'max_mark' => ['sometimes', 'required', 'integer', 'min:1', 'max:'.Mark::CEILING],
+            'pass_mark' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:'.Mark::CEILING],
+            'exempt_mark' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:'.Mark::CEILING],
         ]);
 
+        if ($request->has('max_mark')) {
+            $save->changeScale(
+                $user,
+                $subject,
+                $request->integer('max_mark'),
+                $request->filled('pass_mark') ? $request->integer('pass_mark') : null,
+                $request->filled('exempt_mark') ? $request->integer('exempt_mark') : null,
+            );
+        }
         if ($request->has('stage')) {
             $save->changeStage($user, $subject, Stage::from($request->integer('stage')));
         }

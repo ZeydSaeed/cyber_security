@@ -15,6 +15,7 @@ export default function AuthSplitLayout({
             <div className="relative hidden h-full flex-col bg-brand-surface p-10 text-brand-surface-foreground lg:flex dark:border-e">
                 <div className="absolute inset-0 bg-brand-surface" />
                 <Link
+                    prefetch
                     href={home()}
                     className="relative z-20 flex items-center text-lg font-medium"
                 >
@@ -25,6 +26,7 @@ export default function AuthSplitLayout({
             <div className="w-full lg:p-8">
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <Link
+                        prefetch
                         href={home()}
                         className="relative z-20 flex items-center justify-center lg:hidden"
                     >

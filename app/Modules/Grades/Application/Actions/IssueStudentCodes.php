@@ -56,7 +56,7 @@ class IssueStudentCodes
 
     /**
      * Without a manager check or audit: for actions that create students
-     * and record their own audit (ImportStudents).
+     * and record their own audit (SaveStudent).
      */
     public function give(Student $student): void
     {

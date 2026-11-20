@@ -1,9 +1,9 @@
 import { usePage } from '@inertiajs/react';
 import {
     BookOpen,
-    ClipboardList,
     FileSpreadsheet,
     GraduationCap,
+    Settings,
     UserRound,
     Users,
 } from 'lucide-react';
@@ -30,12 +30,14 @@ export function useMainNavigation(): NavItem[] {
     const { permissions } = usePage().props.auth;
 
     // The owner removed the dashboard, notifications and reports
-    // (2026-11-15); the Grades overview is the home page.
+    // (2026-11-15); the Grades overview is the home page. It is called
+    // "Settings" since 2026-11-19 (owner's request): it holds the
+    // department's settings for marks, access and results.
     const items: (NavItem & { permission?: string })[] = [
         {
-            title: 'First-month marks',
+            title: 'Settings',
             href: gradesOverview(),
-            icon: ClipboardList,
+            icon: Settings,
             permission: 'grades.view_results',
         },
         // The Grades sections, moved here from the overview's buttons

@@ -79,6 +79,7 @@ function Widget({
                 </h2>
                 {link && (
                     <Link
+                        prefetch
                         href={link.href}
                         className="text-sm text-primary underline-offset-4 hover:underline"
                     >

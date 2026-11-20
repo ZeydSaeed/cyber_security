@@ -1,5 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import EmptyState from '@/components/empty-state';
@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
-import { placeLabel } from '../place';
+import { placeLabel, sectionLabel } from '../place';
 import type { MarkValue, SheetStudent } from '../types';
 
 const ABSENT = 'absent';
@@ -18,9 +18,9 @@ function initial(mark: MarkValue): string {
     return mark === null ? '' : String(mark);
 }
 
-/** A whole number from 0 to 100, as the server will check it. */
-function isMark(value: string): boolean {
-    return /^\d{1,3}$/.test(value.trim()) && Number(value) <= 100;
+/** A whole number from 0 to the subject's maximum, as the server checks it. */
+function isMark(value: string, max: number): boolean {
+    return /^\d{1,4}$/.test(value.trim()) && Number(value) <= max;
 }
 
 /**
@@ -38,16 +38,30 @@ export default function MarkSheet({
     saveUrl,
     back,
     notice,
+    within = false,
 }: {
-    subject: { uuid: string; name: string; stage: number; divided: boolean };
+    subject: {
+        uuid: string;
+        name: string;
+        stage: number;
+        divided: boolean;
+        /** Out of what (ADR-0039); 100 unless the owner set another. */
+        max?: number;
+    };
     section: string;
     students: SheetStudent[];
     editable: boolean;
     saveUrl: string;
-    back: { href: string; label: string };
+    back?: { href: string; label: string };
     notice?: ReactNode;
+    /**
+     * One of several sheets on a subject's page (owner's request,
+     * 2026-11-19): the section heads it, not the subject.
+     */
+    within?: boolean;
 }) {
     const { t } = useTranslations();
+    const max = subject.max ?? 100;
     const inputs = useRef<(HTMLInputElement | null)[]>([]);
     const form = useForm<{ marks: Record<string, string> }>({
         marks: Object.fromEntries(
@@ -70,21 +84,37 @@ export default function MarkSheet({
 
     return (
         <>
-            <Link
-                href={back.href}
-                className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-                {/* Mirrored in Arabic, as elsewhere (table-pagination.tsx). */}
-                <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
-                {back.label}
-            </Link>
+            {back && (
+                <Link
+                    prefetch
+                    href={back.href}
+                    className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                >
+                    {/* Mirrored in Arabic, as elsewhere (table-pagination.tsx). */}
+                    <ChevronLeft
+                        className="size-4 rtl:-scale-x-100"
+                        aria-hidden
+                    />
+                    {back.label}
+                </Link>
+            )}
 
             <header className="mb-6">
-                <h1 className="text-xl font-semibold">
-                    <bdi>{subject.name}</bdi>
-                </h1>
+                {within ? (
+                    <h2
+                        className="text-lg font-semibold"
+                        data-test="sheet-section"
+                    >
+                        {sectionLabel(t, section, subject.divided)}
+                    </h2>
+                ) : (
+                    <h1 className="text-xl font-semibold">
+                        <bdi>{subject.name}</bdi>
+                    </h1>
+                )}
                 <p className="text-sm text-muted-foreground">
-                    {placeLabel(t, subject.stage, section, subject.divided)} ·{' '}
+                    {!within &&
+                        `${placeLabel(t, subject.stage, section, subject.divided)} · `}
                     <span data-test="entered-count">
                         {t(':entered of :students entered', {
                             entered: String(entered),
@@ -117,7 +147,9 @@ export default function MarkSheet({
                     <div className="overflow-x-auto rounded-lg border-2 border-grid-line bg-card">
                         <table className="w-full border-collapse text-sm">
                             <caption className="sr-only">
-                                {subject.name}
+                                {within
+                                    ? `${subject.name} · ${sectionLabel(t, section, subject.divided)}`
+                                    : subject.name}
                             </caption>
                             <thead>
                                 <tr>
@@ -137,7 +169,9 @@ export default function MarkSheet({
                                         scope="col"
                                         className="w-24 border border-grid-line p-2 text-center"
                                     >
-                                        {t('Mark out of 100')}
+                                        {t('Mark out of :max', {
+                                            max: String(max),
+                                        })}
                                     </th>
                                     <th
                                         scope="col"
@@ -150,6 +184,9 @@ export default function MarkSheet({
                             <tbody>
                                 {students.map((student, index) => {
                                     const value = values[student.uuid] ?? '';
+                                    // Past its editing time (ADR-0037).
+                                    const locked =
+                                        !editable || student.locked === true;
                                     const absent = value === ABSENT;
                                     const error =
                                         form.errors[
@@ -158,10 +195,10 @@ export default function MarkSheet({
                                     const invalid =
                                         !absent &&
                                         value.trim() !== '' &&
-                                        !isMark(value);
-                                    const fieldId = `mark-${student.uuid}`;
-                                    const absentId = `absent-${student.uuid}`;
-                                    const errorId = `error-${student.uuid}`;
+                                        !isMark(value, max);
+                                    const fieldId = `mark-${subject.uuid}-${student.uuid}`;
+                                    const absentId = `absent-${subject.uuid}-${student.uuid}`;
+                                    const errorId = `error-${subject.uuid}-${student.uuid}`;
                                     const cell = 'border border-grid-line p-2';
 
                                     return (
@@ -181,6 +218,18 @@ export default function MarkSheet({
                                                 >
                                                     <bdi>{student.name}</bdi>
                                                 </label>
+                                                {editable && student.locked && (
+                                                    <span
+                                                        className="ms-2 inline-flex items-center gap-1 text-xs text-muted-foreground"
+                                                        data-test="mark-locked"
+                                                    >
+                                                        <Lock
+                                                            className="size-3"
+                                                            aria-hidden
+                                                        />
+                                                        {t('Locked')}
+                                                    </span>
+                                                )}
                                                 {(invalid || error) && (
                                                     <p
                                                         id={errorId}
@@ -188,7 +237,12 @@ export default function MarkSheet({
                                                     >
                                                         {error ??
                                                             t(
-                                                                'Enter a whole number from 0 to 100, or mark the student absent.',
+                                                                'Enter a whole number from 0 to :max, or mark the student absent.',
+                                                                {
+                                                                    max: String(
+                                                                        max,
+                                                                    ),
+                                                                },
                                                             )}
                                                     </p>
                                                 )}
@@ -220,11 +274,9 @@ export default function MarkSheet({
                                                             ]?.focus();
                                                         }
                                                     }}
-                                                    disabled={
-                                                        !editable || absent
-                                                    }
+                                                    disabled={locked || absent}
                                                     inputMode="numeric"
-                                                    maxLength={3}
+                                                    maxLength={4}
                                                     dir="ltr"
                                                     enterKeyHint="next"
                                                     autoComplete="off"
@@ -253,7 +305,7 @@ export default function MarkSheet({
                                                 <Checkbox
                                                     id={absentId}
                                                     checked={absent}
-                                                    disabled={!editable}
+                                                    disabled={locked}
                                                     onCheckedChange={(
                                                         checked,
                                                     ) =>

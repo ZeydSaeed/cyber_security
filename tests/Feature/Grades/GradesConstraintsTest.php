@@ -73,7 +73,8 @@ it('accepts a valid mark and an absence', function () {
 it('refuses marks the rules forbid', function (array $overrides, string $constraint) {
     expect(fn () => insertMark($this, $overrides))->toThrow(QueryException::class, $constraint);
 })->with([
-    'above 100' => [['mark' => 101], 'grade_marks_mark_check'],
+    // A subject may be out of up to 1000 (ADR-0039); its own maximum is SaveMarks' check.
+    'above 1000' => [['mark' => 1001], 'grade_marks_mark_check'],
     'absent with a mark' => [['is_absent' => true], 'grade_marks_mark_check'],
     'present without a mark' => [['mark' => null], 'grade_marks_mark_check'],
     'no author' => [['entered_by_teacher_id' => null], 'grade_marks_author_check'],

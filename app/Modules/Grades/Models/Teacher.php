@@ -3,6 +3,8 @@
 namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Database\Factories\TeacherFactory;
+use App\Modules\Grades\Domain\DeviceHolder;
+use App\Modules\Grades\Domain\TeacherAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -28,6 +30,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_active
  * @property CarbonImmutable|null $last_seen_at
  * @property int $lock_version
+ * @property TeacherAccess|null $access_mode
+ * @property int|null $edit_minutes
+ * @property CarbonImmutable|null $edit_until
+ * @property string|null $access_reason
+ * @property int $login_count
+ * @property CarbonImmutable|null $last_login_at
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
@@ -60,9 +68,24 @@ class Teacher extends Model implements Authenticatable
             'is_active' => 'boolean',
             'lock_version' => 'integer',
             'last_seen_at' => 'immutable_datetime',
+            'access_mode' => TeacherAccess::class,
+            'edit_minutes' => 'integer',
+            'edit_until' => 'immutable_datetime',
+            'login_count' => 'integer',
+            'last_login_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * The browsers this teacher asked to be remembered on (ADR-0038).
+     *
+     * @return HasMany<RememberedDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(RememberedDevice::class, 'holder_id')->where('holder', DeviceHolder::Teacher->value);
     }
 
     /**
@@ -94,6 +117,25 @@ class Teacher extends Model implements Authenticatable
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    /**
+     * What the teacher may do: their own mode, or the department's (ADR-0037).
+     */
+    public function accessMode(GradeSettings $settings): TeacherAccess
+    {
+        return $this->access_mode ?? $settings->teacher_mode;
+    }
+
+    /**
+     * Whether the teacher may sign in now: active, not blocked, and under
+     * the department's cap on sign-ins, if there is one.
+     */
+    public function maySignIn(GradeSettings $settings): bool
+    {
+        return $this->is_active
+            && $this->accessMode($settings) !== TeacherAccess::Blocked
+            && ($settings->teacher_max_logins === null || $this->login_count < $settings->teacher_max_logins);
     }
 
     /**

@@ -12,11 +12,12 @@
 use App\Access\Role;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\ChangeEntryWindow;
-use App\Modules\Grades\Application\Actions\ImportStudents;
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Actions\SaveStudent;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\Teacher;
@@ -97,11 +98,11 @@ try {
 
                 return ['ok' => true];
             })(),
-        // args: user id, CSV path
-        'import-students' => (function () use ($app, $args): array {
-            $plan = $app->make(ImportStudents::class)->apply(User::findOrFail((int) $args[0]), $args[1], 'csv', 'race.csv');
+        // args: user id, student name (first stage)
+        'add-student' => (function () use ($app, $args): array {
+            $app->make(SaveStudent::class)->create(User::findOrFail((int) $args[0]), (string) $args[1], Stage::First, null);
 
-            return ['ok' => true, 'created' => count($plan->creates)];
+            return ['ok' => true];
         })(),
         default => throw new InvalidArgumentException("Unknown scenario {$scenario}"),
     };

@@ -1,11 +1,15 @@
 <?php
 
+use App\Modules\Grades\Http\AccessController;
+use App\Modules\Grades\Http\AppealsController;
 use App\Modules\Grades\Http\GradesAdminController;
 use App\Modules\Grades\Http\ResultsController;
+use App\Modules\Grades\Http\ResultSettingsController;
 use App\Modules\Grades\Http\StudentPortalController;
 use App\Modules\Grades\Http\StudentsAdminController;
 use App\Modules\Grades\Http\StudentSession;
 use App\Modules\Grades\Http\TeacherMarksController;
+use App\Modules\Grades\Http\TeacherResultsController;
 use App\Modules\Grades\Http\TeacherSession;
 use App\Modules\Grades\Http\TeacherSessionController;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +47,59 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
     Route::middleware('can:grades.manage')->group(function () {
         Route::put('window', [GradesAdminController::class, 'window'])->name('window');
         Route::put('publish', [GradesAdminController::class, 'publish'])->name('publish');
+        Route::put('appeals/{appeal}', [AppealsController::class, 'decide'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('appeal')
+            ->name('appeals.decide');
+        Route::put('publish/section', [GradesAdminController::class, 'publishSection'])->middleware('throttle:60,1')->name('publish.section');
+
+        // What a result says and shows (ADR-0039).
+        Route::put('results/settings', [ResultSettingsController::class, 'settings'])->middleware('throttle:30,1')->name('results.settings');
+        // What the student sees, and the appeals (ADR-0044).
+        Route::put('results/student-view', [ResultSettingsController::class, 'studentView'])->middleware('throttle:30,1')->name('results.student_view');
+        Route::put('results/teacher-view', [ResultSettingsController::class, 'teacherView'])->middleware('throttle:30,1')->name('results.teacher_view');
+        Route::put('results/students/{student}/note', [ResultSettingsController::class, 'note'])
+            ->middleware('throttle:120,1')
+            ->whereUuid('student')
+            ->name('results.note');
+
+        // Who may sign in and change marks (ADR-0037).
+        Route::put('access', [AccessController::class, 'settings'])->middleware('throttle:30,1')->name('access.settings');
+        Route::put('access/teachers/{teacher}', [AccessController::class, 'teacher'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('teacher')
+            ->name('access.teacher');
+        Route::post('access/teachers/{teacher}/reset', [AccessController::class, 'resetTeacherLogins'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('teacher')
+            ->name('access.teacher.reset');
+        Route::delete('access/teachers/{teacher}/devices', [AccessController::class, 'forgetTeacherDevices'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('teacher')
+            ->name('access.teacher.devices');
+        Route::delete('access/students/{student}/devices', [AccessController::class, 'forgetStudentDevices'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('student')
+            ->name('access.student.devices');
+        Route::put('access/sections/{subject}/{section}', [AccessController::class, 'section'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('access.section');
+        Route::post('access/students/reset', [AccessController::class, 'resetStudentLogins'])->middleware('throttle:10,1')->name('access.students.reset');
+        Route::put('access/students/{student}', [AccessController::class, 'student'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('student')
+            ->name('access.student');
+        // One student's appeals, when they are for chosen students (ADR-0043).
+        Route::put('access/students/{student}/appeal', [AccessController::class, 'studentAppeal'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('student')
+            ->name('access.student.appeal');
+        Route::put('access/requests/{editRequest}', [AccessController::class, 'decide'])
+            ->middleware('throttle:60,1')
+            ->whereUuid('editRequest')
+            ->name('access.request');
 
         Route::get('teachers', [GradesAdminController::class, 'teachers'])->name('teachers');
         Route::get('teachers/print', [GradesAdminController::class, 'printTeachers'])->name('teachers.print');
@@ -77,6 +134,11 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('sheet');
+        Route::delete('subjects/{subject}/{section}/approval', [ResultsController::class, 'withdrawApproval'])
+            ->middleware('throttle:30,1')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('sheet.approval');
         Route::put('subjects/{subject}/{section}', [ResultsController::class, 'saveSheet'])
             ->middleware('throttle:60,1')
             ->whereUuid('subject')
@@ -93,15 +155,6 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('admin')->name('grades.ad
             ->middleware('throttle:30,1')
             ->whereUuid('student')
             ->name('students.destroy');
-
-        // The file to fill for the import.
-        Route::get('students/import/template', [StudentsAdminController::class, 'template'])
-            ->middleware('throttle:20,1')
-            ->name('students.template');
-        Route::post('students/import', [StudentsAdminController::class, 'upload'])->middleware('throttle:20,1')->name('students.upload');
-        Route::get('students/import', [StudentsAdminController::class, 'preview'])->name('students.preview');
-        Route::post('students/import/apply', [StudentsAdminController::class, 'apply'])->middleware('throttle:20,1')->name('students.apply');
-        Route::delete('students/import', [StudentsAdminController::class, 'cancel'])->name('students.cancel');
 
         // Students' codes: issue the missing ones, replace a lost one, print a section's.
         Route::post('students/codes', [StudentsAdminController::class, 'issueCodes'])->middleware('throttle:20,1')->name('students.codes.issue');
@@ -129,6 +182,12 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
         Route::post('logout', [TeacherSessionController::class, 'destroy'])->name('logout');
 
         Route::get('subjects', [TeacherMarksController::class, 'subjects'])->name('subjects');
+        // Their own students' results, as the owner allows (ADR-0040).
+        Route::get('results', [TeacherResultsController::class, 'show'])->name('results');
+        // A whole subject: every section's sheet, one after another.
+        Route::get('subjects/{subject}', [TeacherMarksController::class, 'subject'])
+            ->whereUuid('subject')
+            ->name('subject');
         Route::get('subjects/{subject}/{section}', [TeacherMarksController::class, 'section'])
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
@@ -139,6 +198,21 @@ Route::middleware('web')->prefix('teacher')->name('grades.teacher.')->group(func
             ->whereUuid('subject')
             ->whereIn('section', ['A', 'B'])
             ->name('section.save');
+        Route::post('subjects/{subject}/{section}/approve', [TeacherMarksController::class, 'approve'])
+            ->middleware('throttle:grades-teacher-action')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('section.approve');
+        // Answering an appeal, when the owner allows it (ADR-0044).
+        Route::put('appeals/{appeal}', [TeacherMarksController::class, 'answerAppeal'])
+            ->middleware('throttle:grades-teacher-appeal')
+            ->whereUuid('appeal')
+            ->name('appeals.answer');
+        Route::post('subjects/{subject}/{section}/request', [TeacherMarksController::class, 'requestEdit'])
+            ->middleware('throttle:grades-teacher-action')
+            ->whereUuid('subject')
+            ->whereIn('section', ['A', 'B'])
+            ->name('section.request');
     });
 });
 
@@ -154,5 +228,8 @@ Route::middleware('web')->prefix('student')->name('grades.student.')->group(func
     Route::middleware(StudentSession::class)->group(function () {
         Route::post('logout', [StudentPortalController::class, 'destroy'])->name('logout');
         Route::get('result', [StudentPortalController::class, 'result'])->name('result');
+        // Appealing a mark (ADR-0042).
+        // Per student, not per address: a class may share the school's one.
+        Route::post('appeals', [AppealsController::class, 'store'])->middleware('throttle:grades-student-appeal')->name('appeals.store');
     });
 });

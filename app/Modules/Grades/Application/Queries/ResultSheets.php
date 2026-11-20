@@ -8,29 +8,28 @@ use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\StudentResult;
 use App\Modules\Grades\Models\GradeMark;
+use App\Modules\Grades\Models\GradeSettings;
+use App\Modules\Grades\Models\GradeStudentNote;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use Illuminate\Support\Collection;
 
 /**
- * Results as the owner reads, prints and exports them (ADR-0034): a
- * section's students against the subjects of their stage, each with the
- * result ResultCalculator makes. Three queries whatever the section's size.
+ * Results as the owner reads, prints and exports them (ADR-0034,
+ * ADR-0039): a section's students against the subjects of their stage,
+ * each subject with its maximum, pass and exemption marks and the
+ * section's teacher, each student with what ResultCalculator makes, their
+ * rank in the section, behaviour and notes. A fixed number of queries
+ * whatever the section's size.
+ *
+ * A student's own card is cut to what the owner chose to show
+ * (`forStudent`): hidden parts are not sent at all.
  */
-final readonly class ResultSheets
+final class ResultSheets
 {
-    public function __construct(private ResultCalculator $calculator) {}
-
     /**
-     * @return array{
-     *     stage: int,
-     *     section: string,
-     *     divided: bool,
-     *     pass_mark: int,
-     *     subjects: list<array{uuid: string, name: string}>,
-     *     students: list<array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}>,
-     *     summary: array{students: int, complete: int, passed_all: int}
-     * }
+     * @return array<string, mixed>
      */
     public function section(Stage $stage, Section $section, Period $period = Period::Month1): array
     {
@@ -38,41 +37,163 @@ final readonly class ResultSheets
             ->where('stage', $stage->value)
             ->where('section', $section->value)
             ->orderBy('full_name')
-            ->get(['id', 'uuid', 'full_name', 'student_number']);
+            ->get(['id', 'uuid', 'full_name', 'student_number', 'status']);
 
-        return $this->sheet($stage, $students, $period) + ['section' => $section->value, 'divided' => $stage->isDivided()];
+        return $this->sheet($stage, $section, $students, $period);
     }
 
     /**
-     * One student's result card.
+     * One student's result card, as the owner sees it (everything).
      *
-     * @return array{stage: int, section: string, divided: bool, pass_mark: int, subjects: list<array{uuid: string, name: string}>, student: array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}}
+     * @return array<string, mixed>
      */
     public function student(Student $student, Period $period = Period::Month1): array
     {
-        $sheet = $this->sheet($student->stage, collect([$student]), $period);
+        $sheet = $this->section($student->stage, $student->section, $period);
+        // A card has no section figures.
+        unset($sheet['stats']);
+        unset($sheet['absence_flag']);
+        $row = null;
+        foreach ($sheet['students'] as $candidate) {
+            if ($candidate['uuid'] === $student->uuid) {
+                $row = $candidate;
+            }
+        }
+        unset($sheet['students'], $sheet['summary']);
 
-        return [
-            'stage' => $sheet['stage'],
-            'section' => $student->section->value,
-            'divided' => $student->stage->isDivided(),
-            'pass_mark' => $sheet['pass_mark'],
-            'subjects' => $sheet['subjects'],
-            'student' => $sheet['students'][0],
+        return [...$sheet, 'student' => $row];
+    }
+
+    /**
+     * One student's card for the student (ADR-0039): only what the owner
+     * chose to show is sent.
+     *
+     * @return array<string, mixed>
+     */
+    public function forStudent(Student $student, Period $period = Period::Month1): array
+    {
+        $card = $this->student($student, $period);
+        $options = $card['options'];
+        $hidden = [
+            'total' => ['total', 'maximum'],
+            'percentage' => ['percentage'],
+            'rank' => ['rank'],
+            'failed_count' => ['below'],
+            'overall_grade' => ['band'],
+            'exemption' => ['exempt_all'],
+            'student_status' => ['status'],
+            'behaviour' => ['behaviour'],
+            'notes' => ['notes'],
+            'absences' => ['absences'],
         ];
+
+        foreach ($hidden as $option => $fields) {
+            if (! $options[$option]) {
+                foreach ($fields as $field) {
+                    $card['student'][$field] = null;
+                }
+            }
+        }
+        // The department's flag is never the student's to read (ADR-0042).
+        unset($card['student']['frequent_absence']);
+
+        $card['student']['cells'] = array_map(fn (?array $cell): ?array => $cell === null ? null : [
+            ...$cell,
+            'band' => $options['mark_grade'] ? $cell['band'] : null,
+            'exempt' => $options['exemption'] && $cell['exempt'],
+        ], $card['student']['cells']);
+        $card['subjects'] = array_map(fn (array $subject): array => [
+            ...$subject,
+            'teacher' => $options['teachers'] ? $subject['teacher'] : null,
+            'assistant' => $options['teachers'] ? $subject['assistant'] : null,
+            'kind' => $options['kind'] ? $subject['kind'] : null,
+        ], $card['subjects']);
+
+        return $card;
+    }
+
+    /**
+     * A section's results as one of its teachers may read them (ADR-0040):
+     * their own subjects always, the others only when the owner allows,
+     * and only the parts the owner chose. Hidden parts are not sent.
+     *
+     * @param  list<string>  $own  UUIDs of the subjects the teacher teaches in this section
+     * @param  array<string, bool>  $view  GradeSettings::teacherView()
+     * @return array<string, mixed>
+     */
+    public function forTeacher(Stage $stage, Section $section, array $own, array $view, Period $period = Period::Month1): array
+    {
+        $sheet = $this->section($stage, $section, $period);
+
+        $keep = [];
+        foreach ($sheet['subjects'] as $i => $subject) {
+            if ($view['other_subjects'] || in_array($subject['uuid'], $own, true)) {
+                $keep[] = $i;
+            }
+        }
+        $pick = fn (array $list): array => array_map(fn (int $i): mixed => $list[$i] ?? null, $keep);
+
+        $hidden = [
+            'total' => ['total', 'maximum'],
+            'percentage' => ['percentage'],
+            'rank' => ['rank'],
+            'failed_count' => ['below'],
+            'overall_grade' => ['band'],
+            'exemption' => ['exempt_all'],
+            'student_status' => ['status'],
+            'behaviour' => ['behaviour'],
+            'notes' => ['notes'],
+        ];
+
+        $sheet['subjects'] = $pick($sheet['subjects']);
+        $sheet['stats'] = $pick($sheet['stats']);
+        $sheet['students'] = array_map(function (array $row) use ($pick, $hidden, $view): array {
+            $row['marks'] = $pick($row['marks']);
+            $row['cells'] = array_map(fn (?array $cell): ?array => $cell === null ? null : [
+                ...$cell,
+                'band' => $view['mark_grade'] ? $cell['band'] : null,
+                'exempt' => $view['exemption'] && $cell['exempt'],
+            ], $pick($row['cells']));
+
+            foreach ($hidden as $option => $fields) {
+                if (! $view[$option]) {
+                    foreach ($fields as $field) {
+                        $row[$field] = null;
+                    }
+                }
+            }
+
+            return $row;
+        }, $sheet['students']);
+        $sheet['view'] = $view;
+
+        return $sheet;
     }
 
     /**
      * @param  Collection<int, Student>  $students
-     * @return array{stage: int, pass_mark: int, subjects: list<array{uuid: string, name: string}>, students: list<array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}>, summary: array{students: int, complete: int, passed_all: int}}
+     * @return array<string, mixed>
      */
-    private function sheet(Stage $stage, Collection $students, Period $period): array
+    private function sheet(Stage $stage, Section $section, Collection $students, Period $period): array
     {
+        $settings = GradeSettings::current();
+        $calculator = $settings->calculator();
+
         $subjects = Subject::query()
             ->where('stage', $stage->value)
             ->orderBy('sort_order')->orderBy('name')
-            ->get(['id', 'uuid', 'name']);
-        $subjectIds = array_values(array_map('intval', $subjects->pluck('id')->all()));
+            ->get(['id', 'uuid', 'name', 'max_mark', 'pass_mark', 'exempt_mark']);
+        $scales = [];
+        foreach ($subjects as $subject) {
+            $scales[$subject->id] = $subject->scale($settings);
+        }
+
+        $teaching = SubjectTeacher::query()
+            ->with(['teacher:id,name', 'assistant:id,name'])
+            ->whereIn('subject_id', $subjects->pluck('id'))
+            ->where('section', $section->value)
+            ->get()
+            ->keyBy('subject_id');
 
         $marks = GradeMark::query()
             ->where('stage', $stage->value)
@@ -81,41 +202,112 @@ final readonly class ResultSheets
             ->get(['student_id', 'subject_id', 'mark', 'is_absent'])
             ->groupBy('student_id');
 
-        $rows = [];
-        $complete = 0;
-        $passedAll = 0;
+        $notes = GradeStudentNote::query()
+            ->where('period', $period->value)
+            ->whereIn('student_id', $students->pluck('id'))
+            ->get(['student_id', 'behaviour', 'notes'])
+            ->keyBy('student_id');
 
+        $results = [];
         foreach ($students as $student) {
             $own = [];
             foreach ($marks->get($student->id, collect()) as $mark) {
                 $own[$mark->subject_id] = $mark->value();
             }
+            $results[$student->id] = $calculator->for($scales, $own);
+        }
+        $ranks = ResultCalculator::ranks($results);
 
-            $result = $this->calculator->for($subjectIds, $own);
-            $complete += $result->isComplete() ? 1 : 0;
-            $passedAll += $result->passedAll() ? 1 : 0;
-            $rows[] = $this->row($student, $result);
+        // Each subject's figures for the section (ADR-0041).
+        $stats = [];
+        foreach ($subjects as $subject) {
+            $present = [];
+            $absent = 0;
+            $passed = 0;
+            foreach ($results as $result) {
+                $mark = $result->marks[$subject->id] ?? null;
+                if ($mark === null) {
+                    continue;
+                }
+                $absent += $mark->absent ? 1 : 0;
+                $passed += ($result->cells[$subject->id]['passed'] ?? false) ? 1 : 0;
+                if (! $mark->absent) {
+                    $present[] = (int) $mark->value;
+                }
+            }
+            $entered = count($present) + $absent;
+            $stats[] = [
+                'entered' => $entered,
+                'absent' => $absent,
+                'passed' => $passed,
+                'pass_rate' => $entered === 0 ? null : round($passed * 100 / $entered, 1),
+                'highest' => $present === [] ? null : max($present),
+                'lowest' => $present === [] ? null : min($present),
+                'mean' => $present === [] ? null : round(array_sum($present) / count($present), 1),
+            ];
+        }
+
+        $rows = [];
+        foreach ($students as $student) {
+            $note = $notes->get($student->id);
+            $rows[] = [
+                ...$this->row($student, $results[$student->id], $ranks[$student->id], $note),
+                // Absent from as many subjects as the owner flags, or more (ADR-0042).
+                'frequent_absence' => $settings->absence_flag !== null && $results[$student->id]->absences >= $settings->absence_flag,
+            ];
         }
 
         return [
             'stage' => $stage->value,
-            'pass_mark' => (int) config('grades.pass_mark'),
-            'subjects' => array_values($subjects->map(fn (Subject $s): array => ['uuid' => $s->uuid, 'name' => $s->name])->all()),
+            'section' => $section->value,
+            'divided' => $stage->isDivided(),
+            'pass_percent' => $settings->pass_percent,
+            'exempt_overall' => $settings->exempt_overall_percent,
+            'absence_flag' => $settings->absence_flag,
+            'options' => $settings->options(),
+            'tones' => $settings->tones(),
+            'subjects' => array_values($subjects->map(function (Subject $subject) use ($scales, $teaching): array {
+                $scale = $scales[$subject->id];
+                $row = $teaching->get($subject->id);
+
+                return [
+                    'uuid' => $subject->uuid,
+                    'name' => $subject->name,
+                    'max' => $scale->max,
+                    'pass' => $scale->pass,
+                    'exempt' => $scale->exempt,
+                    'teacher' => $row?->teacher?->name,
+                    'assistant' => $row?->assistant?->name,
+                    'kind' => $row?->kind?->value,
+                ];
+            })->all()),
             'students' => $rows,
-            'summary' => ['students' => count($rows), 'complete' => $complete, 'passed_all' => $passedAll],
+            'stats' => $stats,
+            'summary' => [
+                'students' => count($rows),
+                'complete' => count(array_filter($results, fn (StudentResult $result): bool => $result->isComplete())),
+                'passed_all' => count(array_filter($results, fn (StudentResult $result): bool => $result->passedAll())),
+            ],
         ];
     }
 
     /**
-     * @return array{uuid: string, name: string, number: string|null, marks: list<int|string|null>, total: int, maximum: int, percentage: float, below: int, absences: int, missing: int, complete: bool, passed: bool}
+     * @return array<string, mixed>
      */
-    private function row(Student $student, StudentResult $result): array
+    private function row(Student $student, StudentResult $result, ?int $rank, ?GradeStudentNote $note): array
     {
         return [
             'uuid' => $student->uuid,
             'name' => $student->full_name,
             'number' => $student->student_number,
+            'status' => $student->status?->value,
             'marks' => array_values(array_map(fn ($mark) => $mark?->toScalar(), $result->marks)),
+            'cells' => array_values(array_map(fn (?array $cell): ?array => $cell === null ? null : [
+                'percent' => $cell['percent'],
+                'passed' => $cell['passed'],
+                'band' => $cell['band']->value,
+                'exempt' => $cell['exempt'],
+            ], $result->cells)),
             'total' => $result->total,
             'maximum' => $result->maximum,
             'percentage' => $result->percentage,
@@ -124,6 +316,11 @@ final readonly class ResultSheets
             'missing' => $result->missing,
             'complete' => $result->isComplete(),
             'passed' => $result->passedAll(),
+            'rank' => $rank,
+            'band' => $result->band?->value,
+            'exempt_all' => $result->exemptAll,
+            'behaviour' => $note?->behaviour?->value,
+            'notes' => $note?->notes,
         ];
     }
 }

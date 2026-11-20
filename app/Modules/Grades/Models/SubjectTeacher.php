@@ -3,6 +3,7 @@
 namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Domain\TeachingKind;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
@@ -19,11 +20,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $teacher_id
  * @property TeachingKind|null $kind
  * @property int|null $assistant_id
+ * @property TeacherAccess|null $access_mode
+ * @property string|null $access_reason
+ * @property CarbonImmutable|null $edit_until
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
 class SubjectTeacher extends Model
 {
+    public const MORPH = 'grade_subject_teacher';
+
     protected $table = 'grade_subject_teachers';
 
     /**
@@ -34,6 +40,8 @@ class SubjectTeacher extends Model
         return [
             'section' => Section::class,
             'kind' => TeachingKind::class,
+            'access_mode' => TeacherAccess::class,
+            'edit_until' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

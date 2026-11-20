@@ -110,6 +110,30 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `highlight-soft-end`: mix(accent-100 50%, accent-200) = oklch(0.93 0.056 74.1). Set in palette.json "roles".
 - `highlight-soft-border`: accent-200 = oklch(0.905 0.077 74.1). Set in palette.json "roles".
 - `sheet`: linen-50 = oklch(0.98 0.004 71.9). Set in palette.json "roles".
+- `tile-1`: success-700 = oklch(0.45 0.117 150). Set in palette.json "roles".
+- `tile-1-foreground`: success-50 = oklch(0.98 0.031 150). Set in palette.json "roles".
+- `tile-2`: info-700 = oklch(0.45 0.095 235). Set in palette.json "roles".
+- `tile-2-foreground`: info-50 = oklch(0.98 0.01 235). Set in palette.json "roles".
+- `tile-3`: primary-700 = oklch(0.45 0.08 262.8). Set in palette.json "roles".
+- `tile-3-foreground`: primary-50 = oklch(0.98 0.009 262.8). Set in palette.json "roles".
+- `tile-4`: accent-700 = oklch(0.45 0.095 74.1). Set in palette.json "roles".
+- `tile-4-foreground`: accent-50 = oklch(0.98 0.015 74.1). Set in palette.json "roles".
+- `tile-5`: danger-700 = oklch(0.421 0.152 29.5). Set in palette.json "roles".
+- `tile-5-foreground`: danger-50 = oklch(0.98 0.009 29.5). Set in palette.json "roles".
+- `tile-6`: mix(primary-700 50%, danger-700) = oklch(0.435 0.116 326.1). Set in palette.json "roles".
+- `tile-6-foreground`: primary-50 = oklch(0.98 0.009 262.8). Set in palette.json "roles".
+- `tile-7`: olive-700 = oklch(0.45 0.038 128.5). Set in palette.json "roles".
+- `tile-7-foreground`: olive-50 = oklch(0.98 0.015 128.5). Set in palette.json "roles".
+- `tile-8`: mix(success-700 50%, info-700) = oklch(0.45 0.106 192.5). Set in palette.json "roles".
+- `tile-8-foreground`: success-50 = oklch(0.98 0.031 150). Set in palette.json "roles".
+- `tile-1-soft`: success-100 = oklch(0.955 0.055 150). Set in palette.json "roles".
+- `tile-2-soft`: info-100 = oklch(0.955 0.025 235). Set in palette.json "roles".
+- `tile-3-soft`: primary-100 = oklch(0.955 0.021 262.8). Set in palette.json "roles".
+- `tile-4-soft`: accent-100 = oklch(0.955 0.035 74.1). Set in palette.json "roles".
+- `tile-5-soft`: danger-100 = oklch(0.955 0.022 29.5). Set in palette.json "roles".
+- `tile-6-soft`: mix(primary-100 50%, danger-100) = oklch(0.955 0.021 326.1). Set in palette.json "roles".
+- `tile-7-soft`: olive-100 = oklch(0.955 0.016 128.5). Set in palette.json "roles".
+- `tile-8-soft`: mix(success-100 50%, info-100) = oklch(0.955 0.04 192.5). Set in palette.json "roles".
 - gradient `page`: weakest stop 9.74:1 with foreground.
 - gradient `table-head`: weakest stop 7.23:1 with highlight-foreground.
 - gradient `toolbar`: weakest stop 7.23:1 with highlight-foreground.
@@ -179,6 +203,46 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 8.58:1 (min 4.5) destructive-text on sheet
 - PASS 21.00:1 (min 4.5) print-ink on paper
 - PASS 11.47:1 (min 4.5) side-panel-foreground on side-panel
+- PASS 6.72:1 (min 4.5) tile-1-foreground on tile-1
+- PASS 7.05:1 (min 3) tile-1 on card
+- PASS 6.91:1 (min 4.5) tile-2-foreground on tile-2
+- PASS 7.31:1 (min 3) tile-2 on card
+- PASS 7.07:1 (min 4.5) tile-3-foreground on tile-3
+- PASS 7.49:1 (min 3) tile-3 on card
+- PASS 7.14:1 (min 4.5) tile-4-foreground on tile-4
+- PASS 7.58:1 (min 3) tile-4 on card
+- PASS 8.56:1 (min 4.5) tile-5-foreground on tile-5
+- PASS 9.10:1 (min 3) tile-5 on card
+- PASS 7.97:1 (min 4.5) tile-6-foreground on tile-6
+- PASS 8.44:1 (min 3) tile-6 on card
+- PASS 6.96:1 (min 4.5) tile-7-foreground on tile-7
+- PASS 7.34:1 (min 3) tile-7 on card
+- PASS 6.44:1 (min 4.5) tile-8-foreground on tile-8
+- PASS 6.75:1 (min 3) tile-8 on card
+- PASS 11.17:1 (min 4.5) foreground on tile-1-soft
+- PASS 6.65:1 (min 4.5) muted-foreground on tile-1-soft
+- PASS 6.30:1 (min 3) tile-1 on tile-1-soft
+- PASS 11.02:1 (min 4.5) foreground on tile-2-soft
+- PASS 6.56:1 (min 4.5) muted-foreground on tile-2-soft
+- PASS 6.44:1 (min 3) tile-2 on tile-2-soft
+- PASS 10.97:1 (min 4.5) foreground on tile-3-soft
+- PASS 6.53:1 (min 4.5) muted-foreground on tile-3-soft
+- PASS 6.57:1 (min 3) tile-3 on tile-3-soft
+- PASS 10.94:1 (min 4.5) foreground on tile-4-soft
+- PASS 6.51:1 (min 4.5) muted-foreground on tile-4-soft
+- PASS 6.63:1 (min 3) tile-4 on tile-4-soft
+- PASS 10.89:1 (min 4.5) foreground on tile-5-soft
+- PASS 6.48:1 (min 4.5) muted-foreground on tile-5-soft
+- PASS 7.92:1 (min 3) tile-5 on tile-5-soft
+- PASS 10.89:1 (min 4.5) foreground on tile-6-soft
+- PASS 6.48:1 (min 4.5) muted-foreground on tile-6-soft
+- PASS 7.35:1 (min 3) tile-6 on tile-6-soft
+- PASS 11.01:1 (min 4.5) foreground on tile-7-soft
+- PASS 6.55:1 (min 4.5) muted-foreground on tile-7-soft
+- PASS 6.46:1 (min 3) tile-7 on tile-7-soft
+- PASS 11.13:1 (min 4.5) foreground on tile-8-soft
+- PASS 6.62:1 (min 4.5) muted-foreground on tile-8-soft
+- PASS 6.01:1 (min 3) tile-8 on tile-8-soft
 
 ## Roles: dark
 
@@ -236,6 +300,30 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - `highlight-soft-end`: accent-900 = oklch(0.28 0.06 74.1). Set in palette.json "roles".
 - `highlight-soft-border`: accent-800 = oklch(0.37 0.078 74.1). Set in palette.json "roles".
 - `sheet`: primary-900 = oklch(0.28 0.078 262.8). Set in palette.json "roles".
+- `tile-1`: success-400 = oklch(0.72 0.115 150). Set in palette.json "roles".
+- `tile-1-foreground`: success-950 = oklch(0.2 0.056 150). Set in palette.json "roles".
+- `tile-2`: info-400 = oklch(0.72 0.098 235). Set in palette.json "roles".
+- `tile-2-foreground`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
+- `tile-3`: primary-400 = oklch(0.72 0.056 262.8). Set in palette.json "roles".
+- `tile-3-foreground`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
+- `tile-4`: accent-400 = oklch(0.72 0.124 74.1). Set in palette.json "roles".
+- `tile-4-foreground`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
+- `tile-5`: danger-400 = oklch(0.72 0.099 29.5). Set in palette.json "roles".
+- `tile-5-foreground`: danger-950 = oklch(0.2 0.082 29.5). Set in palette.json "roles".
+- `tile-6`: mix(primary-400 50%, danger-400) = oklch(0.72 0.077 326.1). Set in palette.json "roles".
+- `tile-6-foreground`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
+- `tile-7`: olive-400 = oklch(0.72 0.026 128.5). Set in palette.json "roles".
+- `tile-7-foreground`: olive-950 = oklch(0.2 0.025 128.5). Set in palette.json "roles".
+- `tile-8`: mix(success-400 50%, info-400) = oklch(0.72 0.107 192.5). Set in palette.json "roles".
+- `tile-8-foreground`: success-950 = oklch(0.2 0.056 150). Set in palette.json "roles".
+- `tile-1-soft`: success-950 = oklch(0.2 0.056 150). Set in palette.json "roles".
+- `tile-2-soft`: info-950 = oklch(0.2 0.043 235). Set in palette.json "roles".
+- `tile-3-soft`: primary-950 = oklch(0.2 0.055 262.8). Set in palette.json "roles".
+- `tile-4-soft`: accent-950 = oklch(0.2 0.043 74.1). Set in palette.json "roles".
+- `tile-5-soft`: danger-950 = oklch(0.2 0.082 29.5). Set in palette.json "roles".
+- `tile-6-soft`: mix(primary-950 50%, danger-950) = oklch(0.2 0.069 326.1). Set in palette.json "roles".
+- `tile-7-soft`: olive-950 = oklch(0.2 0.025 128.5). Set in palette.json "roles".
+- `tile-8-soft`: mix(success-950 50%, info-950) = oklch(0.2 0.05 192.5). Set in palette.json "roles".
 - gradient `table-head`: weakest stop 10.50:1 with highlight-foreground.
 - gradient `toolbar`: weakest stop 10.50:1 with highlight-foreground.
 - gradient `heading`: weakest stop 10.50:1 with highlight-foreground.
@@ -304,3 +392,43 @@ Standard: docs/standards/COLOR-DESIGN-SYSTEM.md.
 - PASS 8.47:1 (min 4.5) destructive-text on sheet
 - PASS 21.00:1 (min 4.5) print-ink on paper
 - PASS 11.47:1 (min 4.5) side-panel-foreground on side-panel
+- PASS 7.55:1 (min 4.5) tile-1-foreground on tile-1
+- PASS 6.22:1 (min 3) tile-1 on card
+- PASS 7.40:1 (min 4.5) tile-2-foreground on tile-2
+- PASS 6.04:1 (min 3) tile-2 on card
+- PASS 7.32:1 (min 4.5) tile-3-foreground on tile-3
+- PASS 5.92:1 (min 3) tile-3 on card
+- PASS 7.19:1 (min 4.5) tile-4-foreground on tile-4
+- PASS 5.82:1 (min 3) tile-4 on card
+- PASS 7.15:1 (min 4.5) tile-5-foreground on tile-5
+- PASS 5.70:1 (min 3) tile-5 on card
+- PASS 7.08:1 (min 4.5) tile-6-foreground on tile-6
+- PASS 5.74:1 (min 3) tile-6 on card
+- PASS 7.33:1 (min 4.5) tile-7-foreground on tile-7
+- PASS 5.98:1 (min 3) tile-7 on card
+- PASS 7.54:1 (min 4.5) tile-8-foreground on tile-8
+- PASS 6.21:1 (min 3) tile-8 on card
+- PASS 16.86:1 (min 4.5) foreground on tile-1-soft
+- PASS 10.63:1 (min 4.5) muted-foreground on tile-1-soft
+- PASS 7.55:1 (min 3) tile-1 on tile-1-soft
+- PASS 17.01:1 (min 4.5) foreground on tile-2-soft
+- PASS 10.73:1 (min 4.5) muted-foreground on tile-2-soft
+- PASS 7.40:1 (min 3) tile-2 on tile-2-soft
+- PASS 17.15:1 (min 4.5) foreground on tile-3-soft
+- PASS 10.81:1 (min 4.5) muted-foreground on tile-3-soft
+- PASS 7.32:1 (min 3) tile-3 on tile-3-soft
+- PASS 17.15:1 (min 4.5) foreground on tile-4-soft
+- PASS 10.82:1 (min 4.5) muted-foreground on tile-4-soft
+- PASS 7.19:1 (min 3) tile-4 on tile-4-soft
+- PASS 17.42:1 (min 4.5) foreground on tile-5-soft
+- PASS 10.99:1 (min 4.5) muted-foreground on tile-5-soft
+- PASS 7.15:1 (min 3) tile-5 on tile-5-soft
+- PASS 17.39:1 (min 4.5) foreground on tile-6-soft
+- PASS 10.97:1 (min 4.5) muted-foreground on tile-6-soft
+- PASS 7.18:1 (min 3) tile-6 on tile-6-soft
+- PASS 17.01:1 (min 4.5) foreground on tile-7-soft
+- PASS 10.73:1 (min 4.5) muted-foreground on tile-7-soft
+- PASS 7.33:1 (min 3) tile-7 on tile-7-soft
+- PASS 16.67:1 (min 4.5) foreground on tile-8-soft
+- PASS 10.51:1 (min 4.5) muted-foreground on tile-8-soft
+- PASS 7.46:1 (min 3) tile-8 on tile-8-soft

@@ -33,7 +33,7 @@ class ChangeEntryWindow
             }
 
             // Students never see marks that are changing again.
-            if ($target === WindowStatus::Open && $locked->isPublished()) {
+            if ($target === WindowStatus::Open && $locked->anyPublished()) {
                 throw new DomainRuleViolation(__('Hide the published results before opening mark entry again.'), 'status');
             }
 

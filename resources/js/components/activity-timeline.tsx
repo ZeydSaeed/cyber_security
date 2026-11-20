@@ -135,6 +135,62 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Student sign-in paused after too many attempts');
         case 'grades.teacher_lockout':
             return t('Teacher sign-in paused after too many attempts');
+        case 'grades.access_settings_changed':
+            return t('Access settings changed');
+        case 'grades.teacher_access_changed':
+            return t('Teacher access changed');
+        case 'grades.section_access_changed':
+            return t('Section access changed');
+        case 'grades.teacher_logins_reset':
+            return t('Teacher sign-ins counted from zero');
+        case 'grades.student_logins_reset':
+            return t('Student sign-ins counted from zero');
+        case 'grades.student_blocked':
+            return t('Student stopped from signing in');
+        case 'grades.student_unblocked':
+            return t('Student allowed to sign in');
+        case 'grades.edit_requested':
+            return t('Request to change marks sent');
+        case 'grades.edit_request_decided':
+            return t('Request to change marks answered');
+        case 'grades.subject_scale_changed':
+            return t('Subject maximum or pass mark changed');
+        case 'grades.result_settings_changed':
+            return t('Result settings changed');
+        case 'grades.student_note_saved':
+            return t('Behaviour or notes saved');
+        case 'grades.teacher_view_changed':
+            return t('What teachers see of results changed');
+        case 'grades.teacher_results_viewed':
+            return t("Teacher read their students' results");
+        case 'grades.section_approved':
+            return t("Teacher approved a section's marks");
+        case 'grades.section_approval_withdrawn':
+            return t('Approval of marks withdrawn');
+        case 'grades.section_approval_cleared':
+            return t('Approval cleared by a later change');
+        case 'grades.section_published':
+            return t('One section’s results published');
+        case 'grades.section_unpublished':
+            return t('One section’s results hidden');
+        case 'grades.appeal_submitted':
+            return t('Student appealed a mark');
+        case 'grades.appeal_decided':
+            return t('Appeal answered');
+        case 'grades.student_result_viewed':
+            return t('Student read their result');
+        case 'grades.student_card_viewed':
+            return t("Student's result card opened");
+        case 'grades.student_view_changed':
+            return t('What the student sees changed');
+        case 'grades.student_appeal_allowed':
+            return t('Student allowed to appeal');
+        case 'grades.student_appeal_disallowed':
+            return t('Student no longer allowed to appeal');
+        case 'grades.devices_forgotten':
+            return t('Remembered devices forgotten');
+        case 'grades.device_token_mismatch':
+            return t('Remembered device refused: its token was already used');
         case 'user.created':
             return role
                 ? t('Added as :role', { role })

@@ -2,10 +2,17 @@
 
 namespace App\Modules\Grades\Http;
 
+use App\Modules\Grades\Application\Actions\ManageAppeals;
 use App\Modules\Grades\Application\Queries\ResultSheets;
+use App\Modules\Grades\Application\RememberedDevices;
+use App\Modules\Grades\Application\ResultViews;
 use App\Modules\Grades\Application\StudentCodes;
+use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\Period;
+use App\Modules\Grades\Domain\StudentAccess;
+use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use App\Platform\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
@@ -21,8 +28,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Students see their own result (ADR-0034, owner's decision of
  * 2026-11-15): /student takes the code the application gave them; the
  * result shows only once the owner has published it. As for teachers: one
- * answer for every refusal, failed attempts limited per address (5 a
- * minute, 20 an hour), every sign-in audited with no actor and never the
+ * answer for every refusal, failed attempts limited per address (by
+ * default 5 a minute, 20 an hour; the owner sets both, ADR-0037), every sign-in audited with no actor and never the
  * code.
  */
 class StudentPortalController
@@ -31,22 +38,61 @@ class StudentPortalController
 
     public const PER_HOUR = 20;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(private readonly AuditLogger $audit, private readonly RememberedDevices $devices) {}
 
-    public function create(): Response|RedirectResponse
+    /**
+     * The code page; a remembered device (ADR-0038) goes straight in.
+     */
+    public function create(Request $request): Response|RedirectResponse
     {
         if (Auth::guard(Student::GUARD)->check()) {
             return to_route('grades.student.result');
         }
 
-        return Inertia::render('modules/grades/pages/student/login');
+        $settings = GradeSettings::current();
+        $token = DeviceCookie::read($request, DeviceHolder::Student);
+
+        if ($token !== null) {
+            $found = $settings->student_access === StudentAccess::Allowed
+                ? $this->devices->consume(DeviceHolder::Student, $token, $settings)
+                : null;
+
+            if ($found !== null && $found[0] instanceof Student) {
+                [$student, $next] = $found;
+                DeviceCookie::put(DeviceHolder::Student, $next, $settings->remember_days);
+                $this->signIn($request, $student, remembered: true);
+
+                return to_route('grades.student.result');
+            }
+
+            DeviceCookie::forget(DeviceHolder::Student);
+        }
+
+        return Inertia::render('modules/grades/pages/student/login', [
+            // 0: the option is off.
+            'rememberDays' => $settings->remember_days,
+        ]);
     }
 
     public function store(Request $request, StudentCodes $codes): RedirectResponse
     {
-        $request->validate(['code' => ['required', 'string', 'max:64']]);
+        $request->validate([
+            'code' => ['required', 'string', 'max:64'],
+            'remember' => ['sometimes', 'boolean'],
+        ]);
 
-        $keys = ['grades-student:minute:'.$request->ip() => [self::PER_MINUTE, 60], 'grades-student:hour:'.$request->ip() => [self::PER_HOUR, 3600]];
+        $settings = GradeSettings::current();
+
+        // Every student stopped at once (ADR-0037): said before any code is
+        // checked, so it tells nothing about codes.
+        if ($settings->student_access === StudentAccess::Blocked) {
+            throw ValidationException::withMessages(['code' => __('Signing in is closed for students for now.')]);
+        }
+
+        $keys = [
+            'grades-student:minute:'.$request->ip() => [$settings->student_attempts_per_minute, 60],
+            'grades-student:hour:'.$request->ip() => [$settings->student_attempts_per_hour, 3600],
+        ];
 
         foreach ($keys as $key => [$max]) {
             if (RateLimiter::tooManyAttempts($key, $max)) {
@@ -60,30 +106,49 @@ class StudentPortalController
 
         $student = Student::query()->where('code_digest', $codes->digest((string) $request->string('code')))->first();
 
-        if ($student === null) {
+        // Unknown, stopped or past the cap on sign-ins: one answer.
+        if ($student === null || ! $student->maySignIn($settings)) {
             foreach ($keys as $key => [, $decay]) {
                 RateLimiter::hit($key, $decay);
             }
 
-            $this->audit->record('grades.student_login_failed', withoutActor: true);
+            $this->audit->record('grades.student_login_failed', $student, $student === null ? [] : ['refused' => true], withoutActor: true);
 
             throw ValidationException::withMessages(['code' => __('This code was not recognised.')]);
         }
 
-        StudentSession::start($request, $student);
-        $this->audit->record('grades.student_login', $student, withoutActor: true);
+        if ($request->boolean('remember') && $settings->remember_days > 0) {
+            DeviceCookie::put(DeviceHolder::Student, $this->devices->remember($student, $settings->remember_days, $request->userAgent()), $settings->remember_days);
+        }
+
+        $this->signIn($request, $student, remembered: false);
 
         return to_route('grades.student.result');
     }
 
+    private function signIn(Request $request, Student $student, bool $remembered): void
+    {
+        StudentSession::start($request, $student);
+        // Counted in the database: two sign-ins at once both count.
+        Student::query()->whereKey($student->id)->increment('login_count', 1, ['last_login_at' => now()]);
+        $this->audit->record('grades.student_login', $student, $remembered ? ['remembered' => true] : [], withoutActor: true);
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
+        // Signing out also forgets this device (ADR-0038).
+        $token = DeviceCookie::read($request, DeviceHolder::Student);
+        if ($token !== null) {
+            $this->devices->forget(DeviceHolder::Student, $token);
+            DeviceCookie::forget(DeviceHolder::Student);
+        }
+
         StudentSession::end($request);
 
         return to_route('grades.student.login');
     }
 
-    public function result(ResultSheets $sheets): Response
+    public function result(ResultSheets $sheets, ResultViews $views): Response
     {
         $student = Auth::guard(Student::GUARD)->user();
 
@@ -91,13 +156,32 @@ class StudentPortalController
             throw new NotFoundHttpException;
         }
 
-        $published = GradePeriod::for(Period::Month1)->isPublished();
+        // This student's section, or all (ADR-0042).
+        $published = GradePeriod::for(Period::Month1)->publishedFor($student->stage, $student->section);
+        // Who saw the result (ADR-0045): only a published one is a view.
+        if ($published) {
+            $views->byStudent($student);
+        }
 
         return Inertia::render('modules/grades/pages/student/result', [
             'portal' => ['name' => $student->full_name, 'logout' => route('grades.student.logout')],
             'published' => $published,
             // Nothing of the marks before the owner publishes them.
-            'card' => $published ? $sheets->student($student) : null,
+            // Only what the owner chose to show (ADR-0039).
+            'card' => $published ? $sheets->forStudent($student) : null,
+            // Appeals (ADR-0042): until when, and the student's own.
+            'appealUntil' => $published ? ManageAppeals::openUntil($student, GradeSettings::current(), GradePeriod::for(Period::Month1))?->toIso8601String() : null,
+            'appeals' => $published ? array_values(GradeAppeal::query()->with('subject:id,name')
+                ->where('student_id', $student->id)->where('period', Period::Month1->value)
+                ->orderByDesc('id')->get()
+                ->map(fn (GradeAppeal $appeal): array => [
+                    'uuid' => $appeal->uuid,
+                    'subject' => $appeal->subject?->name,
+                    'reason' => $appeal->reason,
+                    'status' => $appeal->status->value,
+                    'response' => $appeal->response,
+                    'created_at' => $appeal->created_at->toIso8601String(),
+                ])->all()) : [],
         ]);
     }
 }

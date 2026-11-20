@@ -3,11 +3,16 @@
 namespace App\Modules\Grades\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Grades\Application\SectionAccess;
+use App\Modules\Grades\Domain\EditPolicy;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\GradeSettings;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
@@ -22,8 +27,9 @@ use Illuminate\Support\Facades\DB;
  * Writes one section's marks in one subject (ADR-0034), in one transaction.
  *
  * - A teacher writes only the sections they teach, only while active, and
- *   only while the period is open. The owner (grades.manage) may correct at any
- *   time.
+ *   as their section's access allows (ADR-0037: mode, editing time, grant;
+ *   normally only while the period is open). The owner (grades.manage) may
+ *   correct at any time.
  * - The subject's row is locked for update (saves of one subject wait for
  *   each other) and the period's row for share (closing waits for saves in
  *   progress, and a save after the close sees it closed).
@@ -57,13 +63,20 @@ class SaveMarks
                 throw new DomainRuleViolation(__('This stage has no such section.'), 'marks');
             }
 
-            $this->authorise($author, $subject, $section, $window->isOpen());
+            $policy = $this->authorise($author, $subject, $section, $window);
 
             $students = Student::query()
                 ->where('stage', $subject->stage->value)
                 ->where('section', $section->value)
                 ->pluck('id', 'uuid')
                 ->all();
+
+            // The subject's own maximum (ADR-0039), read under its lock.
+            foreach ($marks as $mark) {
+                if ($mark !== null && ! $mark->absent && (int) $mark->value > $subject->max_mark) {
+                    throw new DomainRuleViolation(__('Marks in this subject are out of :max.', ['max' => $subject->max_mark]), 'marks');
+                }
+            }
 
             $unknown = array_diff(array_keys($marks), array_keys($students));
             if ($unknown !== []) {
@@ -85,6 +98,7 @@ class SaveMarks
             $now = now();
             // Students with a mark after this save: student id => true.
             $held = array_fill_keys($existing->keys()->all(), true);
+            $locked = 0;
 
             foreach ($marks as $uuid => $mark) {
                 $studentId = $students[$uuid];
@@ -92,6 +106,15 @@ class SaveMarks
                 $old = $row?->value();
 
                 if ($mark === null ? $row === null : $mark->equals($old)) {
+                    continue;
+                }
+
+                // Timed mode (ADR-0037): a mark past its editing time can be
+                // neither changed nor removed (removing it and entering it
+                // again would restart its clock).
+                if ($policy !== null && $row !== null && ! $policy->canChange($row->created_at)) {
+                    $locked++;
+
                     continue;
                 }
 
@@ -121,6 +144,12 @@ class SaveMarks
                 $held[$studentId] = true;
             }
 
+            if ($locked > 0) {
+                throw new DomainRuleViolation($locked === 1
+                    ? __('One mark can no longer be changed: its editing time is over. Ask the department to allow it.')
+                    : __(':count marks can no longer be changed: their editing time is over. Ask the department to allow it.', ['count' => $locked]), 'marks');
+            }
+
             // One statement for every write and one for every removal, not
             // one per student (review load test, 2026-11-18: a section of
             // 36 ran 36 statements while holding the subject's lock, which
@@ -142,6 +171,19 @@ class SaveMarks
 
             if ($changes === []) {
                 return ['changed' => 0, 'complete' => $complete];
+            }
+
+            // A teacher changing approved marks (under a grant) must approve
+            // them again (ADR-0041); the owner's corrections keep it.
+            if ($author instanceof Teacher) {
+                $cleared = SectionApproval::query()
+                    ->where('subject_id', $subject->id)
+                    ->where('section', $section->value)
+                    ->where('period', $period->value)
+                    ->delete();
+                if ($cleared > 0) {
+                    $this->audit->record('grades.section_approval_cleared', $subject, ['section' => $section->value, 'teacher_name' => $author->name], withoutActor: true);
+                }
             }
 
             $metadata = ['section' => $section->value, 'period' => $period->value, 'count' => count($changes)];
@@ -172,22 +214,49 @@ class SaveMarks
         }, 3);
     }
 
-    private function authorise(Teacher|User $author, Subject $subject, Section $section, bool $open): void
+    /**
+     * The owner may always correct (null: no limits). A teacher gets the
+     * policy of their section (ADR-0037), read again inside the
+     * transaction so a lock set a moment ago counts.
+     */
+    private function authorise(Teacher|User $author, Subject $subject, Section $section, GradePeriod $window): ?EditPolicy
     {
         if ($author instanceof User) {
             EnsureManager::check($author);
 
-            return;
+            return null;
         }
 
+        $settings = GradeSettings::current();
         $teacher = Teacher::query()->whereKey($author->id)->first();
+        $row = $teacher === null ? null : SubjectTeacher::query()
+            ->where('subject_id', $subject->id)
+            ->where('section', $section->value)
+            ->where('teacher_id', $teacher->id)
+            ->first();
 
-        if ($teacher === null || ! $teacher->is_active || ! SubjectTeacher::teaches($teacher, $subject, $section)) {
+        if ($teacher === null || $row === null || ! $teacher->is_active
+            || $teacher->accessMode($settings) === TeacherAccess::Blocked
+            || SectionAccess::hidden($teacher, $row, $settings)) {
             throw new AuthorizationException;
         }
 
-        if (! $open) {
-            throw new DomainRuleViolation(__('Mark entry is closed for this period.'), 'marks');
+        $approved = SectionApproval::query()
+            ->where('subject_id', $subject->id)
+            ->where('section', $section->value)
+            ->where('period', $window->period->value)
+            ->exists();
+        $policy = SectionAccess::policy($teacher, $row, $settings, $window, $approved, $window->publishedFor($subject->stage, $section));
+
+        if (! $policy->canWrite()) {
+            throw new DomainRuleViolation(match (true) {
+                $policy->published => __('The results are published; their marks can no longer be changed.'),
+                ! $policy->windowOpen => __('Mark entry is closed for this period.'),
+                $policy->approved => __('You approved these marks. Ask the department to change them.'),
+                default => __('You can read these marks but not change them. Ask the department.'),
+            }, 'marks');
         }
+
+        return $policy;
     }
 }

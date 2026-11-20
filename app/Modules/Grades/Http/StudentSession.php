@@ -2,6 +2,8 @@
 
 namespace App\Modules\Grades\Http;
 
+use App\Modules\Grades\Domain\StudentAccess;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use Closure;
 use Illuminate\Http\Request;
@@ -11,7 +13,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A student's session (ADR-0034) holds only while the code it was opened
- * with is still the student's (a new code ends it) and it has been used in
+ * with is still the student's (a new code ends it), students may still
+ * sign in (ADR-0037), and it has been used in
  * the last 30 minutes. Only the student guard is touched.
  */
 class StudentSession
@@ -33,6 +36,7 @@ class StudentSession
         $seenAt = (int) $request->session()->get(self::SEEN_AT, 0);
         $reason = match (true) {
             $student->code_digest === null || ! hash_equals($student->code_digest, (string) $request->session()->get(self::CODE)) => __('Your code was changed. Sign in with the new code.'),
+            $student->access_blocked || GradeSettings::current()->student_access === StudentAccess::Blocked => __('You can no longer sign in here. Ask the department.'),
             $seenAt < now()->subMinutes(self::IDLE_MINUTES)->getTimestamp() => __('You were signed out after 30 minutes without activity.'),
             default => null,
         };

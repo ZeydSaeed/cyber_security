@@ -3,8 +3,10 @@
 namespace App\Modules\Grades\Models;
 
 use App\Modules\Grades\Database\Factories\StudentFactory;
+use App\Modules\Grades\Domain\DeviceHolder;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\StudentAccess;
 use App\Modules\Grades\Domain\StudentStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
@@ -28,6 +30,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $code_digest
  * @property string|null $code_encrypted
  * @property StudentStatus|null $status
+ * @property bool $access_blocked
+ * @property bool $appeal_allowed
+ * @property int $login_count
+ * @property CarbonImmutable|null $last_login_at
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  */
@@ -75,9 +81,34 @@ class Student extends Model implements Authenticatable
             'stage' => Stage::class,
             'section' => Section::class,
             'status' => StudentStatus::class,
+            'access_blocked' => 'boolean',
+            'appeal_allowed' => 'boolean',
+            'login_count' => 'integer',
+            'last_login_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * Whether the student may sign in now (ADR-0037): students are let in,
+     * this one is not stopped, and under the cap on sign-ins, if any.
+     */
+    public function maySignIn(GradeSettings $settings): bool
+    {
+        return $settings->student_access === StudentAccess::Allowed
+            && ! $this->access_blocked
+            && ($settings->student_max_logins === null || $this->login_count < $settings->student_max_logins);
+    }
+
+    /**
+     * The browsers this student asked to be remembered on (ADR-0038).
+     *
+     * @return HasMany<RememberedDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(RememberedDevice::class, 'holder_id')->where('holder', DeviceHolder::Student->value);
     }
 
     /**

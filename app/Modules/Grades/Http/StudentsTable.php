@@ -39,6 +39,8 @@ class StudentsTable extends TableDefinition
             'stage' => ['sortable' => true, 'hideable' => true],
             'section' => ['sortable' => true, 'hideable' => true],
             'status' => ['sortable' => true, 'hideable' => true],
+            // Sign-ins counted since the last reset (ADR-0037).
+            'login_count' => ['sortable' => true, 'hideable' => true],
         ];
     }
 

@@ -2,7 +2,11 @@ import { Link } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, House } from 'lucide-react';
 import { overview as gradesOverview } from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { PageToolbarSlot, toolButton } from '@/components/page-toolbar';
+import {
+    PageToolbarNavSlot,
+    PageToolbarSlot,
+    toolButton,
+} from '@/components/page-toolbar';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useTranslations } from '@/hooks/use-translations';
@@ -14,8 +18,9 @@ import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
  * the toolbar's own colour. Since 2026-11-16 each page puts its title and
  * controls here (PageToolbar), the previous, next and home buttons sit at
  * the end (the left in Arabic), and the search button is gone: the command
- * search still opens with Ctrl+K. The toolbar grows to a second line when
- * its contents do not fit.
+ * search still opens with Ctrl+K. A page's own Close button sits beside
+ * them (PageToolbarNav). The toolbar grows to a second line when its
+ * contents do not fit.
  */
 export function AppSidebarHeader({
     breadcrumbs = [],
@@ -36,6 +41,7 @@ export function AppSidebarHeader({
                 aria-label={t('Page navigation')}
                 className="ms-auto flex shrink-0 items-center gap-1"
             >
+                <PageToolbarNavSlot />
                 {/* Arrows mirrored in Arabic, as elsewhere (table-pagination.tsx). */}
                 <Button
                     variant="outline"
@@ -66,6 +72,7 @@ export function AppSidebarHeader({
                     asChild
                 >
                     <Link
+                        prefetch
                         href={gradesOverview()}
                         aria-label={t('Home')}
                         title={t('Home')}

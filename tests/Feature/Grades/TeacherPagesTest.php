@@ -62,7 +62,7 @@ it('lists only the teacher\'s subjects, with each section\'s progress', function
         // The first stage is one group: no section B.
         ->where('subjects.0.divided', false)
         ->where('subjects.0.sections', [
-            ['section' => 'A', 'students' => 3, 'entered' => 1],
+            ['section' => 'A', 'students' => 3, 'entered' => 1, 'access' => ['state' => 'edit', 'can_write' => true, 'minutes' => null, 'deadline' => null, 'until' => null], 'appeals' => 0, 'locking_soon' => 0],
         ])
         // Nothing of the users' application.
         ->where('auth.user', null)
@@ -173,4 +173,76 @@ it('reads a section in the same few queries however many students it has', funct
     );
 
     expect($count())->toBe($few)->toBeLessThanOrEqual(8);
+});
+
+describe('every subject\'s students on the subjects page (owner\'s request, 2026-11-20)', function () {
+    it('sends each subject\'s sheets with the list, section A then B', function () {
+        $divided = Subject::factory()->stage(Stage::Second)->create(['teacher_id' => $this->teacher->id, 'name' => 'Networks']);
+        Student::factory()->in(Stage::Second, Section::A)->named('Huda Kareem Jasim')->create();
+
+        $this->get('/teacher/subjects')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('modules/grades/pages/teacher/subjects')
+            ->has('subjects', 2)
+            ->has("sheets.{$this->subject->uuid}.sections", 1)
+            ->where("sheets.{$this->subject->uuid}.subject.name", 'Cryptography')
+            ->where("sheets.{$this->subject->uuid}.sections.0.section", 'A')
+            ->has("sheets.{$this->subject->uuid}.sections.0.students", 3)
+            ->has("sheets.{$divided->uuid}.sections", 2)
+            ->where("sheets.{$divided->uuid}.sections.0.students.0.name", 'Huda Kareem Jasim')
+            ->where("sheets.{$divided->uuid}.sections.0.access.can_write", true)
+            ->missing("sheets.{$divided->uuid}.sections.0.open"));
+    });
+
+    it('brings a save back to the subjects page when sent from it', function () {
+        $this->from('/teacher/subjects')
+            ->put(sectionUrl($this->subject), ['marks' => [$this->students[0]->uuid => '80']])
+            ->assertRedirect('/teacher/subjects');
+    });
+});
+
+describe('a whole subject on one page (owner\'s request, 2026-11-19)', function () {
+    it('shows every section the teacher teaches, section A then B', function () {
+        $divided = Subject::factory()->stage(Stage::Second)->create(['teacher_id' => $this->teacher->id, 'name' => 'Networks']);
+        Student::factory()->in(Stage::Second, Section::A)->named('Huda Kareem Jasim')->create();
+
+        $this->get("/teacher/subjects/{$divided->uuid}")->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('modules/grades/pages/teacher/subject')
+            ->where('subject.name', 'Networks')
+            ->where('subject.divided', true)
+            ->where('open', true)
+            ->has('sections', 2)
+            ->where('sections.0.section', 'A')
+            ->has('sections.0.students', 1)
+            ->where('sections.0.students.0.name', 'Huda Kareem Jasim')
+            ->where('sections.0.access.can_write', true)
+            ->where('sections.1.section', 'B')
+            // The two seeded in beforeEach.
+            ->has('sections.1.students', 2)
+            ->missing('history'));
+    });
+
+    it('sends each section\'s history only once asked for', function () {
+        $this->get("/teacher/subjects/{$this->subject->uuid}")->assertInertia(fn (Assert $page) => $page
+            ->has('sections', 1)
+            ->missing('history')
+            ->reloadOnly('history', fn (Assert $reload) => $reload->has('history.A')));
+    });
+
+    it('brings a save back to the subject\'s page when sent from it', function () {
+        $page = "/teacher/subjects/{$this->subject->uuid}";
+
+        $this->from($page)
+            ->put(sectionUrl($this->subject), ['marks' => [$this->students[0]->uuid => '80']])
+            ->assertRedirect($page);
+        $this->from(sectionUrl($this->subject))
+            ->put(sectionUrl($this->subject), ['marks' => [$this->students[0]->uuid => '81']])
+            ->assertRedirect(sectionUrl($this->subject));
+    });
+
+    it('hides another teacher\'s subject', function () {
+        $other = Subject::factory()->create();
+
+        $this->get("/teacher/subjects/{$other->uuid}")->assertNotFound();
+        $this->get('/teacher/subjects/not-a-uuid')->assertNotFound();
+    });
 });

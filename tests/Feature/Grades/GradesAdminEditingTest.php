@@ -15,7 +15,6 @@ use App\Modules\Grades\Models\Teacher;
 use App\Platform\Audit\AuditEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-use OpenSpout\Reader\XLSX\Reader;
 use Tests\Support\Grades\GradesFixtures;
 
 /*
@@ -228,7 +227,7 @@ describe('students', function () {
 
         $this->get('/admin/students')->assertInertia(fn (Assert $page) => $page
             ->where('students.rows.0.status', 'external')
-            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status']));
+            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status', 'login_count']));
 
         $this->put("/admin/students/{$student->uuid}", ['name' => 'Ali Karim', 'stage' => 1, 'status' => '']);
         expect($student->refresh()->status)->toBeNull();
@@ -271,7 +270,7 @@ describe('students', function () {
 
         $this->get('/admin/students')->assertInertia(fn (Assert $page) => $page
             ->where('students.rows.0.code', $code)
-            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status']));
+            ->where('columns.order', ['full_name', 'code', 'stage', 'section', 'status', 'login_count']));
         expect(AuditEvent::query()->where('action', 'grades.student_codes_listed')->count())->toBe(1);
 
         // Found by its code.
@@ -294,27 +293,7 @@ describe('students', function () {
         expect(Student::query()->count())->toBe(1);
     });
 
-    it('gives a file to fill whose first sheet holds only headers the import reads', function () {
-        $response = $this->actingAs($this->owner)->get('/admin/students/import/template')->assertOk();
-        $path = $response->baseResponse->getFile()->getPathname();
-
-        $reader = new Reader;
-        $reader->open($path);
-        $sheets = [];
-        foreach ($reader->getSheetIterator() as $sheet) {
-            $rows = [];
-            foreach ($sheet->getRowIterator() as $row) {
-                $rows[] = $row->toArray();
-            }
-            $sheets[] = $rows;
-        }
-        $reader->close();
-
-        expect($sheets)->toHaveCount(2)
-            ->and($sheets[0])->toBe([['Name', 'Stage', 'Section', 'Student number']]);
-    });
-
     it('is for managers only', function () {
-        $this->get('/admin/students/import/template')->assertRedirect('/login');
+        $this->post('/admin/students', ['name' => 'Sara Nabil', 'stage' => 1])->assertRedirect('/login');
     });
 });

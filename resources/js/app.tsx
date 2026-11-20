@@ -6,6 +6,7 @@ import { initializeTheme } from '@/hooks/use-appearance';
 // Listens from the start: dialogs in lazy chunks need the click that
 // opened them (lib/opener.ts).
 import '@/lib/opener';
+import { warmPageChunks } from '@/lib/navigation';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -20,11 +21,20 @@ const pages = import.meta.glob<{ default: unknown }>([
     './modules/*/pages/**/*.tsx',
 ]);
 
+const pagePath = (name: string) =>
+    './' + (name.startsWith('modules/') ? name : 'pages/' + name) + '.tsx';
+
+// A hovered link fetches the page's code with its data (lib/navigation.ts).
+// A failed warm-up is harmless: the visit itself loads the page again.
+warmPageChunks((name) => void pages[pagePath(name)]?.().catch(() => null));
+
 void createInertiaApp({
+    // No page-to-page view transitions: measured 2026-11-20, they showed
+    // each page ~90 ms later and settled it ~300 ms later
+    // (docs/evidence/ui-navigation/2026-11-20-before-after).
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: async (name) => {
-        const path = name.startsWith('modules/') ? name : 'pages/' + name;
-        const load = pages['./' + path + '.tsx'];
+        const load = pages[pagePath(name)];
 
         if (!load) {
             throw new Error(`Page not found: ${name}`);

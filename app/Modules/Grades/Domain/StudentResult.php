@@ -3,12 +3,13 @@
 namespace App\Modules\Grades\Domain;
 
 /**
- * One student's result for a period (ADR-0034).
+ * One student's result for a period (ADR-0034, ADR-0039).
  */
 final readonly class StudentResult
 {
     /**
      * @param  array<int, Mark|null>  $marks  subject id => mark (null: not entered yet)
+     * @param  array<int, array{percent: float, passed: bool, band: GradeBand, exempt: bool}|null>  $cells  subject id => what the mark earns (null: not entered)
      */
     public function __construct(
         public array $marks,
@@ -18,6 +19,9 @@ final readonly class StudentResult
         public int $belowPassMark,
         public int $absences,
         public int $missing,
+        public array $cells = [],
+        public ?GradeBand $band = null,
+        public bool $exemptAll = false,
     ) {}
 
     public function isComplete(): bool

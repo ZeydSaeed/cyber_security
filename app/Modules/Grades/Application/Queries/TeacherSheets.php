@@ -2,15 +2,24 @@
 
 namespace App\Modules\Grades\Application\Queries;
 
+use App\Modules\Grades\Application\SectionAccess;
+use App\Modules\Grades\Domain\AppealStatus;
+use App\Modules\Grades\Domain\EditPolicy;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
+use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Domain\WindowStatus;
+use App\Modules\Grades\Models\GradeAppeal;
+use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\GradeSettings;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
+use Carbon\CarbonImmutable;
 
 /**
  * What a teacher's pages show (ADR-0034), as plain values: their subjects
@@ -22,16 +31,27 @@ final class TeacherSheets
     /**
      * @return array{open: bool, subjects: list<array{uuid: string, name: string, stage: int, divided: bool, sections: list<array{section: string, students: int, entered: int}>}>}
      */
-    public function subjects(Teacher $teacher, Period $period = Period::Month1): array
+    public function subjects(Teacher $teacher, Period $period = Period::Month1, ?GradeSettings $settings = null): array
     {
-        $own = SubjectTeacher::query()->toBase()
+        $settings ??= GradeSettings::current();
+        $window = GradePeriod::for($period);
+
+        // The sections the teacher teaches, less those blocked (ADR-0037).
+        $rows = SubjectTeacher::query()
             ->where('teacher_id', $teacher->id)
+            ->get(['id', 'subject_id', 'section', 'teacher_id', 'access_mode', 'edit_until'])
+            ->reject(fn (SubjectTeacher $row): bool => SectionAccess::hidden($teacher, $row, $settings))
+            ->keyBy(fn (SubjectTeacher $row): string => $row->subject_id.'|'.$row->section->value);
+
+        // Sections the teacher approved (ADR-0041).
+        $approved = SectionApproval::query()->toBase()
+            ->whereIn('subject_id', $rows->pluck('subject_id')->unique()->values())
+            ->where('period', $period->value)
             ->get(['subject_id', 'section'])
-            ->groupBy('subject_id')
-            ->map(fn ($rows): array => $rows->pluck('section')->all());
+            ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => true]);
 
         $subjects = Subject::query()
-            ->whereIn('id', $own->keys())
+            ->whereIn('id', $rows->pluck('subject_id')->unique()->values())
             ->orderBy('stage')->orderBy('sort_order')->orderBy('name')
             ->get(['id', 'uuid', 'name', 'stage']);
 
@@ -54,21 +74,61 @@ final class TeacherSheets
             ->get()
             ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => (int) $row->n]);
 
+        // When each mark was first entered, for the marks that lock within a
+        // day (ADR-0045). Only while entry is open: closed, nothing changes.
+        $enteredAt = ! $window->isOpen() ? collect() : GradeMark::query()->toBase()
+            ->join('grade_students', 'grade_students.id', '=', 'grade_marks.student_id')
+            ->whereIn('grade_marks.subject_id', $subjects->pluck('id'))
+            ->where('grade_marks.period', $period->value)
+            ->get(['grade_marks.subject_id', 'grade_students.section', 'grade_marks.created_at'])
+            ->groupBy(fn (\stdClass $row): string => $row->subject_id.'|'.$row->section)
+            ->map(fn ($marks): array => $marks->map(fn (\stdClass $row): CarbonImmutable => CarbonImmutable::parse((string) $row->created_at))->all());
+
+        // Appeals waiting for an answer, per subject and section (ADR-0044):
+        // none before a publication, so not read then.
+        $appeals = ! $window->anyPublished() ? collect() : GradeAppeal::query()->toBase()
+            ->join('grade_students', 'grade_students.id', '=', 'grade_appeals.student_id')
+            ->whereIn('grade_appeals.subject_id', $subjects->pluck('id'))
+            ->where('grade_appeals.period', $period->value)
+            ->where('grade_appeals.status', AppealStatus::Pending->value)
+            ->selectRaw('grade_appeals.subject_id, grade_students.section, count(*) as n')
+            ->groupBy('grade_appeals.subject_id', 'grade_students.section')
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => (int) $row->n]);
+
         return [
-            'open' => $this->isOpen($period),
+            'open' => $window->isOpen(),
             'subjects' => array_values($subjects->map(fn (Subject $subject): array => [
                 'uuid' => $subject->uuid,
                 'name' => $subject->name,
                 'stage' => $subject->stage->value,
                 'divided' => $subject->stage->isDivided(),
-                'sections' => array_map(fn (Section $section): array => [
-                    'section' => $section->value,
-                    'students' => (int) ($students[$subject->stage->value.'|'.$section->value] ?? 0),
-                    'entered' => (int) ($entered[$subject->id.'|'.$section->value] ?? 0),
-                ], array_values(array_filter(
-                    $subject->stage->sections(),
-                    fn (Section $section): bool => in_array($section->value, $own->get($subject->id, []), true),
-                ))),
+                // The stage's sections in order, those the teacher has only.
+                'sections' => array_values(array_filter(array_map(function (Section $section) use ($subject, $rows, $students, $entered, $teacher, $settings, $window, $approved, $appeals, $enteredAt): ?array {
+                    $row = $rows->get($subject->id.'|'.$section->value);
+                    if ($row === null) {
+                        return null;
+                    }
+                    $policy = SectionAccess::policy($teacher, $row, $settings, $window, isset($approved[$subject->id.'|'.$section->value]), $window->publishedFor($subject->stage, $section));
+                    $soon = now()->addDay()->getTimestamp();
+
+                    return [
+                        'section' => $section->value,
+                        'students' => (int) ($students[$subject->stage->value.'|'.$section->value] ?? 0),
+                        'entered' => (int) ($entered[$subject->id.'|'.$section->value] ?? 0),
+                        'appeals' => (int) ($appeals[$subject->id.'|'.$section->value] ?? 0),
+                        // Marks still changeable that lock within a day (ADR-0045).
+                        'locking_soon' => ! $policy->canWrite() ? 0 : count(array_filter(
+                            $enteredAt->get($subject->id.'|'.$section->value) ?? [],
+                            function (CarbonImmutable $at) use ($policy, $soon): bool {
+                                $until = $policy->editableUntil($at);
+
+                                return $until !== null && $policy->canChange($at) && $until <= $soon;
+                            },
+                        )),
+                        'access' => self::describe($policy),
+                    ];
+                }, $subject->stage->sections()))),
             ])->all()),
         ];
     }
@@ -78,8 +138,19 @@ final class TeacherSheets
      *
      * @return array{open: bool, subject: array{uuid: string, name: string, stage: int}, section: string, students: list<array{uuid: string, name: string, number: string|null, mark: int|string|null}>}
      */
-    public function section(Subject $subject, Section $section, Period $period = Period::Month1): array
+    public function section(Subject $subject, Section $section, Period $period = Period::Month1, ?EditPolicy $policy = null, ?Teacher $teacher = null, ?SectionApproval $approval = null, bool $canAnswer = false): array
     {
+        $request = null;
+        if ($teacher !== null) {
+            $request = GradeEditRequest::query()
+                ->where('teacher_id', $teacher->id)
+                ->where('subject_id', $subject->id)
+                ->where('section', $section->value)
+                ->where('period', $period->value)
+                ->latest('id')
+                ->first(['status', 'reason', 'granted_hours', 'created_at', 'decided_at']);
+        }
+
         $students = Student::query()
             ->where('stage', $subject->stage->value)
             ->where('section', $section->value)
@@ -91,19 +162,80 @@ final class TeacherSheets
             ->where('stage', $subject->stage->value)
             ->where('period', $period->value)
             ->whereIn('student_id', $students->pluck('id'))
-            ->get(['student_id', 'mark', 'is_absent'])
+            ->get(['student_id', 'mark', 'is_absent', 'created_at'])
             ->keyBy('student_id');
 
         return [
-            'open' => $this->isOpen($period),
-            'subject' => ['uuid' => $subject->uuid, 'name' => $subject->name, 'stage' => $subject->stage->value, 'divided' => $subject->stage->isDivided()],
+            'open' => $policy->windowOpen ?? $this->isOpen($period),
+            // When the teacher approved these marks (ADR-0041; null: not approved).
+            'approved_at' => $approval?->approved_at->toIso8601String(),
+            // The teacher's access to this section (null: the owner's sheet).
+            'access' => $policy === null ? null : self::describe($policy),
+            // Students' appeals of this subject in this section (ADR-0042).
+            // None before publication, so not read then.
+            'appeals' => $teacher === null || ! ($policy->published ?? false) ? [] : array_values(GradeAppeal::query()
+                ->where('subject_id', $subject->id)
+                ->where('period', $period->value)
+                ->whereIn('student_id', $students->pluck('id'))
+                ->orderByDesc('id')
+                ->get(['uuid', 'student_id', 'reason', 'status', 'response', 'created_at'])
+                ->map(fn (GradeAppeal $appeal): array => [
+                    'uuid' => $appeal->uuid,
+                    // The teacher may answer it (ADR-0044).
+                    'can_answer' => $canAnswer && $appeal->status === AppealStatus::Pending,
+                    'student' => (string) $students->firstWhere('id', $appeal->student_id)?->full_name,
+                    'reason' => $appeal->reason,
+                    'status' => $appeal->status->value,
+                    'response' => $appeal->response,
+                    'created_at' => $appeal->created_at->toIso8601String(),
+                ])->all()),
+            'request' => $request === null ? null : [
+                'status' => $request->status->value,
+                'reason' => $request->reason,
+                'granted_hours' => $request->granted_hours,
+                'created_at' => $request->created_at->toIso8601String(),
+                'decided_at' => $request->decided_at?->toIso8601String(),
+            ],
+            'subject' => ['uuid' => $subject->uuid, 'name' => $subject->name, 'stage' => $subject->stage->value, 'divided' => $subject->stage->isDivided(), 'max' => $subject->max_mark],
             'section' => $section->value,
             'students' => array_values($students->map(fn (Student $student): array => [
                 'uuid' => $student->uuid,
                 'name' => $student->full_name,
                 'number' => $student->student_number,
                 'mark' => $marks->get($student->id)?->value()->toScalar(),
+                // A mark past its editing time (timed mode, ADR-0037).
+                'locked' => $policy !== null && ($row = $marks->get($student->id)) !== null && ! $policy->canChange($row->created_at),
+                // When a mark still changeable locks (timed mode; ADR-0042 warns before).
+                'locks_at' => $policy !== null && ($row = $marks->get($student->id)) !== null && $policy->canChange($row->created_at) && ($until = $policy->editableUntil($row->created_at)) !== null
+                    ? date(DATE_ATOM, $until)
+                    : null,
             ])->all()),
+        ];
+    }
+
+    /**
+     * A section's access as the teacher's pages show it (ADR-0037).
+     *
+     * @return array{state: string, can_write: bool, minutes: int|null, deadline: string|null, until: string|null}
+     */
+    public static function describe(EditPolicy $policy): array
+    {
+        $state = match (true) {
+            $policy->published => 'published',
+            $policy->hasGrant() => 'granted',
+            $policy->approved => 'approved',
+            ! $policy->windowOpen => 'closed',
+            $policy->mode === TeacherAccess::ViewOnly => 'view_only',
+            $policy->isLimited() => 'timed',
+            default => 'edit',
+        };
+
+        return [
+            'state' => $state,
+            'can_write' => $policy->canWrite(),
+            'minutes' => $state === 'timed' ? $policy->editMinutes : null,
+            'deadline' => $state === 'timed' ? $policy->editDeadline?->format(DATE_ATOM) : null,
+            'until' => $state === 'granted' ? $policy->grantUntil?->format(DATE_ATOM) : null,
         ];
     }
 

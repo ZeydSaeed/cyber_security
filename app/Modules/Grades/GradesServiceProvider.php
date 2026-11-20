@@ -3,6 +3,8 @@
 namespace App\Modules\Grades;
 
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Console\SendAppealReminders;
+use App\Modules\Grades\Application\Jobs\NotifyGradesManagers;
 use App\Modules\Grades\Application\Jobs\NotifySectionCompleted;
 use App\Modules\Grades\Application\Metrics\GradesMetrics;
 use App\Modules\Grades\Application\Queries\GradesOverviewQuery;
@@ -11,13 +13,18 @@ use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Contracts\GradesOverview;
 use App\Modules\Grades\Domain\ResultCalculator;
 use App\Modules\Grades\Http\StudentsTable;
+use App\Modules\Grades\Models\GradeAppeal;
+use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
+use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use App\Platform\Observability\MetricsSource;
 use App\Platform\Tables\TableRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -50,10 +57,12 @@ class GradesServiceProvider extends ServiceProvider
         config(['platform.outbox.handlers' => [
             ...(array) config('platform.outbox.handlers'),
             SaveMarks::TOPIC => NotifySectionCompleted::class,
+            NotifyGradesManagers::TOPIC => NotifyGradesManagers::class,
         ]]);
 
         $this->app->singleton(TeacherCodes::class);
-        $this->app->bind(ResultCalculator::class, fn (): ResultCalculator => new ResultCalculator((int) config('grades.pass_mark')));
+        // The department's bands and exemption, read when a result is made (ADR-0039).
+        $this->app->bind(ResultCalculator::class, fn (): ResultCalculator => GradeSettings::current()->calculator());
 
         // The module's public read API (Contracts), for the dashboard.
         $this->app->bind(GradesOverview::class, GradesOverviewQuery::class);
@@ -67,6 +76,14 @@ class GradesServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/Database/migrations');
         $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
 
+        // Reminders about appeals, every hour (ADR-0045).
+        if ($this->app->runningInConsole()) {
+            $this->commands([SendAppealReminders::class]);
+        }
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('grades:appeal-reminders')->hourly()->withoutOverlapping()->onOneServer();
+        });
+
         // The owner's student list keeps its columns and views per person.
         $this->app->make(TableRegistry::class)->register(StudentsTable::NAME, StudentsTable::class, StudentsTable::ABILITY);
 
@@ -75,12 +92,30 @@ class GradesServiceProvider extends ServiceProvider
         RateLimiter::for('grades-teacher-save', fn (Request $request): Limit => Limit::perMinute(60)
             ->by('grades-teacher:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
 
+        // Approving a section and asking to change marks: 10 a minute, and
+        // answering appeals: 30 a minute, for each teacher. Per address, a
+        // school's staff on one network shared 10 approvals a minute: the
+        // fourth teacher of the full-size audit (2026-11-20) was refused.
+        RateLimiter::for('grades-teacher-action', fn (Request $request): Limit => Limit::perMinute(10)
+            ->by('grades-teacher-action:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
+        RateLimiter::for('grades-teacher-appeal', fn (Request $request): Limit => Limit::perMinute(30)
+            ->by('grades-teacher-appeal:'.(Auth::guard(Teacher::GUARD)->id() ?? $request->ip())));
+
+        // Appealing: 10 a minute for each student, not for a whole class
+        // on the school's one address (the route sits behind StudentSession).
+        RateLimiter::for('grades-student-appeal', fn (Request $request): Limit => Limit::perMinute(10)
+            ->by('grades-student-appeal:'.(Auth::guard(Student::GUARD)->id() ?? $request->ip())));
+
         // Stable names in audit records instead of class names.
         Relation::morphMap([
             Teacher::MORPH => Teacher::class,
             Subject::MORPH => Subject::class,
             Student::MORPH => Student::class,
             GradePeriod::MORPH => GradePeriod::class,
+            GradeSettings::MORPH => GradeSettings::class,
+            GradeEditRequest::MORPH => GradeEditRequest::class,
+            SubjectTeacher::MORPH => SubjectTeacher::class,
+            GradeAppeal::MORPH => GradeAppeal::class,
         ]);
     }
 }

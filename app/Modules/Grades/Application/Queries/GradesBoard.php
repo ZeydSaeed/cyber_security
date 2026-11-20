@@ -8,6 +8,7 @@ use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\WindowStatus;
 use App\Modules\Grades\Models\GradeMark;
 use App\Modules\Grades\Models\GradePeriod;
+use App\Modules\Grades\Models\SectionApproval;
 use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
@@ -44,6 +45,12 @@ final class GradesBoard
             ->groupBy('grade_marks.subject_id', 'grade_students.section')->get()
             ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => (int) $row->n]);
 
+        // Sections whose teacher approved the marks (ADR-0041).
+        $approved = SectionApproval::query()->toBase()
+            ->where('period', $period->value)
+            ->get(['subject_id', 'section'])
+            ->mapWithKeys(fn (object $row): array => [$row->subject_id.'|'.$row->section => true]);
+
         $subjects = Subject::query()->with('assignments.teacher:id,name')
             ->orderBy('stage')->orderBy('sort_order')->orderBy('name')
             ->get(['id', 'uuid', 'name', 'stage'])
@@ -75,6 +82,10 @@ final class GradesBoard
                         $sectionValues,
                         array_map(fn (string $section): int => (int) ($entered[$subject->id.'|'.$section] ?? 0), $sectionValues),
                     ),
+                    'approved' => array_combine(
+                        $sectionValues,
+                        array_map(fn (string $section): bool => isset($approved[$subject->id.'|'.$section]), $sectionValues),
+                    ),
                 ])->all()),
             ];
         }
@@ -83,6 +94,8 @@ final class GradesBoard
             'window' => [
                 'open' => $window->status === WindowStatus::Open,
                 'published' => $window->isPublished(),
+                // Sections published on their own (ADR-0042): "stage|section".
+                'sections_published' => array_keys($window->publishedSections()),
                 'opened_at' => $window->opened_at?->toIso8601String(),
                 'closed_at' => $window->closed_at?->toIso8601String(),
             ],

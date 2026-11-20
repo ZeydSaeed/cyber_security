@@ -1,10 +1,11 @@
 <?php
 
+use App\Modules\Grades\Domain\GradeBand;
+use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\NameKey;
 use App\Modules\Grades\Domain\ResultCalculator;
-use App\Modules\Grades\Domain\Section;
-use App\Modules\Grades\Domain\Stage;
+use App\Modules\Grades\Domain\SubjectScale;
 use App\Modules\Grades\Domain\WindowStatus;
 
 /*
@@ -50,35 +51,6 @@ describe('mark', function () {
     });
 });
 
-describe('stage and section', function () {
-    it('reads a stage as people write it', function (string|int $text, ?Stage $stage) {
-        expect(Stage::fromText($text))->toBe($stage);
-    })->with([
-        [1, Stage::First],
-        ['2', Stage::Second],
-        ['first', Stage::First],
-        ['Second', Stage::Second],
-        ["\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}", Stage::First], // the first
-        ["\u{0627}\u{0644}\u{0635}\u{0641} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}", Stage::Second], // the second year
-        ["\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}", Stage::First], // the first stage
-        ['4', null],
-        ['3', Stage::Third],
-        ['', null],
-    ]);
-
-    it('reads a section as people write it', function (string $text, ?Section $section) {
-        expect(Section::fromText($text))->toBe($section);
-    })->with([
-        ['A', Section::A],
-        ['b', Section::B],
-        ['Section A', Section::A],
-        ["\u{0623}", Section::A], // alef with hamza
-        ["\u{0634}\u{0639}\u{0628}\u{0629} \u{0628}", Section::B], // section beh
-        ['C', null],
-        ['', null],
-    ]);
-});
-
 describe('name key', function () {
     it('gives the same key to spellings of one name', function () {
         $with = "\u{0623}\u{062D}\u{0645}\u{062F}  \u{0639}\u{0644}\u{064A}\u{0651}"; // hamza, two spaces, shadda
@@ -94,9 +66,25 @@ describe('name key', function () {
     });
 });
 
+/**
+ * Subjects out of 100, passed at 50 (the defaults).
+ *
+ * @param  list<int>  $ids
+ * @return array<int, SubjectScale>
+ */
+function scales(array $ids, int $max = 100, int $pass = 50, ?int $exempt = null): array
+{
+    return array_fill_keys($ids, new SubjectScale($max, $pass, $exempt));
+}
+
+function calculator(?int $exemptOverall = null): ResultCalculator
+{
+    return new ResultCalculator(GradeBands::defaults(), $exemptOverall);
+}
+
 describe('result', function () {
     it('totals, counts below the pass mark and absences, and knows what is missing', function () {
-        $result = (new ResultCalculator(50))->for([1, 2, 3, 4], [
+        $result = calculator()->for(scales([1, 2, 3, 4]), [
             1 => Mark::of(90),
             2 => Mark::of(49),
             3 => Mark::absent(),
@@ -110,20 +98,71 @@ describe('result', function () {
             ->and($result->missing)->toBe(1)
             ->and($result->isComplete())->toBeFalse()
             ->and($result->passedAll())->toBeFalse()
-            ->and($result->marks[4])->toBeNull();
+            ->and($result->marks[4])->toBeNull()
+            ->and($result->band)->toBeNull();
     });
 
     it('passes a complete result with every subject at or above the pass mark', function () {
-        $result = (new ResultCalculator(50))->for([1, 2], [1 => Mark::of(50), 2 => Mark::of(100)]);
+        $result = calculator()->for(scales([1, 2]), [1 => Mark::of(50), 2 => Mark::of(100)]);
 
         expect($result->passedAll())->toBeTrue()
-            ->and($result->percentage)->toBe(75.0);
+            ->and($result->percentage)->toBe(75.0)
+            ->and($result->band)->toBe(GradeBand::Good);
     });
 
     it('ignores marks of subjects outside the stage', function () {
-        $result = (new ResultCalculator(50))->for([1], [1 => Mark::of(60), 9 => Mark::of(100)]);
+        $result = calculator()->for(scales([1]), [1 => Mark::of(60), 9 => Mark::of(100)]);
 
         expect($result->total)->toBe(60)->and($result->maximum)->toBe(100);
+    });
+
+    it('marks each subject out of its own maximum, with its own pass mark', function () {
+        $result = calculator()->for([1 => new SubjectScale(80, 40), 2 => new SubjectScale(100, 50)], [
+            1 => Mark::of(72, 80),
+            2 => Mark::of(45),
+        ]);
+
+        expect($result->maximum)->toBe(180)
+            ->and($result->total)->toBe(117)
+            ->and($result->percentage)->toBe(65.0)
+            ->and($result->cells[1])->toBe(['percent' => 90.0, 'passed' => true, 'band' => GradeBand::Excellent, 'exempt' => false])
+            ->and($result->cells[2]['band'])->toBe(GradeBand::Fail)
+            // Failing a subject makes the overall grade Fail too.
+            ->and($result->band)->toBe(GradeBand::Fail);
+    });
+
+    it('exempts a subject at its exemption mark, and a student at the general percentage', function () {
+        $result = calculator(85)->for(scales([1, 2], 100, 50, 90), [1 => Mark::of(95), 2 => Mark::of(80)]);
+
+        expect($result->cells[1]['exempt'])->toBeTrue()
+            ->and($result->cells[2]['exempt'])->toBeFalse()
+            ->and($result->percentage)->toBe(87.5)
+            ->and($result->exemptAll)->toBeTrue();
+
+        expect(calculator(90)->for(scales([1, 2]), [1 => Mark::of(95), 2 => Mark::of(80)])->exemptAll)->toBeFalse();
+    });
+
+    it('takes the department percentages for a subject without its own marks', function () {
+        $scale = SubjectScale::from(80, null, null, 50, 85);
+
+        expect($scale->pass)->toBe(40)->and($scale->exempt)->toBe(68);
+    });
+
+    it('refuses grade bands that do not fall', function () {
+        GradeBands::of(['excellent' => 90, 'very_good' => 90, 'good' => 70, 'fair' => 60, 'pass' => 50]);
+    })->throws(InvalidArgumentException::class);
+
+    it('ranks complete results, equal percentages sharing a rank (1, 1, 3)', function () {
+        $calc = calculator();
+        $results = [
+            'a' => $calc->for(scales([1]), [1 => Mark::of(80)]),
+            'b' => $calc->for(scales([1]), [1 => Mark::of(90)]),
+            'c' => $calc->for(scales([1]), [1 => Mark::of(80)]),
+            'd' => $calc->for(scales([1]), [1 => Mark::of(70)]),
+            'e' => $calc->for(scales([1]), []),
+        ];
+
+        expect(ResultCalculator::ranks($results))->toBe(['a' => 2, 'b' => 1, 'c' => 2, 'd' => 4, 'e' => null]);
     });
 });
 

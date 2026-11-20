@@ -2,9 +2,11 @@ import { Head } from '@inertiajs/react';
 import { Clock, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
+import AppealPanel from '../../components/appeal-panel';
+import type { StudentAppeal } from '../../components/appeal-panel';
 import ResultCard from '../../components/result-card';
 import { placeLabelFull } from '../../place';
-import type { ResultRow } from '../../types';
+import type { ResultCardData } from '../../types';
 
 /**
  * A student's own first-month result (ADR-0034), once the owner has
@@ -13,16 +15,15 @@ import type { ResultRow } from '../../types';
 export default function StudentResult({
     published,
     card,
+    appealUntil = null,
+    appeals = [],
 }: {
     published: boolean;
-    card: {
-        stage: number;
-        section: string;
-        divided: boolean;
-        pass_mark: number;
-        subjects: { uuid: string; name: string }[];
-        student: ResultRow;
-    } | null;
+    /** Only what the owner chose to show (ADR-0039). */
+    card: ResultCardData | null;
+    /** Until when an appeal may be sent (ADR-0042); null: not now. */
+    appealUntil?: string | null;
+    appeals?: StudentAppeal[];
 }) {
     const { t } = useTranslations();
 
@@ -58,12 +59,14 @@ export default function StudentResult({
             </header>
 
             {published && card ? (
-                <ResultCard
-                    pass_mark={card.pass_mark}
-                    subjects={card.subjects}
-                    student={card.student}
-                    showName={false}
-                />
+                <>
+                    <ResultCard card={card} showName={false} />
+                    <AppealPanel
+                        card={card}
+                        until={appealUntil}
+                        appeals={appeals}
+                    />
+                </>
             ) : (
                 <p
                     role="status"

@@ -16,14 +16,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * One student added, changed or deleted by hand (owner's request,
- * 2026-11-16), with the import's rules (StudentImportPlanner): a name of 3
+ * 2026-11-16; the only way since the import was removed, 2026-11-20): a name of 3
  * to 160 characters, the first stage in section A only, and a name unique
  * in its stage among students without a number. A new student gets a code
  * made by the application at once; the owner may change it to one they
  * type (StudentCodes::assertAcceptable), which ends the student's open
  * sessions. A student with marks keeps their stage and cannot be deleted:
  * the marks belong to that stage (the database refuses both too). The
- * student number, if any, is left to the import. A student's status is
+ * student number is optional, at most 40 characters and unique; it is
+ * what the printed result card shows (owner's decision, 2026-11-20). A
+ * student's status is
  * empty, or "external" for one enrolled by correspondence (intisab).
  */
 class SaveStudent
@@ -32,15 +34,20 @@ class SaveStudent
         private readonly AuditLogger $audit,
         private readonly IssueStudentCodes $issue,
         private readonly StudentCodes $codes,
+        private readonly ApproveSection $approvals,
     ) {}
 
-    public function create(User $actor, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null): Student
+    public function create(User $actor, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null, ?string $number = null): Student
     {
         [$name, $key, $section] = $this->valid($name, $stage, $section);
+        $number = $this->validNumber($number);
 
-        return DB::transaction(function () use ($actor, $name, $key, $stage, $section, $status): Student {
+        return DB::transaction(function () use ($actor, $name, $key, $stage, $section, $status, $number): Student {
             EnsureManager::check($actor);
-            $this->assertFreeName($stage, $key, null);
+            if ($number === null) {
+                $this->assertFreeName($stage, $key, null);
+            }
+            $this->assertFreeNumber($number, null);
 
             $student = new Student;
             $student->forceFill([
@@ -49,11 +56,14 @@ class SaveStudent
                 'stage' => $stage,
                 'section' => $section,
                 'status' => $status,
+                'student_number' => $number,
             ])->save();
             $this->issue->give($student);
+            $this->approvals->releaseForNewcomer($actor, $student);
 
             $this->audit->record('grades.student_created', $student, [
                 'name' => $name, 'stage' => $stage->value, 'section' => $section->value, 'status' => $status?->value,
+                'number' => $number,
             ], actor: $actor);
 
             return $student;
@@ -62,28 +72,33 @@ class SaveStudent
 
     /**
      * Changes the name, stage, section and status, and the code when one is given
-     * (null or the same code changes nothing).
+     * (null or the same code changes nothing). The student number: false
+     * keeps it, null or empty removes it, text sets it.
      */
-    public function update(User $actor, Student $student, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null, ?string $code = null): Student
+    public function update(User $actor, Student $student, string $name, Stage $stage, ?Section $section, ?StudentStatus $status = null, ?string $code = null, string|false|null $number = false): Student
     {
         [$name, $key, $section] = $this->valid($name, $stage, $section);
+        $keepNumber = $number === false;
+        $number = $keepNumber ? null : $this->validNumber($number);
         $code = $code === null || trim($code) === '' ? null : $code;
         if ($code !== null) {
             $this->codes->assertAcceptable($code);
         }
 
-        return DB::transaction(function () use ($actor, $student, $name, $key, $stage, $section, $status, $code): Student {
+        return DB::transaction(function () use ($actor, $student, $name, $key, $stage, $section, $status, $code, $keepNumber, $number): Student {
             $locked = Student::query()->whereKey($student->id)->lockForUpdate()->firstOrFail();
             EnsureManager::check($actor);
 
             $digest = $code === null ? null : $this->codes->digest($code);
             $newCode = $digest !== null && ($locked->code_digest === null || ! hash_equals($locked->code_digest, $digest));
+            $number = $keepNumber ? $locked->student_number : $number;
 
             $changes = array_filter([
                 'full_name' => $locked->full_name !== $name ? ['from' => $locked->full_name, 'to' => $name] : null,
                 'stage' => $locked->stage !== $stage ? ['from' => $locked->stage->value, 'to' => $stage->value] : null,
                 'section' => $locked->section !== $section ? ['from' => $locked->section->value, 'to' => $section->value] : null,
                 'status' => $locked->status !== $status ? ['from' => $locked->status?->value, 'to' => $status?->value] : null,
+                'student_number' => $locked->student_number !== $number ? ['from' => $locked->student_number, 'to' => $number] : null,
             ]);
 
             if ($changes === [] && ! $newCode) {
@@ -94,11 +109,12 @@ class SaveStudent
                 throw new DomainRuleViolation(__('This student already has marks in the :stage stage and cannot change stage.', ['stage' => $locked->stage->name()]), 'stage');
             }
 
-            if ($locked->student_number === null) {
+            if ($number === null) {
                 $this->assertFreeName($stage, $key, $locked->id);
             }
+            $this->assertFreeNumber($number, $locked->id);
 
-            $fields = ['full_name' => $name, 'name_key' => $key, 'stage' => $stage, 'section' => $section, 'status' => $status];
+            $fields = ['full_name' => $name, 'name_key' => $key, 'stage' => $stage, 'section' => $section, 'status' => $status, 'student_number' => $number];
 
             if ($newCode) {
                 if (Student::query()->where('code_digest', $digest)->whereKeyNot($locked->id)->exists()) {
@@ -109,6 +125,9 @@ class SaveStudent
             }
 
             $locked->forceFill($fields)->save();
+            if (isset($changes['stage']) || isset($changes['section'])) {
+                $this->approvals->releaseForNewcomer($actor, $locked);
+            }
 
             if ($changes !== []) {
                 $this->audit->record('grades.student_updated', $locked, [], $changes, actor: $actor);
@@ -164,9 +183,34 @@ class SaveStudent
         return [$name, $key, $section];
     }
 
+    private function validNumber(?string $number): ?string
+    {
+        $number = $number === null ? null : trim($number);
+        if ($number === null || $number === '') {
+            return null;
+        }
+        if (mb_strlen($number) > 40) {
+            throw new DomainRuleViolation(__('The student number is longer than :max characters.', ['max' => 40]), 'number');
+        }
+
+        return $number;
+    }
+
+    private function assertFreeNumber(?string $number, ?int $exceptId): void
+    {
+        $taken = $number !== null && Student::query()
+            ->when($exceptId !== null, fn ($query) => $query->whereKeyNot($exceptId))
+            ->where('student_number', $number)
+            ->exists();
+
+        if ($taken) {
+            throw new DomainRuleViolation(__('Another student already has this number.'), 'number');
+        }
+    }
+
     /**
-     * Without a student number, a name is unique in its stage (the import
-     * matches on it; the database has the same partial unique index).
+     * Without a student number, a name is unique in its stage (the
+     * database has the same partial unique index).
      */
     private function assertFreeName(Stage $stage, string $key, ?int $exceptId): void
     {

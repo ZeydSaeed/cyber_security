@@ -1,48 +1,74 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { History } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import TeacherMarksController from '@/actions/App/Modules/Grades/Http/TeacherMarksController';
 import { useTranslations } from '@/hooks/use-translations';
-import MarkSheet from '../../components/mark-sheet';
-import WindowNotice from '../../components/window-notice';
+import MarkHistory from '../../components/mark-history';
+import type { HistoryRow } from '../../components/mark-history';
+import TeacherSectionWork from '../../components/teacher-section-work';
+import type { TeacherSectionData } from '../../components/teacher-section-work';
 import { placeLabel } from '../../place';
-import type { SheetStudent } from '../../types';
 
 /**
- * A teacher's sheet for one section (ADR-0034): editable while mark entry
- * is open, read-only after.
+ * A teacher's sheet for one section (ADR-0034): editable as the section's
+ * access allows (ADR-0037: mark entry open, the mode, each mark's editing
+ * time, or the department's grant), read-only otherwise, with a way to ask
+ * the department to change locked marks. Once every student has a mark,
+ * the teacher may approve them; approved marks lock (ADR-0041).
  */
 export default function TeacherSection({
-    open,
+    history,
     subject,
-    section,
-    students,
-}: {
-    open: boolean;
-    subject: { uuid: string; name: string; stage: number; divided: boolean };
-    section: string;
-    students: SheetStudent[];
+    ...data
+}: TeacherSectionData & {
+    /** Each mark's journey (ADR-0043): sent only once asked for. */
+    history?: HistoryRow[];
+    subject: {
+        uuid: string;
+        name: string;
+        stage: number;
+        divided: boolean;
+        max: number;
+    };
 }) {
     const { t } = useTranslations();
+    const [loading, setLoading] = useState(false);
+    const loadHistory = () =>
+        router.reload({
+            only: ['history'],
+            onStart: () => setLoading(true),
+            onFinish: () => setLoading(false),
+        });
 
     return (
         <>
             <Head
-                title={`${subject.name} · ${placeLabel(t, subject.stage, section, subject.divided)}`}
+                title={`${subject.name} · ${placeLabel(t, subject.stage, data.section, subject.divided)}`}
             />
-            <MarkSheet
+            <TeacherSectionWork
+                {...data}
                 subject={subject}
-                section={section}
-                students={students}
-                editable={open}
-                saveUrl={TeacherMarksController.save.url({
-                    subject: subject.uuid,
-                    section,
-                })}
                 back={{
-                    href: TeacherMarksController.subjects.url(),
-                    label: t('Your subjects'),
+                    href: TeacherMarksController.subject.url(subject.uuid),
+                    label: subject.name,
                 }}
-                notice={<WindowNotice open={open} />}
             />
+            {history ? (
+                <MarkHistory rows={history} />
+            ) : (
+                <div className="mt-8">
+                    <Button
+                        variant="outline"
+                        onClick={loadHistory}
+                        disabled={loading}
+                        data-test="show-history"
+                    >
+                        <History aria-hidden />
+                        {t("Show the marks' history")}
+                    </Button>
+                </div>
+            )}
         </>
     );
 }

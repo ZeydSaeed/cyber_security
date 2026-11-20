@@ -1,6 +1,11 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import {
     KeyRound,
+    Lock,
+    MessageSquareOff,
+    MessageSquareText,
+    LockOpen,
+    MonitorX,
     Pencil,
     Printer,
     RefreshCw,
@@ -8,6 +13,7 @@ import {
     UserPlus,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import AccessController from '@/actions/App/Modules/Grades/Http/AccessController';
 import StudentsAdminController from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
 import ConfirmAction from '@/components/confirm-action';
 import DataTable from '@/components/data-table/data-table';
@@ -42,6 +48,14 @@ type StudentRow = {
     section: string;
     /** 'external' (intisab), or null for a regular student. */
     status: string | null;
+    /** Sign-ins counted, the last one, and whether stopped (ADR-0037). */
+    logins: number;
+    last_login_at: string | null;
+    blocked: boolean;
+    /** May appeal when appeals are for chosen students (ADR-0043). */
+    appeal_allowed: boolean;
+    /** Remembered devices not expired (ADR-0038). */
+    devices: number;
 };
 
 const TABLE_PROPS = ['students', 'state'];
@@ -119,6 +133,31 @@ function StudentDialog({
                                     dir="auto"
                                 />
                                 <InputError message={errors.name} />
+                            </div>
+                            {/* Printed on the result card in place of the
+                                sign-in code (owner's decision, 2026-11-20). */}
+                            <div className="grid gap-2">
+                                <Label htmlFor="student-number">
+                                    {t('Student number')}
+                                </Label>
+                                <Input
+                                    id="student-number"
+                                    name="number"
+                                    defaultValue={student?.number ?? ''}
+                                    maxLength={40}
+                                    autoComplete="off"
+                                    dir="ltr"
+                                    aria-describedby="student-number-hint"
+                                />
+                                <p
+                                    id="student-number-hint"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    {t(
+                                        'Optional. Shown on the printed result card; it must not repeat.',
+                                    )}
+                                </p>
+                                <InputError message={errors.number} />
                             </div>
                             {student === null ? (
                                 <p className="text-sm text-muted-foreground">
@@ -249,14 +288,17 @@ export default function GradesStudents({
     students,
     state,
     columns,
-    canImport,
+    canManage,
     places,
+    appealScope = 'all',
 }: {
     students: { rows: StudentRow[] } & PageMeta;
     state: TableState;
     columns: ColumnPrefs;
-    canImport: boolean;
+    canManage: boolean;
     places: { stage: number; section: string; divided: boolean }[];
+    /** Every student may appeal, or only those allowed here (ADR-0043). */
+    appealScope?: 'all' | 'selected';
 }) {
     const { t } = useTranslations();
     const { visit, busy } = useTableNavigation(state, TABLE_PROPS);
@@ -320,6 +362,22 @@ export default function GradesStudents({
             // Empty for a regular student (owner's request, 2026-11-16).
             cell: (s) => (s.status === 'external' ? t('External') : null),
         },
+        {
+            key: 'login_count',
+            header: t('Sign-ins'),
+            sortable: true,
+            className: 'text-center tabular-nums',
+            cell: (s) => (
+                <span data-test="student-logins">
+                    {s.logins}
+                    {s.blocked && (
+                        <span className="block text-xs text-destructive-text">
+                            {t('Stopped')}
+                        </span>
+                    )}
+                </span>
+            ),
+        },
     ];
 
     return (
@@ -358,7 +416,7 @@ export default function GradesStudents({
                     }
                     onClear={() => visit({ search: '', filters: {} })}
                 />
-                {canImport && (
+                {canManage && (
                     <Button
                         variant="outline"
                         size="sm"
@@ -372,7 +430,7 @@ export default function GradesStudents({
                 )}
                 {/* The code slips, on a page of their own (owner,
                     2026-11-17), as the teachers' page prints its slips. */}
-                {canImport && (
+                {canManage && (
                     <Button
                         variant="outline"
                         size="sm"
@@ -380,6 +438,7 @@ export default function GradesStudents({
                         asChild
                     >
                         <Link
+                            prefetch
                             href={StudentsAdminController.printMenu.url()}
                             data-test="print-students"
                         >
@@ -414,7 +473,7 @@ export default function GradesStudents({
                     filtered={filtered}
                     bordered
                     numberFrom={students.from ?? 1}
-                    actionsLabel={canImport ? t('Actions') : undefined}
+                    actionsLabel={canManage ? t('Actions') : undefined}
                     onClearFilters={() => visit({ search: '', filters: {} })}
                     onSort={(column) =>
                         visit({
@@ -427,7 +486,7 @@ export default function GradesStudents({
                         })
                     }
                     rowAction={
-                        canImport
+                        canManage
                             ? (student) => (
                                   <div className="flex flex-wrap justify-start gap-2">
                                       <Button
@@ -479,6 +538,93 @@ export default function GradesStudents({
                                               student.uuid,
                                           )}
                                       />
+                                      {student.devices > 0 && (
+                                          <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className={actionTone.warning}
+                                              onClick={() =>
+                                                  router.delete(
+                                                      AccessController.forgetStudentDevices.url(
+                                                          student.uuid,
+                                                      ),
+                                                      { preserveScroll: true },
+                                                  )
+                                              }
+                                              data-test="forget-student-devices"
+                                          >
+                                              <MonitorX aria-hidden />
+                                              {t('Forget the devices')}
+                                          </Button>
+                                      )}
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className={
+                                              student.blocked
+                                                  ? actionTone.success
+                                                  : actionTone.warning
+                                          }
+                                          onClick={() =>
+                                              router.put(
+                                                  AccessController.student.url(
+                                                      student.uuid,
+                                                  ),
+                                                  { blocked: !student.blocked },
+                                                  { preserveScroll: true },
+                                              )
+                                          }
+                                          data-test="toggle-student-access"
+                                      >
+                                          {student.blocked ? (
+                                              <LockOpen aria-hidden />
+                                          ) : (
+                                              <Lock aria-hidden />
+                                          )}
+                                          {student.blocked
+                                              ? t('Allow signing in')
+                                              : t('Stop signing in')}
+                                      </Button>
+                                      {appealScope === 'selected' && (
+                                          <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className={
+                                                  student.appeal_allowed
+                                                      ? actionTone.warning
+                                                      : actionTone.info
+                                              }
+                                              aria-pressed={
+                                                  student.appeal_allowed
+                                              }
+                                              onClick={() =>
+                                                  router.put(
+                                                      AccessController.studentAppeal.url(
+                                                          student.uuid,
+                                                      ),
+                                                      {
+                                                          allowed:
+                                                              !student.appeal_allowed,
+                                                      },
+                                                      { preserveScroll: true },
+                                                  )
+                                              }
+                                              data-test="toggle-student-appeal"
+                                          >
+                                              {student.appeal_allowed ? (
+                                                  <MessageSquareOff
+                                                      aria-hidden
+                                                  />
+                                              ) : (
+                                                  <MessageSquareText
+                                                      aria-hidden
+                                                  />
+                                              )}
+                                              {student.appeal_allowed
+                                                  ? t('Withdraw the appeal')
+                                                  : t('Allow an appeal')}
+                                          </Button>
+                                      )}
                                       <ConfirmAction
                                           trigger={
                                               <Button
