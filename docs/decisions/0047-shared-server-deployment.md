@@ -46,6 +46,19 @@ Changes the owner asked for on the same day:
   `permitopen="127.0.0.1:5433"`) and role `cyber_readonly`
   (`pg_read_all_data`, read-only transactions, 3 connections). Opened with
   `%USERPROFILE%\cyber_security-tunnel\open-tunnel.ps1` → 127.0.0.1:55433.
+- Data: the owner's local database (teachers, students, subjects, users,
+  audit) was copied to production on 2026-11-21. Production and the
+  owner's PC share `APP_KEY` and `AUDIT_HMAC_KEY` (no `GRADES_CODE_KEY`) so
+  codes, visible passwords and the audit chain read the same on both: an
+  accepted risk, the PC's `.env` now opens production data.
+- Sync down: `sync-from-production.ps1` (same folder) replaces the local
+  database with production through the tunnel, after saving the local one
+  to `D:\Projects\cyber_security\Backup\local-before-sync`. Never upward.
+- Off-server copies: `stage-backup.sh` (timer 02:20 UTC) puts the newest
+  set in the outbox of `cyber_backup_pull` (key limited to
+  `sftp-server -R`); the PC's task "cyber_security backup pull" (10:00 and
+  at log-on) fetches it into `D:\Projects\cyber_security\Backup` (ignored
+  by git), checks each checksum against the manifest, keeps 30.
 
 PostgreSQL 16, not 18: adding the PGDG repository would let unattended
 upgrades move EXAMIS's PostgreSQL 16 packages.
