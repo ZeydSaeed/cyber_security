@@ -46,6 +46,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 use ReflectionMethod;
 use RuntimeException;
 use Throwable;
@@ -85,6 +87,9 @@ class FlowCheck extends Command
 
     private User $owner;
 
+    /** Seeded, so a run can be repeated with the same --seed. */
+    private Randomizer $random;
+
     /** @var array<string, array{ok: int, failed: int}> */
     private array $tally = [];
 
@@ -117,7 +122,7 @@ class FlowCheck extends Command
             return self::FAILURE;
         }
         $this->owner = $owner;
-        mt_srand((int) $this->option('seed'));
+        $this->random = new Randomizer(new Mt19937((int) $this->option('seed')));
 
         $before = $this->untouchable();
         DB::beginTransaction();
@@ -218,7 +223,7 @@ class FlowCheck extends Command
         // Most sections approved by their teacher.
         $approved = [];
         foreach ($rows as $row) {
-            if ($this->studentsOf($row->subject->stage, $row->section) === [] || mt_rand(1, 100) > 85) {
+            if ($this->studentsOf($row->subject->stage, $row->section) === [] || $this->random->getInt(1, 100) > 85) {
                 continue;
             }
             try {
@@ -254,8 +259,8 @@ class FlowCheck extends Command
         $notes = ['يحتاج إلى متابعة في الحضور.', 'متميز ومشارك في المحاضرات.', 'تأخر في تسليم الواجبات.', 'ملتزم ومنضبط.'];
         $behaviours = Behaviour::cases();
         foreach (Student::query()->orderBy('id')->get() as $student) {
-            if (mt_rand(1, 8) === 1) {
-                app(ManageResults::class)->note($this->owner, $student, Period::Month1, $behaviours[mt_rand(0, count($behaviours) - 1)], $notes[mt_rand(0, count($notes) - 1)]);
+            if ($this->random->getInt(1, 8) === 1) {
+                app(ManageResults::class)->note($this->owner, $student, Period::Month1, $behaviours[$this->random->getInt(0, count($behaviours) - 1)], $notes[$this->random->getInt(0, count($notes) - 1)]);
                 $this->facts['students with notes'] = ($this->facts['students with notes'] ?? 0) + 1;
             }
         }
@@ -266,12 +271,12 @@ class FlowCheck extends Command
     /** A mark around 68 out of 100 (scaled to the subject), one in 25 absent. */
     private function madeUpMark(int $max): Mark
     {
-        if (mt_rand(1, 25) === 1) {
+        if ($this->random->getInt(1, 25) === 1) {
             return Mark::absent();
         }
         // Box-Muller.
-        $u = max(1e-9, mt_rand() / mt_getrandmax());
-        $v = mt_rand() / mt_getrandmax();
+        $u = max(1e-9, $this->random->nextFloat());
+        $v = $this->random->nextFloat();
         $value = 68 + 16 * sqrt(-2 * log($u)) * cos(2 * M_PI * $v);
 
         return Mark::of((int) max(0, min($max, round($value * $max / 100))), $max);
@@ -785,12 +790,12 @@ class FlowCheck extends Command
 
         $moves = ['open', 'close', 'publish all', 'hide all', 'publish one', 'hide one', 'publish several'];
         for ($step = 0; $step < 300; $step++) {
-            $move = $moves[mt_rand(0, count($moves) - 1)];
-            [$stage, $section] = $places[mt_rand(0, count($places) - 1)];
+            $move = $moves[$this->random->getInt(0, count($moves) - 1)];
+            [$stage, $section] = $places[$this->random->getInt(0, count($places) - 1)];
             $key = "{$stage->value}|{$section->value}";
             $several = [];
             foreach ($places as $place) {
-                if (mt_rand(0, 1) === 1) {
+                if ($this->random->getInt(0, 1) === 1) {
                     $several[] = $place;
                 }
             }
@@ -957,9 +962,9 @@ class FlowCheck extends Command
         $students = Student::query()->orderBy('id')->get()->shuffle()->take(18);
         $appeals = [];
         foreach ($students as $student) {
-            $subjects = Subject::query()->where('stage', $student->stage->value)->inRandomOrder(mt_rand())->take(mt_rand(1, 2))->get();
+            $subjects = Subject::query()->where('stage', $student->stage->value)->inRandomOrder($this->random->nextInt())->take($this->random->getInt(1, 2))->get();
             foreach ($subjects as $subject) {
-                $appeals[] = app(ManageAppeals::class)->submit($student, $subject, Period::Month1, $reasons[mt_rand(0, count($reasons) - 1)]);
+                $appeals[] = app(ManageAppeals::class)->submit($student, $subject, Period::Month1, $reasons[$this->random->getInt(0, count($reasons) - 1)]);
             }
         }
         $this->facts['appeals'] = count($appeals);
