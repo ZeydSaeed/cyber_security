@@ -31,6 +31,22 @@ or setting, the firewall, and existing DNS records.
 | Deploy      | root-owned `/srv/cyber_security/bin/scripts`; `APP=cyber BASE=/srv/cyber_security SMOKE_HOST=admin.mahani-iq.com MIGRATE_ENV=/root/cyber_security/migrate.env deploy.sh <artifact>` |
 | Access      | SSH key `cyber_security_deploy` in root's authorized_keys (owner may remove it)                 |
 
+Changes the owner asked for on the same day:
+
+- Second factor not required (`PLATFORM_REQUIRE_SECOND_FACTOR=false`):
+  e-mail and password only. An accepted risk, the owner's decision.
+- Portal links in the links tab and printed sheets come from
+  `GRADES_TEACHER_LINK`, `GRADES_STUDENT_LINK`, `GRADES_ADMIN_LINK`.
+- Backups: age recipients in `.env`; the three private identities live on
+  the owner's PC only (`%USERPROFILE%\cyber_security-backup-keys`), never
+  on the server. `pg_stat_statements` is not installed in this cluster.
+  The pool allows `proc_open` (the web "copy of the database" runs
+  pg_dump); `exec`, `system` and the rest stay disabled.
+- Tunnel: SSH user `cyber_tunnel` (no shell; key restricted to
+  `permitopen="127.0.0.1:5433"`) and role `cyber_readonly`
+  (`pg_read_all_data`, read-only transactions, 3 connections). Opened with
+  `%USERPROFILE%\cyber_security-tunnel\open-tunnel.ps1` → 127.0.0.1:55433.
+
 PostgreSQL 16, not 18: adding the PGDG repository would let unattended
 upgrades move EXAMIS's PostgreSQL 16 packages.
 
@@ -38,8 +54,9 @@ upgrades move EXAMIS's PostgreSQL 16 packages.
 
 - Nginx is the one shared component; every change passes `nginx -t` first.
 - The application is tested on PostgreSQL 18 in CI but runs on 16.
-  Migrations pass on 16; `pg_dump --exclude-extension` (17+) is not
-  available, so in-app backups fail until that is resolved (open issue).
+  Migrations pass on 16; `pg_dump --exclude-extension` (17+) is given
+  only to pg_dump 17+ (BackupSettings::dumpExclusions); a backup set was
+  made on the server and decrypted and read on the owner's PC.
 - Baseline of EXAMIS before the change:
   `/root/cyber_security-baseline-20261121T090837Z.txt` on the server.
 
@@ -47,5 +64,5 @@ upgrades move EXAMIS's PostgreSQL 16 packages.
 
 Disable `cyber_security.target` and `php8.5-fpm`, remove the Nginx site
 link and reload, drop cluster `16/cyber`, remove `/srv/cyber_security`,
-`/etc/ssl/cyber_security`, the user `cyber`, the three DNS records, and the
+`/etc/ssl/cyber_security`, the users `cyber` and `cyber_tunnel`, the three DNS records, and the
 SSH key line. EXAMIS is unaffected by each step.
