@@ -9,6 +9,7 @@ use App\Platform\Backup\DatabaseExport;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -19,6 +20,11 @@ use Throwable;
  * plain SQL file on the server; "save" sends it to the browser, which asks
  * where to put it. A copy can be saved once, by the person who took it in
  * the same session. Both steps are audited.
+ *
+ * Each copy asks for the person's own password again (owner's request,
+ * 2026-11-21): the file holds every table unencrypted, so an open session
+ * alone is not enough. A wrong password is audited too; the route's
+ * throttle limits the guesses.
  */
 class BackupController extends Controller
 {
@@ -31,6 +37,16 @@ class BackupController extends Controller
 
     public function store(Request $request, DatabaseExport $export, AuditLogger $audit, #[CurrentUser] User $user): JsonResponse
     {
+        try {
+            $request->validate(['password' => ['required', 'string', 'current_password:web']]);
+        } catch (ValidationException $exception) {
+            if ($request->filled('password')) {
+                $audit->record('backup.password_refused', actor: $user);
+            }
+
+            throw $exception;
+        }
+
         try {
             $copy = $export->prepare();
         } catch (Throwable $exception) {

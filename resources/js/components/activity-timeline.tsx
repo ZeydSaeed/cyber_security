@@ -37,6 +37,8 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Database copy taken');
         case 'backup.database_downloaded':
             return t('Database copy saved');
+        case 'backup.password_refused':
+            return t('Database copy refused: wrong password');
         case 'access.role_assigned':
             return t('Role granted: :role', { role });
         case 'access.role_revoked':

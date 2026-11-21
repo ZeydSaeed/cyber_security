@@ -66,7 +66,7 @@ it('takes a copy, then saves it once, and audits both', function () {
     $admin = backupAdmin();
 
     $copy = $this->actingAs($admin)
-        ->postJson('/admin/backup')
+        ->postJson('/admin/backup', ['password' => 'password'])
         ->assertOk()
         ->assertJsonPath('name', 'cyber_security-test.sql')
         ->json();
@@ -82,7 +82,7 @@ it('takes a copy, then saves it once, and audits both', function () {
 });
 
 it('refuses a copy taken in another session', function () {
-    $copy = $this->actingAs(backupAdmin())->postJson('/admin/backup')->json();
+    $copy = $this->actingAs(backupAdmin())->postJson('/admin/backup', ['password' => 'password'])->json();
 
     $this->flushSession();
 
@@ -91,6 +91,31 @@ it('refuses a copy taken in another session', function () {
 
 it('refuses people without roles.manage', function () {
     $this->actingAs(User::factory()->withTwoFactor()->create())
-        ->postJson('/admin/backup')
+        ->postJson('/admin/backup', ['password' => 'password'])
         ->assertForbidden();
+});
+
+it('takes no copy without the person\'s own password, and audits a wrong one', function () {
+    $admin = backupAdmin();
+    $exported = fn () => AuditEvent::query()->where('action', 'backup.database_exported')->count();
+    $refused = fn () => AuditEvent::query()->where('action', 'backup.password_refused')->count();
+
+    $this->actingAs($admin)->postJson('/admin/backup')->assertUnprocessable()->assertJsonValidationErrors('password');
+    expect($refused())->toBe(0);
+
+    $this->postJson('/admin/backup', ['password' => 'not-my-password'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('password');
+
+    expect($exported())->toBe(0)
+        ->and($refused())->toBe(1)
+        ->and(AuditEvent::query()->where('action', 'backup.password_refused')->value('actor_id'))->toBe($admin->id);
+
+    // Another administrator's password is not this person's.
+    User::factory()->withTwoFactor()->create(['password' => 'other-secret-password']);
+    $this->postJson('/admin/backup', ['password' => 'other-secret-password'])->assertUnprocessable();
+    expect($exported())->toBe(0);
+
+    $this->postJson('/admin/backup', ['password' => 'password'])->assertOk();
+    expect($exported())->toBe(1);
 });
