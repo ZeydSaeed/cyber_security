@@ -19,4 +19,13 @@ return [
 
     // How many days of sign-ins and views the reports chart.
     'report_days' => 60,
+
+    // The sign-in links the links tab and the printed sheets give out
+    // (2026-11-21): each portal may have a host of its own. Empty: the
+    // portal's address on the host the page was opened on.
+    'links' => [
+        'teacher' => env('GRADES_TEACHER_LINK', ''),
+        'student' => env('GRADES_STUDENT_LINK', ''),
+        'admin' => env('GRADES_ADMIN_LINK', ''),
+    ],
 ];

@@ -1,4 +1,4 @@
-# ADR-0042: Deployment on the shared EXAMIS server
+# ADR-0047: Deployment on the shared EXAMIS server
 
 - Status: Accepted
 - Date: 2026-11-21
