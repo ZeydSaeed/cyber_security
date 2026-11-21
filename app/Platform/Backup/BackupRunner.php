@@ -91,7 +91,7 @@ class BackupRunner
 
             $dump = new Process([
                 BackupSettings::tool('pg_dump'), '--format=custom', '--no-owner', '--no-privileges',
-                '--exclude-extension=pg_stat_statements', '--snapshot='.$snapshotId,
+                ...BackupSettings::dumpExclusions(), '--snapshot='.$snapshotId,
                 '--host='.$connection['host'], '--port='.$connection['port'],
                 '--username='.config('platform.backup.database.username'), '--dbname='.$connection['database'],
             ], null, $environment);
@@ -115,7 +115,9 @@ class BackupRunner
      */
     private function tar(string $root, array $entries, string $class, string $path, bool $encrypted): void
     {
-        $archive = new Process([BackupSettings::tool('tar'), '-cf', '-', '-C', $root, ...$entries]);
+        // --dereference: on a server .env is a link to the shared one
+        // (ADR-0032); the set must hold the file, not the link.
+        $archive = new Process([BackupSettings::tool('tar'), '--dereference', '-cf', '-', '-C', $root, ...$entries]);
 
         $this->write($archive, $class, $path, $encrypted);
     }

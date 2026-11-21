@@ -3,6 +3,7 @@
 namespace App\Platform\Backup;
 
 use InvalidArgumentException;
+use Symfony\Component\Process\Process;
 
 /**
  * Backup settings from config/platform.php, checked before anything runs.
@@ -46,6 +47,40 @@ final class BackupSettings
     public static function tool(string $name): string
     {
         return (string) config("platform.backup.tools.{$name}");
+    }
+
+    /** @var array<string, int> pg_dump's major version, per tool path */
+    private static array $dumpMajor = [];
+
+    /**
+     * pg_dump options that leave out the pg_stat_statements extension.
+     * --exclude-extension exists from pg_dump 17; an older one (the
+     * shared server's PostgreSQL 16, ADR-0047) refuses it, so it is given
+     * only when the tool knows it. Without it, a database that has no such
+     * extension dumps the same.
+     *
+     * @return list<string>
+     */
+    public static function dumpExclusions(): array
+    {
+        $tool = self::tool('pg_dump');
+
+        if (! array_key_exists($tool, self::$dumpMajor)) {
+            $version = new Process([$tool, '--version']);
+            $version->run();
+            self::$dumpMajor[$tool] = self::majorVersion($version->getOutput());
+        }
+
+        return self::$dumpMajor[$tool] >= 17 ? ['--exclude-extension=pg_stat_statements'] : [];
+    }
+
+    /**
+     * The major version in `pg_dump --version` output ("pg_dump (PostgreSQL)
+     * 16.15 (Ubuntu …)"); 0 when there is none.
+     */
+    public static function majorVersion(string $output): int
+    {
+        return preg_match('/\(PostgreSQL\)\s+(\d+)/', $output, $match) === 1 ? (int) $match[1] : 0;
     }
 
     /**
