@@ -1164,5 +1164,8 @@
     "The copy could not be taken.": "تعذّر أخذ النسخة.",
     "The copy could not be saved. Take a new one.": "تعذّر حفظ النسخة. خذ نسخة جديدة.",
     "Database copy taken": "أُخذت نسخة من قاعدة البيانات",
-    "Database copy saved": "حُفِظت نسخة من قاعدة البيانات"
+    "Database copy saved": "حُفِظت نسخة من قاعدة البيانات",
+    "Enter your password to take a copy of the database.": "أدخل كلمة المرور لأخذ نسخة من قاعدة البيانات.",
+    "The password is incorrect.": "كلمة المرور غير صحيحة.",
+    "Database copy refused: wrong password": "رُفض أخذ نسخة من قاعدة البيانات: كلمة مرور خاطئة"
 }

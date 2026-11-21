@@ -1,8 +1,11 @@
 import { Head } from '@inertiajs/react';
 import { DatabaseBackup, HardDriveDownload, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
+import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -12,6 +15,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
 import { csrfToken } from '@/lib/csrf';
@@ -38,16 +42,28 @@ function size(bytes: number): string {
  * A plain copy of the database (owner's request, 2026-11-21): the server
  * takes it, then the browser's "Save as" window lets the owner choose the
  * drive and folder. Where that window is not offered (Firefox, Safari),
- * the file goes to the browser's downloads.
+ * the file goes to the browser's downloads. Each copy asks for the
+ * person's password first.
  */
 export default function Backup() {
     const { t } = useTranslations();
+    const [asking, setAsking] = useState(false);
+    const [password, setPassword] = useState('');
+    const [passwordError, setPasswordError] = useState<string | undefined>();
     const [taking, setTaking] = useState(false);
     const [saving, setSaving] = useState(false);
     const [copy, setCopy] = useState<Copy | null>(null);
 
-    const take = async () => {
+    const ask = () => {
+        setPassword('');
+        setPasswordError(undefined);
+        setAsking(true);
+    };
+
+    const take = async (event: FormEvent) => {
+        event.preventDefault();
         setTaking(true);
+        setPasswordError(undefined);
 
         try {
             const response = await fetch(backupStore.url(), {
@@ -55,16 +71,34 @@ export default function Backup() {
                 credentials: 'same-origin',
                 headers: {
                     Accept: 'application/json',
+                    'Content-Type': 'application/json',
                     'X-XSRF-TOKEN': csrfToken(),
                 },
+                body: JSON.stringify({ password }),
             });
+
+            if (response.status === 422) {
+                const body = (await response.json()) as {
+                    errors?: { password?: string[] };
+                };
+                setPasswordError(
+                    body.errors?.password?.[0] ??
+                        t('The password is incorrect.'),
+                );
+
+                return;
+            }
 
             if (!response.ok) {
                 throw new Error(`Copy not taken (${response.status}).`);
             }
 
+            setAsking(false);
+            setPassword('');
             setCopy((await response.json()) as Copy);
         } catch {
+            setAsking(false);
+            setPassword('');
             toast.error(t('The copy could not be taken.'));
         } finally {
             setTaking(false);
@@ -168,20 +202,84 @@ export default function Backup() {
                     </div>
                     <div>
                         <Button
-                            onClick={take}
+                            onClick={ask}
                             disabled={taking}
                             data-test="backup-take"
                         >
-                            {taking ? (
-                                <Spinner />
-                            ) : (
-                                <DatabaseBackup aria-hidden />
-                            )}
-                            {taking ? t('Taking the copy…') : t('Take a copy')}
+                            <DatabaseBackup aria-hidden />
+                            {t('Take a copy')}
                         </Button>
                     </div>
                 </section>
             </div>
+
+            <Dialog
+                open={asking}
+                onOpenChange={(open) => !open && !taking && setAsking(false)}
+            >
+                <DialogContent data-test="backup-password">
+                    <form onSubmit={take} className="flex flex-col gap-4">
+                        <DialogHeader>
+                            <DialogTitle>{t('Confirm password')}</DialogTitle>
+                            <DialogDescription>
+                                {t(
+                                    'Enter your password to take a copy of the database.',
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-2">
+                            <Label htmlFor="backup-password">
+                                {t('Password')}
+                            </Label>
+                            <PasswordInput
+                                id="backup-password"
+                                name="password"
+                                autoComplete="current-password"
+                                autoFocus
+                                required
+                                value={password}
+                                onChange={(event) =>
+                                    setPassword(event.target.value)
+                                }
+                                aria-invalid={passwordError !== undefined}
+                                aria-describedby={
+                                    passwordError
+                                        ? 'backup-password-error'
+                                        : undefined
+                                }
+                            />
+                            <InputError
+                                id="backup-password-error"
+                                message={passwordError}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setAsking(false)}
+                                disabled={taking}
+                            >
+                                {t('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={taking || password === ''}
+                                data-test="backup-confirm"
+                            >
+                                {taking ? (
+                                    <Spinner />
+                                ) : (
+                                    <DatabaseBackup aria-hidden />
+                                )}
+                                {taking
+                                    ? t('Taking the copy…')
+                                    : t('Take a copy')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             <Dialog
                 open={copy !== null}
