@@ -1147,5 +1147,22 @@
     "Teachers who may read the results": "المدرسون المسموح لهم برؤية النتائج",
     "Give how long appeals stay open, or the date they close.": "حدّد مدة بقاء الاعتراض مفتوحاً، أو تاريخ إغلاقه.",
     "Some teachers or sections are in the limited-time mode with no time of their own. Give them one, or keep a time here.": "بعض المدرسين أو الشعب في وضع التعديل لمدة محددة دون مدة خاصة بهم. حدّد لهم مدة، أو أبقِ مدة هنا.",
-    "This section's teacher has no editing time, nor has the department. Give one first.": "ليس لمدرس هذه الشعبة مدة تعديل، ولا للقسم. حدّد مدة أولاً."
+    "This section's teacher has no editing time, nor has the department. Give one first.": "ليس لمدرس هذه الشعبة مدة تعديل، ولا للقسم. حدّد مدة أولاً.",
+    "This system was designed and developed by Dr. Zeyd Saeed Rahm": "صُمِّم هذا النظام وطُوِّر من قِبَل الدكتور زيد سعيد رحم",
+    "Contact": "للتواصل",
+    "Database backup": "النسخ الاحتياطي",
+    "A complete copy of the database, saved on this computer where you choose.": "نسخة كاملة من قاعدة البيانات، تُحفَظ على هذه الحاسبة في المكان الذي تختاره.",
+    "The copy holds every table: teachers, subjects, students, marks, appeals, users and the audit log. It is a plain SQL file that opens in any editor and is restored with psql.": "تضم النسخة جميع الجداول: المدرسين والمواد والطلاب والدرجات والاعتراضات والمستخدمين وسجل التدقيق. وهي ملف SQL عادي يُفتح بأي محرر ويُستعاد بأداة psql.",
+    "The copy is not encrypted: anyone who opens the file reads all the data. Keep it on a drive only you use.": "النسخة غير مشفّرة: من يفتح الملف يقرأ جميع البيانات. احفظها على قرص لا يستخدمه غيرك.",
+    "Take a copy": "أخذ نسخة احتياطية",
+    "Taking the copy…": "جارٍ أخذ النسخة…",
+    "The copy is ready": "النسخة جاهزة",
+    "Choose the drive and the folder on this computer where it is saved.": "اختر القرص (البارتشن) والمجلد على هذه الحاسبة لحفظها.",
+    "Choose where to save": "اختيار مكان الحفظ",
+    "Database copy (SQL)": "نسخة قاعدة البيانات (SQL)",
+    "The copy was saved.": "حُفِظت النسخة.",
+    "The copy could not be taken.": "تعذّر أخذ النسخة.",
+    "The copy could not be saved. Take a new one.": "تعذّر حفظ النسخة. خذ نسخة جديدة.",
+    "Database copy taken": "أُخذت نسخة من قاعدة البيانات",
+    "Database copy saved": "حُفِظت نسخة من قاعدة البيانات"
 }

@@ -33,6 +33,10 @@ function actionLabel(t: Translate, entry: TimelineEntry): string {
             return t('Account deleted');
         case 'user.password_viewed':
             return t('Password shown to an administrator');
+        case 'backup.database_exported':
+            return t('Database copy taken');
+        case 'backup.database_downloaded':
+            return t('Database copy saved');
         case 'access.role_assigned':
             return t('Role granted: :role', { role });
         case 'access.role_revoked':

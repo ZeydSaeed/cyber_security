@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\DashboardController;
@@ -69,6 +70,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:60,1')
             ->whereNumber('user')
             ->name('users.password');
+
+        // A plain copy of the database, saved where the owner chooses
+        // (owner's request, 2026-11-21).
+        Route::get('backup', [BackupController::class, 'index'])->name('backup.index');
+        Route::post('backup', [BackupController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('backup.store');
+        Route::get('backup/{copy}', [BackupController::class, 'download'])
+            ->middleware('throttle:12,1')
+            ->whereUuid('copy')
+            ->name('backup.download');
     });
 });
 

@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import {
     BookOpen,
+    DatabaseBackup,
     ChartColumn,
     FileSpreadsheet,
     GraduationCap,
@@ -19,6 +20,7 @@ import {
 import academicReports from '@/actions/App/Modules/Grades/Http/ReportsController';
 import { index as resultsIndex } from '@/actions/App/Modules/Grades/Http/ResultsController';
 import { index as studentsIndex } from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
+import { index as backupIndex } from '@/routes/admin/backup';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { NavItem } from '@/types';
 
@@ -81,6 +83,14 @@ export function useMainNavigation(): NavItem[] {
             href: academicReports(),
             icon: ChartColumn,
             permission: 'grades.view_results',
+        },
+        // Under the reports, a plain copy of the database (owner's
+        // request, 2026-11-21).
+        {
+            title: 'Database backup',
+            href: backupIndex(),
+            icon: DatabaseBackup,
+            permission: 'roles.manage',
         },
     ];
 
