@@ -162,19 +162,18 @@ it('ignores a language that is not offered', function () {
         ->assertSee('<html lang="en" dir="ltr"', false);
 });
 
-it('passes only known themes to the page script', function () {
-    $this->withUnencryptedCookie('appearance', "dark';alert(1)//")
+it('paints the official light colours unless dark was chosen', function () {
+    // An unknown or old "system" value, or the device's own dark mode, is
+    // not followed: the page starts light (owner's decision, 2026-11-21).
+    foreach (["dark';alert(1)//", 'system'] as $cookie) {
+        $this->withUnencryptedCookie('appearance', $cookie)
+            ->get('/')
+            ->assertDontSee('alert(1)', false)
+            ->assertDontSee('prefers-color-scheme', false)
+            ->assertDontSee('class="dark"', false);
+    }
+
+    $this->withUnencryptedCookie('appearance', 'dark')
         ->get('/')
-        ->assertDontSee('alert(1)', false)
-        ->assertSee('const appearance = "system";', false);
-});
-
-it('lets the theme script run under the Content-Security-Policy', function () {
-    $response = $this->get('/');
-    $nonce = Vite::cspNonce();
-
-    expect($nonce)->not->toBe('')
-        ->and($response->headers->get('Content-Security-Policy'))->toContain("'nonce-{$nonce}'");
-
-    $response->assertSee('<script nonce="'.$nonce.'">', false);
+        ->assertSee('class="dark"', false);
 });

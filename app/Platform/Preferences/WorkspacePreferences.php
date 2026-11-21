@@ -20,7 +20,8 @@ final class WorkspacePreferences
 
     public const SESSION_KEY = 'platform.workspace';
 
-    public const APPEARANCES = ['light', 'dark', 'system'];
+    /** Light is the default; the device's own dark mode is not followed. */
+    public const APPEARANCES = ['light', 'dark'];
 
     public const DENSITIES = ['comfortable', 'compact'];
 

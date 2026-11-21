@@ -22,7 +22,7 @@ class HandleAppearance
         $saved = WorkspacePreferences::forRequest($request);
         $appearance = $saved['appearance'] ?? $request->cookie('appearance');
 
-        View::share('appearance', in_array($appearance, WorkspacePreferences::APPEARANCES, true) ? $appearance : 'system');
+        View::share('appearance', in_array($appearance, WorkspacePreferences::APPEARANCES, true) ? $appearance : 'light');
         View::share('density', $saved['density'] ?? 'comfortable');
 
         return $next($request);
