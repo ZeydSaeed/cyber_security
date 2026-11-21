@@ -4,6 +4,7 @@ use App\Platform\Backup\BackupSettings;
 use App\Platform\Backup\Pipe;
 use App\Platform\Backup\RestoreDrill;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
 /*
@@ -147,3 +148,13 @@ it('restores to another database server when one is configured, else to the appl
     expect(config('database.connections.'.RestoreDrill::CONNECTION.'.host'))->toBe('recovery-host.internal')
         ->and(config('database.connections.'.RestoreDrill::CONNECTION.'.port'))->toBe('5433');
 });
+
+it('leaves out pg_stat_statements only with a pg_dump that knows --exclude-extension (17+)', function () {
+    expect(BackupSettings::majorVersion('pg_dump (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)'))->toBe(16)
+        ->and(BackupSettings::majorVersion("pg_dump (PostgreSQL) 18.1\n"))->toBe(18)
+        ->and(BackupSettings::majorVersion('not pg_dump'))->toBe(0);
+
+    // The local pg_dump, whichever it is, gets the option only from 17.
+    $major = BackupSettings::majorVersion((string) (new Process([BackupSettings::tool('pg_dump'), '--version']))->mustRun()->getOutput());
+    expect(BackupSettings::dumpExclusions())->toBe($major >= 17 ? ['--exclude-extension=pg_stat_statements'] : []);
+})->skip(fn () => ! (new ExecutableFinder)->find(config('platform.backup.tools.pg_dump')), 'pg_dump is not installed here');

@@ -10,6 +10,7 @@ use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\Queries\AccessBoard;
 use App\Modules\Grades\Application\Queries\AppealCounts;
 use App\Modules\Grades\Application\Queries\GradesBoard;
+use App\Modules\Grades\Application\Queries\PortalLinks;
 use App\Modules\Grades\Application\TeacherCodes;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
@@ -60,9 +61,9 @@ class GradesAdminController
             'resultSettings' => $canManage ? self::resultSettings(GradeSettings::current()) : null,
             // Students' appeals at a glance (appeals tab, 2026-11-20).
             'appealCounts' => $canManage ? AppealCounts::for(Period::Month1) : null,
-            'teacherLink' => route('grades.teacher.login'),
-            'studentLink' => route('grades.student.login'),
-            'adminLink' => route('grades.admin.overview'),
+            'teacherLink' => PortalLinks::teacher(),
+            'studentLink' => PortalLinks::student(),
+            'adminLink' => PortalLinks::admin(),
             'canManage' => $canManage,
         ]);
     }
@@ -228,7 +229,7 @@ class GradesAdminController
         $audit->record('grades.teacher_codes_viewed', null, ['printed' => true], actor: $user);
 
         return Inertia::render('modules/grades/pages/print/teachers', [
-            'teacherLink' => route('grades.teacher.login'),
+            'teacherLink' => PortalLinks::teacher(),
             'teachers' => array_values($teachers->map(fn (Teacher $teacher): array => [
                 'uuid' => $teacher->uuid,
                 'name' => $teacher->name,

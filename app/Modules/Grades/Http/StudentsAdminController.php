@@ -5,6 +5,7 @@ namespace App\Modules\Grades\Http;
 use App\Models\User;
 use App\Modules\Grades\Application\Actions\IssueStudentCodes;
 use App\Modules\Grades\Application\Actions\SaveStudent;
+use App\Modules\Grades\Application\Queries\PortalLinks;
 use App\Modules\Grades\Application\StudentCodes;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
@@ -152,7 +153,7 @@ class StudentsAdminController
             'stage' => $stage->value,
             'section' => $section->value,
             'divided' => $stage->isDivided(),
-            'studentLink' => route('grades.student.login'),
+            'studentLink' => PortalLinks::student(),
             'students' => array_values($students->map(fn (Student $student): array => [
                 'name' => $student->full_name,
                 'number' => $student->student_number,

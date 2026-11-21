@@ -94,6 +94,22 @@ describe('set-up', function () {
         $this->put('/admin/window', ['status' => 'ajar'])->assertSessionHasErrors('status');
     });
 
+    it('gives out each portal\'s configured address, or its route on this host', function () {
+        config()->set('grades.links', [
+            'teacher' => 'https://teachers.example.org',
+            'student' => 'https://learn.example.org',
+            'admin' => '',
+        ]);
+
+        $this->actingAs($this->owner)->get('/admin')->assertInertia(fn (Assert $page) => $page
+            ->where('teacherLink', 'https://teachers.example.org')
+            ->where('studentLink', 'https://learn.example.org')
+            ->where('adminLink', route('grades.admin.overview')));
+
+        $this->get('/admin/teachers/print')->assertInertia(fn (Assert $page) => $page
+            ->where('teacherLink', 'https://teachers.example.org'));
+    });
+
     it('adds a teacher, refuses a weak code beside its field, and changes name, code and access', function () {
         $this->actingAs($this->owner)->from('/admin/teachers')
             ->post('/admin/teachers', ['name' => 'Huda Karim', 'code' => 'short'])

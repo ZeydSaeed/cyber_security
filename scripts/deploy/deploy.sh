@@ -20,6 +20,7 @@
 #
 # Settings (environment): APP (template), BASE (/srv/$APP), PHP_VERSION
 # (8.5), SMOKE_HOST (the site's host name), KEEP (5), MIGRATE (1),
+# MIGRATE_ENV (owner credentials for migrations; none: the .env role),
 # RELOAD (systemctl reload php$PHP_VERSION-fpm).
 set -euo pipefail
 
@@ -74,7 +75,16 @@ ln -sfn "$BASE/shared/.env" "$RELEASE/.env"
 chown -R "$APP:$APP" "$RELEASE"
 
 if [ "$MIGRATE" = 1 ]; then
-    artisan "$RELEASE" migrate --force
+    # Migrations run as the schema owner (ADR-0012) when MIGRATE_ENV names
+    # a root-only file with its DB_USERNAME and DB_PASSWORD. Real environment
+    # variables win over .env, and only this subshell has them: the caches
+    # below are built with the application's own role.
+    if [ -n "${MIGRATE_ENV:-}" ]; then
+        # shellcheck source=/dev/null
+        (set -a && . "$MIGRATE_ENV" && set +a && artisan "$RELEASE" migrate --force)
+    else
+        artisan "$RELEASE" migrate --force
+    fi
 fi
 for cache in config:cache route:cache view:cache event:cache; do
     artisan "$RELEASE" "$cache" > /dev/null

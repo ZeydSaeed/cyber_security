@@ -56,3 +56,7 @@ yarn-error.log
 /dist
 /again
 /RELEASE.json
+
+# Daily copies of the production backups (encrypted), pulled by the
+# owner's scheduled task (ADR-0047). Never committed.
+/Backup/

@@ -42,7 +42,7 @@ class DatabaseExport
 
         $dump = new Process([
             BackupSettings::tool('pg_dump'), '--format=plain', '--encoding=UTF8',
-            '--no-owner', '--no-privileges', '--exclude-extension=pg_stat_statements',
+            '--no-owner', '--no-privileges', ...BackupSettings::dumpExclusions(),
             '--host='.$connection['host'], '--port='.$connection['port'],
             '--username='.$username, '--dbname='.$connection['database'],
             '--file='.$path,
