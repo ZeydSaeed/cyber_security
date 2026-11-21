@@ -221,7 +221,7 @@ for (const locale of ['ar', 'en']) {
                 .check();
             await page
                 .locator('button', {
-                    hasText: locale === 'ar' ? 'حسب النظام' : 'System',
+                    hasText: locale === 'ar' ? 'فاتح' : 'Light',
                 })
                 .click();
             await page.waitForTimeout(300);

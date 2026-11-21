@@ -12,7 +12,7 @@ export type WorkspacePreferences = {
 
 type Changes = Partial<{
     locale: string;
-    appearance: 'light' | 'dark' | 'system';
+    appearance: 'light' | 'dark';
     density: WorkspacePreferences['density'];
     shortcuts: boolean;
 }>;

@@ -1,21 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ \App\Platform\Http\Middleware\SetLocale::direction() }}" data-density="{{ $density ?? 'comfortable' }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ \App\Platform\Http\Middleware\SetLocale::direction() }}" data-density="{{ $density ?? 'comfortable' }}" @class(['dark' => ($appearance ?? 'light') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-
-        {{-- Applies the system dark mode before the first paint. Carries the
-             request's nonce: the Content-Security-Policy blocks any other
-             inline script (ADR-0016). --}}
-        <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
-            (function() {
-                const appearance = @json($appearance ?? 'system');
-
-                if (appearance === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.classList.add('dark');
-                }
-            })();
-        </script>
 
         {{-- The page background before the stylesheet arrives: generated with
              the palette (scripts/design-system/palette.mjs). --}}
