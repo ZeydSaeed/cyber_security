@@ -2,7 +2,6 @@
 
 use App\Platform\Localization\Translations;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Vite;
 
 /*
 | Interface languages (ADR-0024): every string has an Arabic translation,
