@@ -8,16 +8,15 @@ use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\SaveSubject;
 use App\Modules\Grades\Application\Actions\SaveTeacher;
 use App\Modules\Grades\Application\Queries\AccessBoard;
+use App\Modules\Grades\Application\Queries\AppealCounts;
 use App\Modules\Grades\Application\Queries\GradesBoard;
 use App\Modules\Grades\Application\TeacherCodes;
-use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Domain\TeachingKind;
 use App\Modules\Grades\Domain\WindowStatus;
-use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeSettings;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
@@ -60,7 +59,7 @@ class GradesAdminController
             // What a result says and shows (ADR-0039).
             'resultSettings' => $canManage ? self::resultSettings(GradeSettings::current()) : null,
             // Students' appeals at a glance (appeals tab, 2026-11-20).
-            'appealCounts' => $canManage ? self::appealCounts() : null,
+            'appealCounts' => $canManage ? AppealCounts::for(Period::Month1) : null,
             'teacherLink' => route('grades.teacher.login'),
             'studentLink' => route('grades.student.login'),
             'adminLink' => route('grades.admin.overview'),
@@ -90,34 +89,6 @@ class GradesAdminController
             // Teachers may answer appeals of their subjects (ADR-0044).
             'teacher_appeal_replies' => $settings->teacher_appeal_replies,
             'absence_flag' => $settings->absence_flag,
-        ];
-    }
-
-    /**
-     * The appeals of this period by status, and who answered them.
-     *
-     * @return array{pending: int, accepted: int, rejected: int, by_teacher: int, by_department: int}
-     */
-    private static function appealCounts(): array
-    {
-        $byStatus = GradeAppeal::query()
-            ->where('period', Period::Month1->value)
-            ->selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-        $answered = GradeAppeal::query()
-            ->where('period', Period::Month1->value)
-            ->where('status', '!=', AppealStatus::Pending->value)
-            ->selectRaw('count(decided_by_teacher_id) as by_teacher, count(*) as total')
-            ->first();
-        $byTeacher = (int) ($answered->by_teacher ?? 0);
-
-        return [
-            'pending' => (int) ($byStatus[AppealStatus::Pending->value] ?? 0),
-            'accepted' => (int) ($byStatus[AppealStatus::Accepted->value] ?? 0),
-            'rejected' => (int) ($byStatus[AppealStatus::Rejected->value] ?? 0),
-            'by_teacher' => $byTeacher,
-            'by_department' => (int) ($answered->total ?? 0) - $byTeacher,
         ];
     }
 

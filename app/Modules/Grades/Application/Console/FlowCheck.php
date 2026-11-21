@@ -11,6 +11,7 @@ use App\Modules\Grades\Application\Actions\ManageResults;
 use App\Modules\Grades\Application\Actions\PublishResults;
 use App\Modules\Grades\Application\Actions\RequestEdit;
 use App\Modules\Grades\Application\Actions\SaveMarks;
+use App\Modules\Grades\Application\Queries\AppealCounts;
 use App\Modules\Grades\Application\Queries\GradesBoard;
 use App\Modules\Grades\Application\Queries\ResultSheets;
 use App\Modules\Grades\Application\SectionAccess;
@@ -27,7 +28,6 @@ use App\Modules\Grades\Domain\StudentAccess;
 use App\Modules\Grades\Domain\TeacherAccess;
 use App\Modules\Grades\Domain\TeacherResults;
 use App\Modules\Grades\Domain\WindowStatus;
-use App\Modules\Grades\Http\GradesAdminController;
 use App\Modules\Grades\Models\GradeAppeal;
 use App\Modules\Grades\Models\GradeEditRequest;
 use App\Modules\Grades\Models\GradeMark;
@@ -48,7 +48,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
-use ReflectionMethod;
 use RuntimeException;
 use Throwable;
 
@@ -1030,7 +1029,7 @@ class FlowCheck extends Command
 
     private function checkAppealCounts(string $when): void
     {
-        $counts = (new ReflectionMethod(GradesAdminController::class, 'appealCounts'))->invoke(null);
+        $counts = AppealCounts::for(Period::Month1);
         $raw = fn (string $status): int => DB::table('grade_appeals')->where('period', Period::Month1->value)->where('status', $status)->count();
         $answered = DB::table('grade_appeals')->where('period', Period::Month1->value)->where('status', '!=', 'pending');
         $this->check('control panel', "{$when}: appeal tiles", [
