@@ -22,6 +22,8 @@ export type ResultSettings = {
     teacher_view: Record<string, boolean>;
     /** Minutes to appeal after publication; null: no time (ADR-0043). */
     appeal_minutes: number | null;
+    /** Appeals open no earlier than this; null: at publication. */
+    appeal_from: string | null;
     /** When appeals close at the latest; null: no date. */
     appeal_until: string | null;
     /** Every student, or only those allowed on the Students page. */

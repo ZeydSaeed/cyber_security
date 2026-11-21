@@ -280,13 +280,17 @@ describe('the student\'s card', function () {
     });
 
     it('takes the appeal time and date from the page', function () {
-        // From the "Students" box of the settings (ADR-0044).
+        // From the appeals tab of the settings (2026-11-20).
         $this->actingAs($this->owner)->put('/admin/results/student-view', [
-            'options' => ['total', 'appeals', 'absences'],
+            'options' => ['total', 'absences'],
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($this->owner)->put('/admin/results/appeals', [
+            'enabled' => '1',
             'appeal_days' => 1,
             'appeal_hours' => 12,
             'appeal_until' => '2026-12-05T18:00:00.000Z',
             'appeal_scope' => 'selected',
+            'answered_by' => 'department',
         ])->assertSessionHasNoErrors();
 
         $settings = GradeSettings::current();

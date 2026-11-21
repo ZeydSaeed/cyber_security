@@ -105,6 +105,30 @@ for (const locale of ['ar', 'en']) {
             ).toBeVisible();
         });
 
+        test('every page but the dashboard has a Close button back to it', async ({
+            page,
+        }) => {
+            await open(page, locale, '/admin');
+            await expect(page.locator('[data-test="close-page"]')).toHaveCount(
+                0,
+            );
+
+            for (const path of [
+                '/admin/users',
+                '/settings/profile',
+                '/admin?tab=window',
+            ]) {
+                await open(page, locale, path);
+                const close = page.locator('[data-test="close-page"]');
+                await expect(close, path).toBeVisible();
+                await expect(close).toHaveText(
+                    locale === 'ar' ? 'إغلاق' : 'Close',
+                );
+                await close.click();
+                await expect(page).toHaveURL(/\/admin$/);
+            }
+        });
+
         test('Esc closes the search and gives focus back', async ({ page }) => {
             await open(page, locale, '/admin');
             // Focus on a control first, which must have it again after Esc.

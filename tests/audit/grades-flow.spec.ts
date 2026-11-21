@@ -302,30 +302,31 @@ test('1. the owner completes the staff and the students to 100', async ({
         expect(pupil.code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
     }
 
-    // What students see: rank, grades and absences, appeals for a day,
-    // answered by the teachers too.
+    // What students see: rank, grades and absences.
     await visit(page, '/admin?tab=students');
     const view = page.locator('[data-test="student-view"]');
-    for (const option of [
-        'rank',
-        'mark_grade',
-        'overall_grade',
-        'absences',
-        'appeals',
-    ]) {
+    for (const option of ['rank', 'mark_grade', 'overall_grade', 'absences']) {
         const box = view.locator(`[data-test="option-${option}"]`);
         if ((await box.getAttribute('aria-checked')) !== 'true') {
             await box.click();
         }
     }
-    await page.locator('input[name="appeal_days"]').fill('1');
-    await page.locator('[data-test="appeal-scope"]').selectOption('all');
-    const replies = page.locator('[data-test="teacher-appeal-replies"]');
-    if ((await replies.getAttribute('aria-checked')) !== 'true') {
-        await replies.click();
-    }
     await view.locator('[data-test="save-student-view"]').click();
     await expect(page.getByText('تم حفظ ما يراه الطالب.')).toBeVisible();
+
+    // Appeals, on their own tab (2026-11-20): for a day, answered by the
+    // subject's teacher.
+    await visit(page, '/admin?tab=appeals');
+    const appeals = page.locator('[data-test="appeal-settings"]');
+    const enabled = appeals.locator('[data-test="appeals-enabled"]');
+    if ((await enabled.getAttribute('aria-checked')) !== 'true') {
+        await enabled.click();
+    }
+    await appeals.locator('input[name="appeal_days"]').fill('1');
+    await appeals.locator('[data-test="appeal-scope"]').selectOption('all');
+    await appeals.locator('[data-test="answered-by-teacher"]').check();
+    await appeals.locator('[data-test="save-appeal-settings"]').click();
+    await expect(page.getByText('حُفظت إعدادات الاعتراضات.')).toBeVisible();
 
     await page.context().close();
 });
@@ -563,25 +564,47 @@ test('3. the owner allows a change, closes entry and checks every result', async
     );
     await expect(page.locator('body')).not.toContainText(seeded.code);
 
-    // Publish section by section. Each asks first and says what is not
-    // ready: in 1A the teacher's change under the grant cleared one
-    // approval (step 3), every other section is complete and approved.
+    // Publish section by section (owner's request, 2026-11-20): tick one,
+    // publish; the dialog lists what is not ready. In 1A the teacher's
+    // change under the grant cleared one approval (step 3); every other
+    // section is complete and approved. The last one publishes them all.
     await visit(page, '/admin?tab=window');
-    const buttons = page.locator('[data-test="publish-section"]');
-    await expect(buttons).toHaveCount(5);
-    for (let i = 0; i < 5; i++) {
-        await buttons.nth(i).click();
-        const dialog = page.locator('[data-slot="confirm-action"]');
+    const stagesBoxes = page.locator('[data-test="publish-stage"]');
+    const ticks = [
+        stagesBoxes.nth(0).locator('[data-test="publish-stage-box"]'),
+        stagesBoxes.nth(1).locator('[data-test="publish-section-box"]').nth(0),
+        stagesBoxes.nth(1).locator('[data-test="publish-section-box"]').nth(1),
+        stagesBoxes.nth(2).locator('[data-test="publish-section-box"]').nth(0),
+        stagesBoxes.nth(2).locator('[data-test="publish-section-box"]').nth(1),
+    ];
+    for (const [i, tick] of ticks.entries()) {
+        await tick.check();
+        await page.click('[data-test="show-shortages"]');
+        if (i === 0) {
+            await expect(
+                page.locator('[data-test="shortage-row"]'),
+            ).toHaveCount(1);
+            await expect(
+                page.locator('[data-test="shortage-row"]'),
+            ).toContainText('لم يعتمدها المدرّس');
+        }
+        await page.click('[data-test="publish"]');
+        const dialog = page.locator('[data-test="publish-dialog"]');
         await expect(dialog).toBeVisible();
         await expect(dialog).toContainText(
             i === 0
-                ? '1 من شعب المواد لم يعتمدها مدرّسها بعد.'
+                ? 'توجد 1 من شعب المواد غير مكتملة.'
                 : 'كل الدرجات مُدخلة ومعتمدة.',
         );
-        await dialog.locator('[data-test="confirm-action-button"]').click();
+        await dialog.locator('[data-test="publish-confirm"]').click();
         await expect(dialog).toBeHidden();
-        await expect(buttons.nth(i)).toHaveAttribute('aria-pressed', 'true');
+        if (i < ticks.length - 1) {
+            await expect(
+                page.locator('[data-test="section-published"]'),
+            ).toHaveCount(i + 1);
+        }
     }
+    await expect(page.locator('[data-test="unpublish"]')).toBeVisible();
     await page.context().close();
 });
 

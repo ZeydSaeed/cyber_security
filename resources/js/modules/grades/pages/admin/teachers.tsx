@@ -1,10 +1,10 @@
 import { Form, Head, router } from '@inertiajs/react';
 import {
-    KeyRound,
     Lock,
     LockOpen,
     Pencil,
     Printer,
+    RefreshCw,
     Trash2,
     UserPlus,
 } from 'lucide-react';
@@ -28,6 +28,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslations } from '@/hooks/use-translations';
 import { stageLabel } from '../../place';
+import { kindLabel } from '../../result-words';
+import { kindOf, teachesPractical, teachesTheory } from '../../types';
+import type { TeachingKind } from '../../types';
+import {
+    rowAction,
+    rowActions,
+    rowActionTone,
+} from '../../components/row-actions';
 
 type Teacher = {
     uuid: string;
@@ -48,8 +56,8 @@ type Subject = {
     sections: string[];
     /** Each section's teacher (a teacher's UUID, or null for none). */
     teachers: Record<string, string | null>;
-    /** How each section is taught: "theory", "practical" or not said. */
-    kinds: Record<string, 'theory' | 'practical' | null>;
+    /** How each section is taught: theory, practical, both, or not said. */
+    kinds: Record<string, TeachingKind | null>;
     /** Each section's assistant teacher (a teacher's UUID), if any. */
     assistants: Record<string, string | null>;
 };
@@ -117,9 +125,11 @@ function SubjectChoice({
 }
 
 /**
- * One section's box and, once ticked, how it is taught (theoretical or
- * practical) and the teacher's assistant, another teacher (owner's
- * request, 2026-11-18). Both are optional; an unticked box sends neither.
+ * One section's box and, once ticked, how it is taught and the teacher's
+ * assistant, another teacher (owner's request, 2026-11-18). The type is two
+ * boxes, theoretical and practical, either or both (owner's request,
+ * 2026-11-20); none ticked is "not stated". An unticked section sends
+ * neither.
  */
 function SectionChoice({
     subject,
@@ -140,6 +150,10 @@ function SectionChoice({
     const id = useId();
     const own = teacher !== null && subject.teachers[section] === teacher.uuid;
     const [checked, setChecked] = useState(own);
+    // Kept only for the teacher who had the section.
+    const given = own ? (subject.kinds[section] ?? null) : null;
+    const [theory, setTheory] = useState(teachesTheory(given));
+    const [practical, setPractical] = useState(teachesPractical(given));
     const holder = subject.teachers[section] ?? null;
     const taughtBy =
         holder !== null && holder !== teacher?.uuid ? nameOf(holder) : null;
@@ -167,25 +181,42 @@ function SectionChoice({
             </label>
             {checked && (
                 <div className="grid gap-2 ps-6" data-test="section-details">
-                    <div className="grid gap-1">
-                        <Label htmlFor={`${id}-kind`} className="text-xs">
+                    <fieldset className="grid gap-1" data-test="section-kind">
+                        <legend className="mb-1 text-xs font-medium">
                             {t('Type')}
-                        </Label>
-                        <select
-                            id={`${id}-kind`}
+                        </legend>
+                        <input
+                            type="hidden"
                             name={`${key}[kind]`}
-                            // Kept only for the teacher who had the section.
-                            defaultValue={
-                                own ? (subject.kinds[section] ?? '') : ''
-                            }
-                            className={selectClass}
-                            data-test="section-kind"
-                        >
-                            <option value="">{t('Not stated')}</option>
-                            <option value="theory">{t('Theoretical')}</option>
-                            <option value="practical">{t('Practical')}</option>
-                        </select>
-                    </div>
+                            value={kindOf(theory, practical) ?? ''}
+                        />
+                        <div className="flex flex-wrap gap-x-6 gap-y-1">
+                            <label className="flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={theory}
+                                    onChange={(event) =>
+                                        setTheory(event.target.checked)
+                                    }
+                                    className="size-4 accent-primary"
+                                    data-test="section-kind-theory"
+                                />
+                                {t('Theoretical')}
+                            </label>
+                            <label className="flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={practical}
+                                    onChange={(event) =>
+                                        setPractical(event.target.checked)
+                                    }
+                                    className="size-4 accent-primary"
+                                    data-test="section-kind-practical"
+                                />
+                                {t('Practical')}
+                            </label>
+                        </div>
+                    </fieldset>
                     <div className="grid gap-1">
                         <Label htmlFor={`${id}-assistant`} className="text-xs">
                             {t('Assistant teacher name')}
@@ -504,13 +535,13 @@ export default function GradesTeachers({
                     />
                 ) : (
                     <div
-                        className="overflow-x-auto rounded-xl border border-grid-line bg-card focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                        className="w-fit max-w-full overflow-x-auto rounded-xl border border-grid-line bg-card focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                         tabIndex={0}
                         role="region"
                         aria-label={t('Teachers')}
                     >
                         <table
-                            className="w-full min-w-[60rem] border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_th]:border [&_th]:border-grid-line"
+                            className="border-collapse border-hidden text-sm [&_td]:border [&_td]:border-grid-line [&_td]:whitespace-nowrap [&_th]:border [&_th]:border-grid-line [&_th]:whitespace-nowrap"
                             data-test="teachers"
                         >
                             <caption className="sr-only">
@@ -655,11 +686,9 @@ export default function GradesTeachers({
                                                     const kind =
                                                         subject.kinds[section];
 
-                                                    return kind === 'theory'
-                                                        ? t('Theoretical')
-                                                        : kind === 'practical'
-                                                          ? t('Practical')
-                                                          : '';
+                                                    return kind
+                                                        ? kindLabel(t, kind)
+                                                        : '';
                                                 },
                                             )}
                                         </td>
@@ -679,15 +708,15 @@ export default function GradesTeachers({
                                             )}
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            {/* Icon-only actions; the label is
-                                                the accessible name and the
-                                                hover hint. Each has its own
-                                                token colour. */}
-                                            <div className="flex flex-wrap gap-1.5">
+                                            {/* Icon-only actions with no
+                                                background (row-actions.ts);
+                                                the label is the accessible
+                                                name and the hover hint. */}
+                                            <div className={rowActions}>
                                                 <Button
-                                                    variant="outline"
+                                                    variant="ghost"
                                                     size="icon"
-                                                    className="size-8 text-primary"
+                                                    className={`${rowAction} ${rowActionTone.info}`}
                                                     aria-label={t('Edit')}
                                                     title={t('Edit')}
                                                     onClick={() =>
@@ -700,9 +729,9 @@ export default function GradesTeachers({
                                                 <ConfirmAction
                                                     trigger={
                                                         <Button
-                                                            variant="outline"
+                                                            variant="ghost"
                                                             size="icon"
-                                                            className="size-8 text-info-text"
+                                                            className={`${rowAction} ${rowActionTone.warning}`}
                                                             aria-label={t(
                                                                 'New code',
                                                             )}
@@ -711,7 +740,7 @@ export default function GradesTeachers({
                                                             )}
                                                             data-test="new-teacher-code"
                                                         >
-                                                            <KeyRound
+                                                            <RefreshCw
                                                                 aria-hidden
                                                             />
                                                         </Button>
@@ -731,17 +760,18 @@ export default function GradesTeachers({
                                                         teacher.uuid,
                                                     )}
                                                 />
-                                                {/* Shows the current state: an open
-                                                    lock (green) while signing in
-                                                    is allowed, a closed lock
-                                                    (amber) once it is stopped. */}
+                                                {/* Shows what a click does, as on
+                                                    the students' page: a closed
+                                                    lock (amber) stops signing
+                                                    in, an open one (green)
+                                                    allows it. */}
                                                 <Button
-                                                    variant="outline"
+                                                    variant="ghost"
                                                     size="icon"
-                                                    className={`size-8 ${
+                                                    className={`${rowAction} ${
                                                         teacher.active
-                                                            ? 'text-success-text'
-                                                            : 'text-warning-text'
+                                                            ? rowActionTone.warning
+                                                            : rowActionTone.success
                                                     }`}
                                                     aria-label={
                                                         teacher.active
@@ -777,17 +807,17 @@ export default function GradesTeachers({
                                                     data-test="toggle-teacher"
                                                 >
                                                     {teacher.active ? (
-                                                        <LockOpen aria-hidden />
-                                                    ) : (
                                                         <Lock aria-hidden />
+                                                    ) : (
+                                                        <LockOpen aria-hidden />
                                                     )}
                                                 </Button>
                                                 <ConfirmAction
                                                     trigger={
                                                         <Button
-                                                            variant="outline"
+                                                            variant="ghost"
                                                             size="icon"
-                                                            className="size-8 text-destructive-text"
+                                                            className={`${rowAction} ${rowActionTone.destructive}`}
                                                             aria-label={t(
                                                                 'Delete',
                                                             )}

@@ -24,6 +24,5 @@ class DashboardTest extends TestCase
 
         $this->get(route('dashboard'))->assertRedirect('/admin');
         $this->get('/notifications')->assertRedirect('/admin');
-        $this->get('/admin/reports')->assertRedirect('/admin');
     }
 }

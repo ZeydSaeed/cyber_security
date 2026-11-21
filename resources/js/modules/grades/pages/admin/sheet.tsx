@@ -59,7 +59,7 @@ export default function GradesSheet({
                     })}
                     back={{
                         href: GradesAdminController.overview.url(),
-                        label: t('Settings'),
+                        label: t('Control panel'),
                     }}
                     notice={
                         <>

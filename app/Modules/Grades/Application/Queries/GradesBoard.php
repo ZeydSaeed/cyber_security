@@ -27,7 +27,7 @@ final class GradesBoard
      *     window: array{open: bool, published: bool, opened_at: string|null, closed_at: string|null},
      *     expected_subjects: int,
      *     teachers: int,
-     *     stages: list<array{stage: int, divided: bool, students: array<string, int>, subjects: list<array{uuid: string, name: string, teachers: array<string, string|null>, sections: array<string, int>}>}>
+     *     stages: list<array{stage: int, divided: bool, students: array<string, int>, subjects: list<array{uuid: string, name: string, teachers: array<string, string|null>, sections: array<string, int>, approved: array<string, bool>}>}>
      * }
      */
     public function show(Period $period = Period::Month1): array

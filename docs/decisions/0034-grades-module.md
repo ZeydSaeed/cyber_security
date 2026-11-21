@@ -329,3 +329,112 @@ See `docs/evidence/grades-audit/2026-11-20-full-size-audit.md`.
   a confirmation that says how many marks are still missing (in how many
   sections) and how many subject sections their teacher has not approved,
   or that everything is entered and approved. Hiding does not ask.
+- **A section's type is two boxes, theoretical and practical.** Either or
+  both may be ticked; none is "not stated". `TeachingKind` gains `both`
+  ("Theoretical and practical"); PostgreSQL's check accepts it
+  (migration `2026_11_20_100000_teaching_kind_both`). The print slip ticks
+  both boxes for such a section.
+- **Publishing chooses its stages and sections, then shows what is
+  missing.** The window tab ticks stages and sections (several, or all;
+  a published section shows "Published" with Hide). A button lists, for
+  what is ticked, each subject section with no teacher, with marks still
+  missing, or not approved, with its subject, teacher and section.
+  Publishing opens a dialog with that list; with shortages its button is
+  "Publish anyway", and Cancel changes nothing. Several sections publish
+  together in one transaction (`PUT /admin/publish/sections`,
+  `PublishResults::sections`); all of them publishes the whole period.
+- **"Settings" is called "Control panel"; academic reports at
+  /admin/reports.** The sidebar's last item opens the academic reports
+  (`ReportsController`, `AcademicReports`, `ReportAdvice`): results by
+  section and stage (passed, failed, exempt, incomplete, rates, means),
+  the top ten of each stage, subjects compared within their stage,
+  teachers' progress and sign-ins, students' sign-ins and views, appeals
+  with their teachers and answers, the marks' dates and corrections, and
+  recommendations by fixed rules. Read with grades.view_results; opening
+  it is audited (`grades.reports_viewed`). The platform's old redirect of
+  /admin/reports is gone. Checked two ways: hand-worked data
+  (`ReportsCheckSeeder`, `AcademicReportsTest`) and an independent recount
+  (`php artisan grades:reports-check`).
+- **Students' appeals have a tab of their own; the control panel's cards
+  follow the owner's picture (2026-11-20).** Each card is a soft tile with
+  a faint border, a solid round badge, its label, a large number and a
+  line of state; a ninth tile colour (`tile-9`, `palette.json`) serves the
+  appeals. The appeals tab (`/admin?tab=appeals`, also linked from the
+  students' tab) shows the appeals by status in the picture's layout (a
+  bar by share, a legend, a card per status, and who answered), then
+  their settings, saved on their own (`PUT /admin/results/appeals`,
+  `ManageResults::appeals`, audited `grades.appeal_settings_changed`):
+  appeals on or off; who answers, the subject's teacher (on their sheet,
+  the department told and still able to answer) or the administration
+  alone; open from a date (`appeal_from`, migration
+  `2026_11_20_200000_appeal_opens_from`; empty: at publication), closed at
+  a date, and/or kept open for days, hours or minutes counted from when
+  they open (the earlier close applies); and who may appeal. "What the
+  student sees" no longer carries the appeals or the appeal box.
+- **The reports' figures as status boards** (owner's picture, 2026-11-20):
+  a bar split into the states' shares, a legend with each share in
+  words, and a soft card per state with a round icon, its name and its
+  number (`StatusBoard`). Its colours are the palette roles
+  `status-good`, `-wait`, `-bad`, `-info` and `-final` (each with
+  `-foreground` and `-soft`), chosen with the colour-blindness validator
+  for the bar's orders (worst adjacent ΔE 12.7 light, 16.4 dark) and
+  contrast-tested in pairs.json. Dark mode lets the amber go above the
+  validator's lightness band (0.83) to keep 3:1 on the dark card.
+
+## Amendment, 2026-11-21 (full data-flow audit, owner's request of 2026-11-20)
+
+See `docs/evidence/grades-flow/2026-11-21-flow-check.md`.
+
+- **`php artisan grades:flow-check`** fills the department as it stands
+  (every student gets a mark in every subject of their stage, entered by
+  the section's own teacher; approvals, edit requests, behaviour and
+  notes), then sets every value of every setting through the module's own
+  actions and compares each outcome with a rule worked out in the command
+  independently: pass and exemption percentages and grade bands (every
+  result recounted from the raw tables), what the student sees (each
+  option alone, all, none), what teachers see and when (off, once
+  published, always; each option; nothing, one section or all
+  published), the department's, a teacher's and a section's access with
+  mark entry, publication, approval, grant and editing time (3,600
+  combinations, each also tried as a real save), students' sign-in,
+  300 random moves of mark entry and publication, appeals (on/off, who
+  may, from, until, for how long, which section is published, at times
+  before, inside and after the window) and who answers them. The control
+  panel's figures and `grades:reports-check` are recounted after each
+  stage. Everything runs in one transaction and is rolled back; `--keep`
+  commits the fill and a final state (published, appeals open for seven
+  days, some answered by teachers, some by the department, some
+  waiting), never in production and only when every check passed. Users,
+  roles, teachers, subjects, assignments and students are hashed before
+  and after and must be unchanged. `FlowCheckCommandTest` runs it on a
+  small department.
+- **Defects found and fixed** (pinned in `FlowAuditFindingsTest`):
+    1. A teacher could answer an appeal of a section blocked for them
+       (`PUT /teacher/appeals/{uuid}` checked only that they teach it).
+       `ManageAppeals::answerAsTeacher` now refuses a blocked section or a
+       stopped teacher, as the sheets do.
+    2. Without "other subjects", a teacher's results page still sent the
+       figures that count every subject (absences, missing marks,
+       complete, passed, the absence flag, the section summary).
+       `ResultSheets::forTeacher` counts them over the subjects shown.
+    3. Publishing everything after a section had been published on its
+       own restarted that section's appeal time. `publishedAtFor` keeps the
+       earlier of the two moments.
+    4. A teacher or a section could be put in the limited-time mode with no
+       editing time anywhere, which then edited without a limit; and the
+       department's time could be cleared while such a teacher or section
+       relied on it. `ManageAccess` refuses all three.
+    5. Appeals could be switched on with neither a time nor a closing
+       date: the page said students may appeal, yet they never could.
+       `ManageResults::appeals` refuses it; the hint says so.
+    6. "Hide the results" (`PUT /admin/publish`, published false) did
+       nothing when only single sections were published, against its own
+       rule that hiding all hides them too. It now hides them.
+- **Left as is, for the owner to decide**: a department editing time
+  saved under "edit" or "limited time" is kept while the mode is
+  read-only or no access (by design, ManageAccess) and then still
+  applies to a teacher or section given "edit" individually, although
+  the page greys the field out in that mode with the hint that it is used
+  only with those two modes. The "out of" option hides the
+  maximum on the card only; the maximum is still sent (it is not
+  sensitive, and each subject's percentage implies it).

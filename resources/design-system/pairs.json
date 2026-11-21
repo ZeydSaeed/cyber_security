@@ -510,5 +510,155 @@
         "fg": "tile-8",
         "bg": "tile-8-soft",
         "min": 3
+    },
+    {
+        "fg": "tile-9-foreground",
+        "bg": "tile-9",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-9",
+        "bg": "card",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "tile-9-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "tile-9-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "tile-9",
+        "bg": "tile-9-soft",
+        "min": 3
+    },
+    {
+        "fg": "status-good-foreground",
+        "bg": "status-good",
+        "min": 4.5
+    },
+    {
+        "fg": "status-good",
+        "bg": "status-good-soft",
+        "min": 3
+    },
+    {
+        "fg": "status-good",
+        "bg": "card",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "status-good-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "status-good-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "status-wait-foreground",
+        "bg": "status-wait",
+        "min": 4.5
+    },
+    {
+        "fg": "status-wait",
+        "bg": "status-wait-soft",
+        "min": 3
+    },
+    {
+        "fg": "status-wait",
+        "bg": "card",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "status-wait-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "status-wait-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "status-bad-foreground",
+        "bg": "status-bad",
+        "min": 4.5
+    },
+    {
+        "fg": "status-bad",
+        "bg": "status-bad-soft",
+        "min": 3
+    },
+    {
+        "fg": "status-bad",
+        "bg": "card",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "status-bad-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "status-bad-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "status-info-foreground",
+        "bg": "status-info",
+        "min": 4.5
+    },
+    {
+        "fg": "status-info",
+        "bg": "status-info-soft",
+        "min": 3
+    },
+    {
+        "fg": "status-info",
+        "bg": "card",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "status-info-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "status-info-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "status-final-foreground",
+        "bg": "status-final",
+        "min": 4.5
+    },
+    {
+        "fg": "status-final",
+        "bg": "status-final-soft",
+        "min": 3
+    },
+    {
+        "fg": "status-final",
+        "bg": "card",
+        "min": 3
+    },
+    {
+        "fg": "foreground",
+        "bg": "status-final-soft",
+        "min": 4.5
+    },
+    {
+        "fg": "muted-foreground",
+        "bg": "status-final-soft",
+        "min": 4.5
     }
 ]

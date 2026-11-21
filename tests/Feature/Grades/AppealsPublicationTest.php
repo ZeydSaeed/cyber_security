@@ -115,6 +115,30 @@ describe('publishing one section', function () {
 
         $this->actingAs($this->owner)->get('/admin')->assertInertia(fn (Assert $page) => $page->where('window.sections_published', ['2|B']));
     });
+
+    it('publishes the ticked sections together, keeps one already out, and audits each new one', function () {
+        closeEntry($this);
+        app(PublishResults::class)->section($this->owner, Period::Month1, Stage::Second, Section::A, true);
+
+        $this->actingAs($this->owner)->put('/admin/publish/sections', ['places' => ['1|A', '2|A', '3|B']])->assertSessionHasNoErrors();
+
+        $this->get('/admin')->assertInertia(fn (Assert $page) => $page
+            ->where('window.published', false)
+            ->where('window.sections_published', fn ($places) => collect($places)->sort()->values()->all() === ['1|A', '2|A', '3|B']));
+        expect(AuditEvent::query()->where('action', 'grades.section_published')->count())->toBe(3);
+    });
+
+    it('publishes no section when one place is wrong, or while mark entry is open', function () {
+        closeEntry($this);
+        $this->actingAs($this->owner)->put('/admin/publish/sections', ['places' => ['2|A', '1|B']])->assertSessionHasErrors('publish');
+        $this->put('/admin/publish/sections', ['places' => ['2|A', 'x']])->assertSessionHasErrors('places.1');
+        $this->put('/admin/publish/sections', ['places' => []])->assertSessionHasErrors('places');
+
+        GradesFixtures::openWindow();
+        $this->put('/admin/publish/sections', ['places' => ['2|A']])->assertSessionHasErrors('publish');
+
+        $this->get('/admin')->assertInertia(fn (Assert $page) => $page->where('window.sections_published', []));
+    });
 });
 
 describe('appeals', function () {

@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslations } from '@/hooks/use-translations';
+import DesignerCredit from '../../components/designer-credit';
 
 /**
  * The link the owner sends to every teacher (ADR-0034): one field, the
@@ -89,6 +90,8 @@ export default function TeacherLogin({
                             {processing && <Spinner />}
                             {t('Continue')}
                         </Button>
+
+                        <DesignerCredit />
                     </>
                 )}
             </Form>

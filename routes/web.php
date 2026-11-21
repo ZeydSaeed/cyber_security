@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\DashboardController;
@@ -47,8 +48,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where(['table' => '[a-z-]+', 'view' => '[0-9]+'])
         ->name('tables.views.destroy');
 
-    // Reports: for those who may read the audit trail (ADR-0029).
-    Route::redirect('admin/reports', '/admin')->name('admin.reports');
+    // /admin/reports is the Grades module's academic reports since
+    // 2026-11-20 (owner's request); the platform's redirect is gone.
 
     Route::middleware('can:roles.manage')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
@@ -69,6 +70,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:60,1')
             ->whereNumber('user')
             ->name('users.password');
+
+        // A plain copy of the database, saved where the owner chooses
+        // (owner's request, 2026-11-21).
+        Route::get('backup', [BackupController::class, 'index'])->name('backup.index');
+        Route::post('backup', [BackupController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('backup.store');
+        Route::get('backup/{copy}', [BackupController::class, 'download'])
+            ->middleware('throttle:12,1')
+            ->whereUuid('copy')
+            ->name('backup.download');
     });
 });
 

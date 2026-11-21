@@ -99,6 +99,10 @@
                 "mix": ["success-700", 50, "info-700"]
             },
             "tile-8-foreground": "auto",
+            "tile-9": {
+                "mix": ["accent-700", 50, "danger-700"]
+            },
+            "tile-9-foreground": "auto",
             "tile-1-soft": "success-100",
             "tile-2-soft": "info-100",
             "tile-3-soft": "primary-100",
@@ -110,6 +114,30 @@
             "tile-7-soft": "olive-100",
             "tile-8-soft": {
                 "mix": ["success-100", 50, "info-100"]
+            },
+            "tile-9-soft": {
+                "mix": ["accent-100", 50, "danger-100"]
+            },
+            "status-good": "success-700",
+            "status-good-foreground": "auto",
+            "status-good-soft": "success-100",
+            "status-wait": "warning-500",
+            "status-wait-foreground": "auto",
+            "status-wait-soft": "warning-50",
+            "status-bad": {
+                "mix": ["danger-600", 50, "danger-700"]
+            },
+            "status-bad-foreground": "auto",
+            "status-bad-soft": "danger-100",
+            "status-info": "info-500",
+            "status-info-foreground": "auto",
+            "status-info-soft": "info-100",
+            "status-final": {
+                "mix": ["info-500", 50, "danger-600"]
+            },
+            "status-final-foreground": "auto",
+            "status-final-soft": {
+                "mix": ["info-100", 50, "danger-100"]
             }
         },
         "dark": {
@@ -172,6 +200,10 @@
                 "mix": ["success-400", 50, "info-400"]
             },
             "tile-8-foreground": "auto",
+            "tile-9": {
+                "mix": ["accent-400", 50, "danger-400"]
+            },
+            "tile-9-foreground": "auto",
             "tile-1-soft": "success-950",
             "tile-2-soft": "info-950",
             "tile-3-soft": "primary-950",
@@ -183,6 +215,34 @@
             "tile-7-soft": "olive-950",
             "tile-8-soft": {
                 "mix": ["success-950", 50, "info-950"]
+            },
+            "tile-9-soft": {
+                "mix": ["accent-950", 50, "danger-950"]
+            },
+            "status-good": {
+                "mix": ["success-500", 50, "success-600"]
+            },
+            "status-good-foreground": "auto",
+            "status-good-soft": "success-950",
+            "status-wait": "accent-300",
+            "status-wait-foreground": "auto",
+            "status-wait-soft": "accent-950",
+            "status-bad": {
+                "mix": ["danger-400", 50, "danger-500"]
+            },
+            "status-bad-foreground": "auto",
+            "status-bad-soft": "danger-950",
+            "status-info": {
+                "mix": ["info-400", 50, "info-500"]
+            },
+            "status-info-foreground": "auto",
+            "status-info-soft": "info-950",
+            "status-final": {
+                "mix": ["info-300", 50, "danger-600"]
+            },
+            "status-final-foreground": "auto",
+            "status-final-soft": {
+                "mix": ["info-950", 50, "danger-950"]
             }
         }
     },

@@ -28,7 +28,11 @@ export function behaviourLabel(t: Translate, behaviour: string): string {
 }
 
 export function kindLabel(t: Translate, kind: string): string {
-    return kind === 'practical' ? t('Practical') : t('Theoretical');
+    return kind === 'both'
+        ? t('Theoretical and practical')
+        : kind === 'practical'
+          ? t('Practical')
+          : t('Theoretical');
 }
 
 /**

@@ -10,6 +10,14 @@ enum Period: string
 {
     case Month1 = 'month_1';
 
+    /** "First month", translated. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Month1 => __('First month'),
+        };
+    }
+
     /**
      * @return list<string>
      */

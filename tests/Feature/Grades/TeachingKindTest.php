@@ -77,6 +77,28 @@ it('saves the type and the assistant of each section from the teacher\'s form, a
         ->and(row($this->networks, Section::B))->toBeNull();
 });
 
+it('saves a section taught both theoretically and practically, and refuses an unknown type', function () {
+    $a = "{$this->networks->uuid}:A";
+
+    $this->actingAs($this->owner)->put("/admin/teachers/{$this->huda->uuid}", [
+        'subjects' => ['', $a],
+        'details' => [$a => ['kind' => 'both', 'assistant' => '']],
+    ])->assertSessionHasNoErrors();
+
+    expect(row($this->networks, Section::A)?->kind)->toBe(TeachingKind::Both)
+        ->and(TeachingKind::Both->label())->toBe('Theoretical and practical');
+
+    $this->get('/admin/teachers')->assertInertia(fn (Assert $page) => $page
+        ->where('subjects.0.kinds', ['A' => 'both', 'B' => null]));
+
+    $this->put("/admin/teachers/{$this->huda->uuid}", [
+        'subjects' => ['', $a],
+        'details' => [$a => ['kind' => 'lab', 'assistant' => '']],
+    ])->assertSessionHasErrors('details.'.$a.'.kind');
+
+    expect(row($this->networks, Section::A)?->kind)->toBe(TeachingKind::Both);
+});
+
 it('fills the print slip: sections taught alike share a block, with their type and assistant', function () {
     $save = app(SaveSubject::class);
     $save->assign($this->owner, $this->networks, $this->huda);

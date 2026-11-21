@@ -1,9 +1,11 @@
 import { usePage } from '@inertiajs/react';
 import {
     BookOpen,
+    DatabaseBackup,
+    ChartColumn,
     FileSpreadsheet,
     GraduationCap,
-    Settings,
+    LayoutDashboard,
     UserRound,
     Users,
 } from 'lucide-react';
@@ -15,8 +17,10 @@ import {
     subjects as gradesSubjects,
     teachers as gradesTeachers,
 } from '@/actions/App/Modules/Grades/Http/GradesAdminController';
+import academicReports from '@/actions/App/Modules/Grades/Http/ReportsController';
 import { index as resultsIndex } from '@/actions/App/Modules/Grades/Http/ResultsController';
 import { index as studentsIndex } from '@/actions/App/Modules/Grades/Http/StudentsAdminController';
+import { index as backupIndex } from '@/routes/admin/backup';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { NavItem } from '@/types';
 
@@ -31,13 +35,14 @@ export function useMainNavigation(): NavItem[] {
 
     // The owner removed the dashboard, notifications and reports
     // (2026-11-15); the Grades overview is the home page. It is called
-    // "Settings" since 2026-11-19 (owner's request): it holds the
-    // department's settings for marks, access and results.
+    // "Settings" from 2026-11-19 and "Control panel" since 2026-11-20
+    // (owner's requests): it holds the department's settings for marks,
+    // access and results.
     const items: (NavItem & { permission?: string })[] = [
         {
-            title: 'Settings',
+            title: 'Control panel',
             href: gradesOverview(),
-            icon: Settings,
+            icon: LayoutDashboard,
             permission: 'grades.view_results',
         },
         // The Grades sections, moved here from the overview's buttons
@@ -70,6 +75,21 @@ export function useMainNavigation(): NavItem[] {
             title: 'Users',
             href: usersIndex(),
             icon: Users,
+            permission: 'roles.manage',
+        },
+        // Last, the academic reports (owner's request, 2026-11-20).
+        {
+            title: 'Academic reports',
+            href: academicReports(),
+            icon: ChartColumn,
+            permission: 'grades.view_results',
+        },
+        // Under the reports, a plain copy of the database (owner's
+        // request, 2026-11-21).
+        {
+            title: 'Database backup',
+            href: backupIndex(),
+            icon: DatabaseBackup,
             permission: 'roles.manage',
         },
     ];

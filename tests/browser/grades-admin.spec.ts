@@ -60,6 +60,8 @@ const pages = [
         'card',
         'teacher-view',
         'subjects',
+        // Students' appeals, a tab of their own (2026-11-20).
+        'appeals',
     ].map((tab) => `/admin?tab=${tab}`),
     '/admin/teachers',
     '/admin/subjects',
@@ -250,8 +252,8 @@ test.describe('grades owner flow', () => {
 
         await details
             .first()
-            .locator('[data-test="section-kind"]')
-            .selectOption('practical');
+            .locator('[data-test="section-kind-practical"]')
+            .check();
         await details
             .first()
             .locator('[data-test="section-assistant"]')
@@ -273,6 +275,56 @@ test.describe('grades owner flow', () => {
             path: 'storage/framework/screenshots/grades-teachers-details-en.png',
             fullPage: true,
         });
+    });
+
+    // Students' appeals have a tab of their own (owner's request,
+    // 2026-11-20): the picture's summary, who answers and how long.
+    test('saves the appeal settings from their own tab', async ({ page }) => {
+        await open(page, '/admin', 'ar');
+        // The picture's bar: each card's progress, also on the card.
+        await expect(
+            page.locator('[data-test="progress-overview"]'),
+        ).toBeVisible();
+        await expect(
+            page.locator('[data-test="progress-window"]'),
+        ).toContainText('%');
+        await expect(
+            page.locator('[data-test="card-students"] [role="progressbar"]'),
+        ).toBeVisible();
+        await page.screenshot({
+            path: 'storage/framework/screenshots/grades-control-panel-ar.png',
+            fullPage: true,
+        });
+        await page.locator('[data-test="card-appeals"]').click();
+        await expect(page).toHaveURL(/tab=appeals/);
+        await pageReady(page);
+        await expect(
+            page.locator('[data-test="appeal-summary"]'),
+        ).toBeVisible();
+
+        const form = page.locator('[data-test="appeal-settings"]');
+        await form.locator('[data-test="answered-by-teacher"]').check();
+        await form.locator('input[name="appeal_hours"]').fill('6');
+        await form.locator('[data-test="save-appeal-settings"]').click();
+        await expect(page.getByText('حُفظت إعدادات الاعتراضات.')).toBeVisible();
+
+        await page.reload();
+        await pageReady(page);
+        await expect(
+            form.locator('[data-test="answered-by-teacher"]'),
+        ).toBeChecked();
+        await expect(form.locator('input[name="appeal_hours"]')).toHaveValue(
+            '6',
+        );
+        await page.screenshot({
+            path: 'storage/framework/screenshots/grades-appeals-tab-ar.png',
+            fullPage: true,
+        });
+
+        // Reached from the students' tab too.
+        await open(page, '/admin?tab=students', 'ar');
+        await page.locator('[data-test="appeals-link"]').click();
+        await expect(page).toHaveURL(/tab=appeals/);
     });
 
     // "What the student sees" sits in the Students box of the access
@@ -318,6 +370,51 @@ test.describe('grades owner flow', () => {
         await expect(
             page.getByText('What the student sees was saved.'),
         ).toBeVisible();
+    });
+
+    // Row actions (owner's request, 2026-11-20): icons only, with no
+    // background, on one line, the same icons on both pages.
+    test('row actions are matching icons on one line', async ({ page }) => {
+        await page.setViewportSize(viewports.desktop);
+        const icons: Record<string, string[]> = {};
+
+        for (const [path, who] of [
+            ['/admin/students', 'student'],
+            ['/admin/teachers', 'teacher'],
+        ]) {
+            await open(page, path, 'ar');
+            const edit = page.locator(`[data-test="edit-${who}"]`).first();
+            const row = edit.locator('xpath=..');
+            const buttons = row.locator('button');
+            const tops = await buttons.evaluateAll((all) =>
+                all.map((b) => Math.round(b.getBoundingClientRect().top)),
+            );
+            expect(new Set(tops).size, `${path}: one line`).toBe(1);
+            expect(
+                await edit.evaluate((b) => getComputedStyle(b).backgroundColor),
+                `${path}: no background`,
+            ).toBe('rgba(0, 0, 0, 0)');
+
+            icons[who] = await Promise.all(
+                ['edit', 'new', 'toggle', 'delete'].map((name) =>
+                    page
+                        .locator(
+                            `[data-test^="${name}-${who}"]:not([data-test*="appeal"]):not([data-test*="devices"])`,
+                        )
+                        .first()
+                        .locator('svg')
+                        .getAttribute('class')
+                        .then((c) =>
+                            (c ?? '')
+                                .split(' ')
+                                .filter((k) => k.startsWith('lucide-'))
+                                .join(' '),
+                        ),
+                ),
+            );
+        }
+
+        expect(icons.teacher).toEqual(icons.student);
     });
 
     // The import card left the students page on 2026-11-16 (the owner adds

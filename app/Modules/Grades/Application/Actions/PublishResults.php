@@ -30,7 +30,12 @@ class PublishResults
             $locked = GradePeriod::query()->where('period', $period->value)->lockForUpdate()->firstOrFail();
             EnsureManager::check($actor);
 
-            if ($publish === ($locked->results_published_at !== null)) {
+            // Hiding with only single sections out hides them too (flow
+            // audit, 2026-11-20: it used to stop here and leave them shown).
+            $nothingToDo = $publish
+                ? $locked->results_published_at !== null
+                : $locked->results_published_at === null && ! SectionPublication::query()->where('period', $period->value)->exists();
+            if ($nothingToDo) {
                 return $locked;
             }
 
@@ -46,6 +51,47 @@ class PublishResults
             $this->audit->record($publish ? 'grades.results_published' : 'grades.results_unpublished', $locked, ['period' => $period->value], actor: $actor);
 
             return $locked;
+        }, 3);
+    }
+
+    /**
+     * Publishes several sections at once (owner's request, 2026-11-20: the
+     * stages and sections are ticked, then published together), under the
+     * rules of section(): all or none, in one transaction. A section
+     * already published is left as it is.
+     *
+     * @param  list<array{0: Stage, 1: Section}>  $places
+     */
+    public function sections(User $actor, Period $period, array $places): void
+    {
+        foreach ($places as [$stage, $section]) {
+            if (! $stage->hasSection($section)) {
+                throw new DomainRuleViolation(__('This stage has no such section.'), 'publish');
+            }
+        }
+
+        GradePeriod::for($period);
+
+        DB::transaction(function () use ($actor, $period, $places): void {
+            $locked = GradePeriod::query()->where('period', $period->value)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            if ($locked->isPublished()) {
+                throw new DomainRuleViolation(__('Every section is published. Hide the results first to publish sections one by one.'), 'publish');
+            }
+            if ($locked->isOpen()) {
+                throw new DomainRuleViolation(__('Close mark entry before publishing the results.'), 'publish');
+            }
+
+            foreach ($places as [$stage, $section]) {
+                $exists = SectionPublication::query()->where('period', $period->value)->where('stage', $stage->value)->where('section', $section->value)->exists();
+                if ($exists) {
+                    continue;
+                }
+
+                (new SectionPublication)->forceFill(['stage' => $stage, 'section' => $section, 'period' => $period, 'published_at' => now()])->save();
+                $this->audit->record('grades.section_published', $locked, ['stage' => $stage->value, 'section' => $section->value], actor: $actor);
+            }
         }, 3);
     }
 

@@ -1,110 +1,42 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Eye, EyeOff, Lock, LockOpen } from 'lucide-react';
+import { Lock, LockOpen } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
-import ConfirmAction from '@/components/confirm-action';
 import PageToolbar from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import AccessPanel from '../../components/access-panel';
+import type { AppealCounts } from '../../components/appeals-admin-panel';
 import type { AccessBoardProps } from '../../components/access-panel';
 import CopyLink from '../../components/copy-link';
-import ResultSettingsPanel from '../../components/result-settings-panel';
+import type { PublicationStage } from '../../components/publication-panel';
 import type { ResultSettings } from '../../components/result-settings-panel';
 import {
-    SettingsClose,
+    ProgressOverview,
     SettingsLanding,
     useSettingsTabs,
 } from '../../components/settings-tabs';
 import type { SettingsTab } from '../../components/settings-tabs';
-import { placeLabel, sectionLabel, stageLabel } from '../../place';
+import { sectionLabel, stageLabel } from '../../place';
 
-type Stage = {
-    stage: number;
-    divided: boolean;
-    students: Record<string, number>;
-    subjects: {
-        uuid: string;
-        name: string;
-        /** Each section's teacher's name (null: none yet). */
-        teachers: Record<string, string | null>;
-        sections: Record<string, number>;
-        /** Whether each section's teacher approved the marks (ADR-0041). */
-        approved: Record<string, boolean>;
-    }[];
-};
+// Each panel opens from its own settings card: loaded then, to keep the
+// page within the bundle budget (ADR-0024).
+const AccessPanel = lazy(() => import('../../components/access-panel'));
+const AppealsAdminPanel = lazy(
+    () => import('../../components/appeals-admin-panel'),
+);
+const PublicationPanel = lazy(
+    () => import('../../components/publication-panel'),
+);
+const ResultSettingsPanel = lazy(
+    () => import('../../components/result-settings-panel'),
+);
 
-type Readiness = { missing: number; sections: number; unapproved: number };
+type Stage = PublicationStage;
 
 /**
- * What is not ready before publishing (audit of 2026-11-20): the marks
- * still missing, in how many sections, and the subject sections their
- * teacher has not approved. All sections, or one.
- */
-function readiness(
-    stages: Stage[],
-    onlyStage?: number,
-    onlySection?: string,
-): Readiness {
-    const result: Readiness = { missing: 0, sections: 0, unapproved: 0 };
-
-    for (const stage of stages) {
-        if (onlyStage !== undefined && stage.stage !== onlyStage) {
-            continue;
-        }
-        for (const [section, students] of Object.entries(stage.students)) {
-            if (onlySection !== undefined && section !== onlySection) {
-                continue;
-            }
-            let missing = 0;
-            for (const subject of stage.subjects) {
-                missing += Math.max(
-                    0,
-                    students - (subject.sections[section] ?? 0),
-                );
-                if (!subject.approved[section]) {
-                    result.unapproved++;
-                }
-            }
-            result.missing += missing;
-            result.sections += missing > 0 ? 1 : 0;
-        }
-    }
-
-    return result;
-}
-
-function readinessText(
-    t: ReturnType<typeof useTranslations>['t'],
-    ready: Readiness,
-): string {
-    if (ready.missing === 0 && ready.unapproved === 0) {
-        return t(
-            'Every mark is entered and approved. Each student will see their own result with their code.',
-        );
-    }
-
-    return [
-        ready.missing > 0
-            ? t(':missing marks are still missing, in :sections sections.', {
-                  missing: String(ready.missing),
-                  sections: String(ready.sections),
-              })
-            : null,
-        ready.unapproved > 0
-            ? t(':count subject sections are not approved by their teacher.', {
-                  count: String(ready.unapproved),
-              })
-            : null,
-        t('Students will see these results as they are.'),
-    ]
-        .filter((line): line is string => line !== null)
-        .join(' ');
-}
-
-/**
- * The owner's settings (ADR-0034, called "Settings" since 2026-11-19), in
+ * The owner's settings (ADR-0034, called "Control panel" since 2026-11-20), in
  * tabs, each a page of its own (owner's request, 2026-11-19): mark entry
  * and publication, the links, teachers' and students' sign-in rules,
  * teachers' permissions, the result card, what teachers see, and each
@@ -121,6 +53,7 @@ export default function GradesOverview({
     canManage,
     access,
     resultSettings,
+    appealCounts = null,
 }: {
     /** The open tab; null: the list of tabs. */
     tab?: SettingsTab | null;
@@ -141,6 +74,8 @@ export default function GradesOverview({
     access: AccessBoardProps | null;
     /** What a result says and shows (ADR-0039); only for grades.manage. */
     resultSettings: ResultSettings | null;
+    /** Appeals by status (appeals tab); only for grades.manage. */
+    appealCounts?: AppealCounts | null;
 }) {
     const { t } = useTranslations();
     const put = (url: string, data: Record<string, string | boolean>) =>
@@ -149,28 +84,135 @@ export default function GradesOverview({
         (sum, stage) => sum + stage.subjects.length,
         0,
     );
+    const studentTotal = stages.reduce(
+        (sum, stage) =>
+            sum +
+            Object.values(stage.students).reduce((a, b) => a + (b ?? 0), 0),
+        0,
+    );
+    const appealTotal = appealCounts
+        ? appealCounts.pending + appealCounts.accepted + appealCounts.rejected
+        : 0;
+    // Each card's progress (owner's request, 2026-11-20), from what the
+    // page already has: done of due.
+    let marksDue = 0;
+    let marksIn = 0;
+    let sectionsDue = 0;
+    let sectionsApproved = 0;
+    let sectionsTaught = 0;
+    let placesDue = 0;
+    for (const stage of stages) {
+        const places = Object.entries(stage.students);
+        placesDue += places.filter(
+            ([, students]) => (students ?? 0) > 0,
+        ).length;
+        for (const subject of stage.subjects) {
+            for (const [section, students] of places) {
+                sectionsDue += 1;
+                marksDue += students ?? 0;
+                marksIn += Math.min(
+                    subject.sections[section] ?? 0,
+                    students ?? 0,
+                );
+                if (subject.approved[section]) {
+                    sectionsApproved += 1;
+                }
+                if (subject.teachers[section]) {
+                    sectionsTaught += 1;
+                }
+            }
+        }
+    }
+    const placesPublished = window.published
+        ? placesDue
+        : window.sections_published.length;
+    const teachersIn =
+        access?.teachers.filter((teacher) => teacher.logins > 0).length ?? 0;
+    const teacherCount = access?.teachers.length ?? 0;
+    const appealsAnswered = appealCounts
+        ? appealCounts.accepted + appealCounts.rejected
+        : 0;
+
+    // The large number on each card (owner's picture, 2026-11-20).
     const tabs = useSettingsTabs(canManage, {
         window: {
+            count: window.published
+                ? t('Published')
+                : window.open
+                  ? t('Open')
+                  : t('Closed'),
+            progress: {
+                done: marksIn,
+                of: marksDue,
+                label: t('Marks entered'),
+            },
             summary: `${window.open ? t('Mark entry is open.') : t('Mark entry is closed.')} ${window.published ? t('Results are published to the students.') : t('Results are not published to the students.')}`,
         },
-        links: { summary: t('The addresses to give teachers and students.') },
+        links: {
+            summary: t('The addresses to give teachers and students.'),
+            count: 3,
+            progress: access
+                ? {
+                      done: teachersIn + access.students.signed_in,
+                      of: teacherCount + access.students.total,
+                      label: t('Signed in through the links'),
+                  }
+                : undefined,
+        },
         teachers: {
+            count: access?.teachers.length,
+            progress: access
+                ? {
+                      done: teachersIn,
+                      of: teacherCount,
+                      label: t('Teachers signed in'),
+                  }
+                : undefined,
             summary: t(':count refused teacher sign-ins in 24 hours.', {
                 count: String(access?.failed.teachers ?? 0),
             }),
         },
         students: {
-            summary: t(
-                ':signed of :total students signed in; :appeals appeals waiting.',
-                {
-                    signed: String(access?.students.signed_in ?? 0),
-                    total: String(access?.students.total ?? 0),
-                    appeals: String(access?.appeals.length ?? 0),
-                },
-            ),
+            count: access?.students.total ?? studentTotal,
+            progress: access
+                ? {
+                      done: access.students.signed_in,
+                      of: access.students.total,
+                      label: t('Students signed in'),
+                  }
+                : undefined,
+            summary: t(':signed of :total students signed in.', {
+                signed: String(access?.students.signed_in ?? 0),
+                total: String(access?.students.total ?? 0),
+            }),
+        },
+        appeals: {
+            count: appealCounts?.pending ?? 0,
+            progress: appealCounts
+                ? {
+                      done: appealsAnswered,
+                      of: appealTotal,
+                      label: t('Appeals answered'),
+                  }
+                : undefined,
+            summary: !resultSettings?.options.appeals
+                ? t('Appeals are off.')
+                : resultSettings.teacher_appeal_replies
+                  ? t(':total appeals; the subject teacher answers.', {
+                        total: String(appealTotal),
+                    })
+                  : t(':total appeals; the administration answers.', {
+                        total: String(appealTotal),
+                    }),
             attention: access?.appeals.length,
         },
         permissions: {
+            count: access?.requests.length ?? 0,
+            progress: {
+                done: sectionsApproved,
+                of: sectionsDue,
+                label: t('Sections approved by their teacher'),
+            },
             summary: t(
                 ':teachers teachers; :requests requests to change marks waiting.',
                 {
@@ -181,6 +223,12 @@ export default function GradesOverview({
             attention: access?.requests.length,
         },
         card: {
+            count: `${resultSettings?.pass_percent ?? 50}%`,
+            progress: {
+                done: placesPublished,
+                of: placesDue,
+                label: t('Sections with published results'),
+            },
             summary: t(
                 'Pass at :percent%; grades, exemption and colours of marks.',
                 {
@@ -195,8 +243,25 @@ export default function GradesOverview({
                     : resultSettings?.teacher_results === 'published'
                       ? t('Once published to the students')
                       : t('Teachers do not read the results.'),
+            // A department-wide setting: every teacher or none.
+            progress: resultSettings
+                ? {
+                      done:
+                          resultSettings.teacher_results === 'off'
+                              ? 0
+                              : teacherCount,
+                      of: teacherCount,
+                      label: t('Teachers who may read the results'),
+                  }
+                : undefined,
         },
         subjects: {
+            count: subjectCount,
+            progress: {
+                done: sectionsTaught,
+                of: sectionsDue,
+                label: t('Subject sections with a teacher'),
+            },
             summary: t(':count subjects across the stages.', {
                 count: String(subjectCount),
             }),
@@ -208,43 +273,61 @@ export default function GradesOverview({
         <>
             <Head
                 title={
-                    open ? `${open.label} · ${t('Settings')}` : t('Settings')
+                    open
+                        ? `${open.label} · ${t('Control panel')}`
+                        : t('Control panel')
                 }
             />
-            <PageToolbar title={open ? open.label : t('Settings')} />
-            {open !== null && <SettingsClose />}
+            <PageToolbar title={open ? open.label : t('Control panel')} />
             <div className="flex flex-col gap-6 p-4">
+                {open === null && <ProgressOverview tabs={tabs} />}
                 {open === null && <SettingsLanding tabs={tabs} />}
 
                 {open?.key === 'window' && (
-                    <section
-                        className="grid gap-4 rounded-lg border bg-card p-4 md:grid-cols-2"
-                        data-test="entry-window"
-                    >
-                        <div className="flex flex-col gap-3">
-                            <div className="flex items-center gap-3">
-                                {window.open ? (
-                                    <LockOpen
-                                        className="size-5 text-success-text"
-                                        aria-hidden
-                                    />
-                                ) : (
-                                    <Lock
-                                        className="size-5 text-muted-foreground"
-                                        aria-hidden
-                                    />
-                                )}
-                                <p className="font-medium">
+                    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+                        <section
+                            className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-5"
+                            data-test="entry-window"
+                        >
+                            {window.open ? (
+                                <LockOpen
+                                    className="size-5 text-success-text"
+                                    aria-hidden
+                                />
+                            ) : (
+                                <Lock
+                                    className="size-5 text-muted-foreground"
+                                    aria-hidden
+                                />
+                            )}
+                            <div className="flex-1">
+                                <h2 className="font-semibold">
+                                    {t('Open mark entry to the teaching staff')}
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
                                     {window.open
                                         ? t('Mark entry is open.')
                                         : t('Mark entry is closed.')}
                                 </p>
+                                {canManage &&
+                                    !window.open &&
+                                    (window.published ||
+                                        window.sections_published.length >
+                                            0) && (
+                                        <p
+                                            className="text-sm text-muted-foreground"
+                                            data-test="open-window-hint"
+                                        >
+                                            {t(
+                                                'Hide the published results before opening mark entry again.',
+                                            )}
+                                        </p>
+                                    )}
                             </div>
                             {canManage &&
                                 (window.open ? (
                                     <Button
                                         variant="outline"
-                                        className="self-start"
                                         onClick={() =>
                                             put(
                                                 GradesAdminController.window.url(),
@@ -257,7 +340,6 @@ export default function GradesOverview({
                                     </Button>
                                 ) : (
                                     <Button
-                                        className="self-start"
                                         // A section published on its own also
                                         // keeps entry closed (ChangeEntryWindow).
                                         disabled={
@@ -275,209 +357,16 @@ export default function GradesOverview({
                                         {t('Open mark entry')}
                                     </Button>
                                 ))}
-                            {canManage &&
-                                !window.open &&
-                                (window.published ||
-                                    window.sections_published.length > 0) && (
-                                    <p
-                                        className="text-sm text-muted-foreground"
-                                        data-test="open-window-hint"
-                                    >
-                                        {t(
-                                            'Hide the published results before opening mark entry again.',
-                                        )}
-                                    </p>
-                                )}
-                        </div>
+                        </section>
 
-                        <div
-                            className="flex flex-col gap-3"
-                            data-test="publication"
-                        >
-                            <div className="flex items-center gap-3">
-                                {window.published ? (
-                                    <Eye
-                                        className="size-5 text-success-text"
-                                        aria-hidden
-                                    />
-                                ) : (
-                                    <EyeOff
-                                        className="size-5 text-muted-foreground"
-                                        aria-hidden
-                                    />
-                                )}
-                                <div>
-                                    <p className="font-medium">
-                                        {window.published
-                                            ? t(
-                                                  'Results are published to the students.',
-                                              )
-                                            : t(
-                                                  'Results are not published to the students.',
-                                              )}
-                                    </p>
-                                    {window.open && (
-                                        <p className="text-sm text-muted-foreground">
-                                            {t(
-                                                'Close mark entry before publishing.',
-                                            )}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            {canManage &&
-                                (window.published ? (
-                                    <Button
-                                        variant="outline"
-                                        className="self-start"
-                                        onClick={() =>
-                                            put(
-                                                GradesAdminController.publish.url(),
-                                                { published: false },
-                                            )
-                                        }
-                                        data-test="unpublish"
-                                    >
-                                        {t('Hide the results')}
-                                    </Button>
-                                ) : (
-                                    <ConfirmAction
-                                        trigger={
-                                            <Button
-                                                className="self-start"
-                                                disabled={window.open}
-                                                data-test="publish"
-                                            >
-                                                {t('Publish the results')}
-                                            </Button>
-                                        }
-                                        title={t('Publish the results?')}
-                                        description={readinessText(
-                                            t,
-                                            readiness(stages),
-                                        )}
-                                        confirmLabel={t('Publish')}
-                                        tone="default"
-                                        form={GradesAdminController.publish.form()}
-                                        fields={{ published: '1' }}
-                                    />
-                                ))}
-                            {/* One section at a time (ADR-0042), while not all are. */}
-                            {canManage && !window.published && (
-                                <div
-                                    className="flex flex-wrap gap-2"
-                                    data-test="section-publication"
-                                >
-                                    {stages.flatMap((stage) =>
-                                        Object.keys(stage.students).map(
-                                            (section) => {
-                                                const shown =
-                                                    window.sections_published.includes(
-                                                        `${stage.stage}|${section}`,
-                                                    );
-                                                const place = placeLabel(
-                                                    t,
-                                                    stage.stage,
-                                                    section,
-                                                    stage.divided,
-                                                );
-
-                                                // Publishing asks first, with what
-                                                // is not ready; hiding does not.
-                                                if (!shown) {
-                                                    return (
-                                                        <ConfirmAction
-                                                            key={`${stage.stage}${section}`}
-                                                            trigger={
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    disabled={
-                                                                        window.open
-                                                                    }
-                                                                    aria-pressed={
-                                                                        false
-                                                                    }
-                                                                    data-test="publish-section"
-                                                                >
-                                                                    {place}
-                                                                </Button>
-                                                            }
-                                                            title={t(
-                                                                'Publish the results of :place?',
-                                                                { place },
-                                                            )}
-                                                            description={readinessText(
-                                                                t,
-                                                                readiness(
-                                                                    stages,
-                                                                    stage.stage,
-                                                                    section,
-                                                                ),
-                                                            )}
-                                                            confirmLabel={t(
-                                                                'Publish',
-                                                            )}
-                                                            tone="default"
-                                                            form={GradesAdminController.publishSection.form()}
-                                                            fields={{
-                                                                stage: String(
-                                                                    stage.stage,
-                                                                ),
-                                                                section,
-                                                                published: '1',
-                                                            }}
-                                                        />
-                                                    );
-                                                }
-
-                                                return (
-                                                    <Button
-                                                        key={`${stage.stage}${section}`}
-                                                        size="sm"
-                                                        variant={
-                                                            shown
-                                                                ? 'default'
-                                                                : 'outline'
-                                                        }
-                                                        disabled={
-                                                            window.open &&
-                                                            !shown
-                                                        }
-                                                        aria-pressed={shown}
-                                                        onClick={() =>
-                                                            put(
-                                                                GradesAdminController.publishSection.url(),
-                                                                {
-                                                                    stage: String(
-                                                                        stage.stage,
-                                                                    ),
-                                                                    section,
-                                                                    published:
-                                                                        !shown,
-                                                                },
-                                                            )
-                                                        }
-                                                        data-test="publish-section"
-                                                    >
-                                                        {placeLabel(
-                                                            t,
-                                                            stage.stage,
-                                                            section,
-                                                            stage.divided,
-                                                        )}
-                                                        {shown
-                                                            ? ` · ${t('Published')}`
-                                                            : ''}
-                                                    </Button>
-                                                );
-                                            },
-                                        ),
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </section>
+                        <Suspense fallback={null}>
+                            <PublicationPanel
+                                window={window}
+                                stages={stages}
+                                canManage={canManage}
+                            />
+                        </Suspense>
+                    </div>
                 )}
 
                 {open?.key === 'links' && (
@@ -504,20 +393,34 @@ export default function GradesOverview({
                     (open?.key === 'teachers' ||
                         open?.key === 'students' ||
                         open?.key === 'permissions') && (
-                        <AccessPanel
-                            access={access}
-                            studentView={resultSettings}
-                            part={open.key}
-                        />
+                        <Suspense fallback={null}>
+                            <AccessPanel
+                                access={access}
+                                studentView={resultSettings}
+                                part={open.key}
+                            />
+                        </Suspense>
                     )}
 
                 {resultSettings &&
                     (open?.key === 'card' || open?.key === 'teacher-view') && (
-                        <ResultSettingsPanel
-                            settings={resultSettings}
-                            part={open.key === 'card' ? 'card' : 'teachers'}
-                        />
+                        <Suspense fallback={null}>
+                            <ResultSettingsPanel
+                                settings={resultSettings}
+                                part={open.key === 'card' ? 'card' : 'teachers'}
+                            />
+                        </Suspense>
                     )}
+
+                {resultSettings && appealCounts && open?.key === 'appeals' && (
+                    <Suspense fallback={null}>
+                        <AppealsAdminPanel
+                            settings={resultSettings}
+                            counts={appealCounts}
+                            appeals={access?.appeals ?? []}
+                        />
+                    </Suspense>
+                )}
 
                 {open?.key === 'subjects' &&
                     stages.map((stage) => {

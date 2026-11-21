@@ -34,6 +34,11 @@ import { Label } from '@/components/ui/label';
 import { useTableNavigation } from '@/hooks/use-table-navigation';
 import { useTranslations } from '@/hooks/use-translations';
 import type { ColumnPrefs, PageMeta, TableState } from '@/types/table';
+import {
+    rowAction,
+    rowActions,
+    rowActionTone,
+} from '../../components/row-actions';
 import { stageLabel, stageName } from '../../place';
 
 type StudentRow = {
@@ -63,18 +68,11 @@ const TABLE_PROPS = ['students', 'state'];
 /**
  * Row actions coloured by what they do (owner's request, 2026-11-18):
  * edit = info, a first code = success, replacing a code = warning,
- * delete = danger. Status tokens only (COLOR-DESIGN-SYSTEM); each button
- * also carries an icon and its word, so colour is never the only cue.
+ * delete = danger. Icons only, with no background (2026-11-20, see
+ * row-actions.ts).
  */
-const actionTone = {
-    info: 'border-info/40 text-info-text hover:bg-info/10 hover:text-info-text',
-    success:
-        'border-success/40 text-success-text hover:bg-success/10 hover:text-success-text',
-    warning:
-        'border-warning/60 text-warning-text hover:bg-warning/15 hover:text-warning-text',
-    destructive:
-        'border-destructive/40 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text',
-} as const;
+const action = (tone: keyof typeof rowActionTone) =>
+    `${rowAction} ${rowActionTone[tone]}`;
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
@@ -488,31 +486,42 @@ export default function GradesStudents({
                     rowAction={
                         canManage
                             ? (student) => (
-                                  <div className="flex flex-wrap justify-start gap-2">
+                                  <div className={rowActions}>
                                       <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className={actionTone.info}
+                                          variant="ghost"
+                                          size="icon"
+                                          className={action('info')}
+                                          aria-label={t('Edit')}
+                                          title={t('Edit')}
                                           onClick={() => setDialog(student)}
                                           data-test="edit-student"
                                       >
                                           <Pencil aria-hidden />
-                                          {t('Edit')}
                                       </Button>
                                       {/* Asks first: the old code stops
                                           working (owner, 2026-11-16). */}
                                       <ConfirmAction
                                           trigger={
                                               <Button
-                                                  variant="outline"
-                                                  size="sm"
+                                                  variant="ghost"
+                                                  size="icon"
                                                   // Replacing cancels a code
                                                   // in use: a warning. A
                                                   // first code: a success.
-                                                  className={
+                                                  className={action(
                                                       student.has_code
-                                                          ? actionTone.warning
-                                                          : actionTone.success
+                                                          ? 'warning'
+                                                          : 'success',
+                                                  )}
+                                                  aria-label={
+                                                      student.has_code
+                                                          ? t('New code')
+                                                          : t('Give a code')
+                                                  }
+                                                  title={
+                                                      student.has_code
+                                                          ? t('New code')
+                                                          : t('Give a code')
                                                   }
                                                   data-test="new-student-code"
                                               >
@@ -521,9 +530,6 @@ export default function GradesStudents({
                                                   ) : (
                                                       <KeyRound aria-hidden />
                                                   )}
-                                                  {student.has_code
-                                                      ? t('New code')
-                                                      : t('Give a code')}
                                               </Button>
                                           }
                                           title={t('A new code for :name?', {
@@ -540,9 +546,13 @@ export default function GradesStudents({
                                       />
                                       {student.devices > 0 && (
                                           <Button
-                                              variant="outline"
-                                              size="sm"
-                                              className={actionTone.warning}
+                                              variant="ghost"
+                                              size="icon"
+                                              className={action('warning')}
+                                              aria-label={t(
+                                                  'Forget the devices',
+                                              )}
+                                              title={t('Forget the devices')}
                                               onClick={() =>
                                                   router.delete(
                                                       AccessController.forgetStudentDevices.url(
@@ -554,16 +564,25 @@ export default function GradesStudents({
                                               data-test="forget-student-devices"
                                           >
                                               <MonitorX aria-hidden />
-                                              {t('Forget the devices')}
                                           </Button>
                                       )}
                                       <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className={
+                                          variant="ghost"
+                                          size="icon"
+                                          className={action(
                                               student.blocked
-                                                  ? actionTone.success
-                                                  : actionTone.warning
+                                                  ? 'success'
+                                                  : 'warning',
+                                          )}
+                                          aria-label={
+                                              student.blocked
+                                                  ? t('Allow signing in')
+                                                  : t('Stop signing in')
+                                          }
+                                          title={
+                                              student.blocked
+                                                  ? t('Allow signing in')
+                                                  : t('Stop signing in')
                                           }
                                           onClick={() =>
                                               router.put(
@@ -581,18 +600,25 @@ export default function GradesStudents({
                                           ) : (
                                               <Lock aria-hidden />
                                           )}
-                                          {student.blocked
-                                              ? t('Allow signing in')
-                                              : t('Stop signing in')}
                                       </Button>
                                       {appealScope === 'selected' && (
                                           <Button
-                                              variant="outline"
-                                              size="sm"
-                                              className={
+                                              variant="ghost"
+                                              size="icon"
+                                              className={action(
                                                   student.appeal_allowed
-                                                      ? actionTone.warning
-                                                      : actionTone.info
+                                                      ? 'warning'
+                                                      : 'info',
+                                              )}
+                                              aria-label={
+                                                  student.appeal_allowed
+                                                      ? t('Withdraw the appeal')
+                                                      : t('Allow an appeal')
+                                              }
+                                              title={
+                                                  student.appeal_allowed
+                                                      ? t('Withdraw the appeal')
+                                                      : t('Allow an appeal')
                                               }
                                               aria-pressed={
                                                   student.appeal_allowed
@@ -620,23 +646,21 @@ export default function GradesStudents({
                                                       aria-hidden
                                                   />
                                               )}
-                                              {student.appeal_allowed
-                                                  ? t('Withdraw the appeal')
-                                                  : t('Allow an appeal')}
                                           </Button>
                                       )}
                                       <ConfirmAction
                                           trigger={
                                               <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  className={
-                                                      actionTone.destructive
-                                                  }
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className={action(
+                                                      'destructive',
+                                                  )}
+                                                  aria-label={t('Delete')}
+                                                  title={t('Delete')}
                                                   data-test="delete-student"
                                               >
                                                   <Trash2 aria-hidden />
-                                                  {t('Delete')}
                                               </Button>
                                           }
                                           title={t('Delete :name?', {

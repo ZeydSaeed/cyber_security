@@ -168,6 +168,71 @@ class ManageResults
     }
 
     /**
+     * The appeals' own settings (appeals tab, owner's request 2026-11-20):
+     * whether students may appeal, from when and for how long, who may,
+     * and who answers (the subject's teacher, or the department alone).
+     */
+    public function appeals(User $actor, bool $enabled, ?int $minutes, ?CarbonImmutable $from, ?CarbonImmutable $until, AppealScope $scope, bool $teacherReplies): GradeSettings
+    {
+        if ($minutes !== null && ($minutes < 1 || $minutes > self::MAX_APPEAL_MINUTES)) {
+            throw new DomainRuleViolation(__('Give a time from 1 minute to 90 days.'), 'appeal_minutes');
+        }
+        if ($from !== null && $until !== null && ! $until->isAfter($from)) {
+            throw new DomainRuleViolation(__('Appeals must close after they open.'), 'appeal_until');
+        }
+        // Allowed with no time and no closing date, appeals would never
+        // open while the page says they may (flow audit, 2026-11-20).
+        if ($enabled && $minutes === null && $until === null) {
+            throw new DomainRuleViolation(__('Give how long appeals stay open, or the date they close.'), 'appeal_minutes');
+        }
+
+        return DB::transaction(function () use ($actor, $enabled, $minutes, $from, $until, $scope, $teacherReplies): GradeSettings {
+            GradeSettings::current();
+            $settings = GradeSettings::query()->whereKey(GradeSettings::ROW)->lockForUpdate()->firstOrFail();
+            EnsureManager::check($actor);
+
+            $options = $settings->options();
+            $values = [
+                'result_options' => ResultDisplay::options(['appeals' => $enabled] + $options),
+                'appeal_minutes' => $minutes,
+                'appeal_from' => $from?->format(DATE_ATOM),
+                'appeal_until' => $until?->format(DATE_ATOM),
+                'appeal_scope' => $scope->value,
+                'teacher_appeal_replies' => $teacherReplies,
+            ];
+            $before = [
+                'result_options' => $options,
+                'appeal_minutes' => $settings->appeal_minutes,
+                'appeal_from' => $settings->appeal_from?->format(DATE_ATOM),
+                'appeal_until' => $settings->appeal_until?->format(DATE_ATOM),
+                'appeal_scope' => $settings->appeal_scope->value,
+                'teacher_appeal_replies' => $settings->teacher_appeal_replies,
+            ];
+            $changes = [];
+            foreach ($values as $field => $value) {
+                if ($before[$field] !== $value) {
+                    $changes[$field] = $field === 'result_options'
+                        ? ['from' => $options['appeals'], 'to' => $enabled]
+                        : ['from' => $before[$field], 'to' => $value];
+                }
+            }
+
+            if ($changes === []) {
+                return $settings;
+            }
+            if (isset($changes['result_options'])) {
+                $changes['appeals_enabled'] = $changes['result_options'];
+                unset($changes['result_options']);
+            }
+
+            $settings->forceFill($values)->save();
+            $this->audit->record('grades.appeal_settings_changed', $settings, [], $changes, actor: $actor);
+
+            return $settings;
+        }, 3);
+    }
+
+    /**
      * When teachers may read their own students' results, and what they
      * see of them (ADR-0040).
      *

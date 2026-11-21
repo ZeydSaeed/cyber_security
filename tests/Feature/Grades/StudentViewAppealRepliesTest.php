@@ -75,10 +75,14 @@ function allowTeacherReplies(object $test, bool $allowed = true): void
 describe('the "Students" box', function () {
     it('saves what the student sees on its own, and the result rules keep it', function () {
         $this->actingAs($this->owner)->put('/admin/results/student-view', [
-            'options' => ['total', 'absences', 'appeals'],
+            'options' => ['total', 'absences'],
+        ])->assertSessionHasNoErrors();
+        // The appeals are saved from their own tab (2026-11-20).
+        $this->actingAs($this->owner)->put('/admin/results/appeals', [
+            'enabled' => '1',
             'appeal_hours' => 6,
             'appeal_scope' => 'selected',
-            'teacher_appeal_replies' => '1',
+            'answered_by' => 'teacher',
         ])->assertSessionHasNoErrors();
 
         $settings = GradeSettings::current();

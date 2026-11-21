@@ -1,3 +1,24 @@
+/** How a section is taught (Domain\TeachingKind). */
+export type TeachingKind = 'theory' | 'practical' | 'both';
+
+/** Whether a kind includes theory, practical, or each. */
+export const teachesTheory = (kind: TeachingKind | null | undefined) =>
+    kind === 'theory' || kind === 'both';
+export const teachesPractical = (kind: TeachingKind | null | undefined) =>
+    kind === 'practical' || kind === 'both';
+
+/** The kind from two ticks: theory, practical, both or none. */
+export function kindOf(
+    theory: boolean,
+    practical: boolean,
+): TeachingKind | null {
+    if (theory && practical) {
+        return 'both';
+    }
+
+    return theory ? 'theory' : practical ? 'practical' : null;
+}
+
 /** A mark as the server sends it: a number, "absent", or none yet. */
 export type MarkValue = number | 'absent' | null;
 
@@ -100,7 +121,7 @@ export type ResultSubject = {
     exempt: number | null;
     teacher: string | null;
     assistant: string | null;
-    kind: 'theory' | 'practical' | null;
+    kind: TeachingKind | null;
 };
 
 /** What a result card shows (Domain\ResultDisplay::OPTIONS). */
