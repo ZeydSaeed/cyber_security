@@ -1,0 +1,68 @@
+{
+    "ran_at": "2026-11-21T01:21:15+00:00",
+    "kept": true,
+    "checks": 534385,
+    "areas": {
+        "fill": {
+            "ok": 2,
+            "failed": 0
+        },
+        "control panel": {
+            "ok": 267,
+            "failed": 0
+        },
+        "results": {
+            "ok": 72052,
+            "failed": 0
+        },
+        "student view": {
+            "ok": 9367,
+            "failed": 0
+        },
+        "teacher view": {
+            "ok": 433049,
+            "failed": 0
+        },
+        "access": {
+            "ok": 16500,
+            "failed": 0
+        },
+        "student sign-in": {
+            "ok": 12,
+            "failed": 0
+        },
+        "entry and publication": {
+            "ok": 2100,
+            "failed": 0
+        },
+        "appeals": {
+            "ok": 1005,
+            "failed": 0
+        },
+        "appeal answers": {
+            "ok": 24,
+            "failed": 0
+        },
+        "final state": {
+            "ok": 5,
+            "failed": 0
+        },
+        "reports": {
+            "ok": 1,
+            "failed": 0
+        },
+        "untouched": {
+            "ok": 1,
+            "failed": 0
+        }
+    },
+    "facts": {
+        "sheets entered by their teacher": 34,
+        "marks": 1463,
+        "approved sections": 29,
+        "edit requests": 4,
+        "students with notes": 12,
+        "appeals": 25
+    },
+    "failures": []
+}

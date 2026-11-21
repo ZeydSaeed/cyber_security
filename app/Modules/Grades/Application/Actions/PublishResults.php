@@ -30,7 +30,12 @@ class PublishResults
             $locked = GradePeriod::query()->where('period', $period->value)->lockForUpdate()->firstOrFail();
             EnsureManager::check($actor);
 
-            if ($publish === ($locked->results_published_at !== null)) {
+            // Hiding with only single sections out hides them too (flow
+            // audit, 2026-11-20: it used to stop here and leave them shown).
+            $nothingToDo = $publish
+                ? $locked->results_published_at !== null
+                : $locked->results_published_at === null && ! SectionPublication::query()->where('period', $period->value)->exists();
+            if ($nothingToDo) {
                 return $locked;
             }
 

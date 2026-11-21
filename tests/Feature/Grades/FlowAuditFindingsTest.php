@@ -24,6 +24,7 @@ use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
+use App\Platform\Audit\AuditEvent;
 use App\Platform\Exceptions\DomainRuleViolation;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -155,6 +156,20 @@ it('refuses the limited-time mode where no editing time applies', function () {
     expect(fn () => $access->settings($this->owner, $settings(null)))
         ->toThrow(DomainRuleViolation::class, 'Some teachers or sections are in the limited-time mode with no time of their own. Give them one, or keep a time here.');
     expect(GradeSettings::current()->teacher_edit_minutes)->toBe(120);
+});
+
+it('hides the sections published one by one when everything is hidden', function () {
+    app(ChangeEntryWindow::class)->handle($this->owner, Period::Month1, WindowStatus::Closed);
+    app(PublishResults::class)->section($this->owner, Period::Month1, Stage::Second, Section::A, true);
+
+    $this->actingAs($this->owner)->put('/admin/publish', ['published' => false])->assertSessionHasNoErrors();
+
+    expect(GradePeriod::for(Period::Month1)->anyPublished())->toBeFalse();
+    // Nothing out: hiding again records nothing more.
+    $hidden = fn () => AuditEvent::query()->where('action', 'grades.results_unpublished')->count();
+    expect($hidden())->toBe(1);
+    app(PublishResults::class)->handle($this->owner, Period::Month1, false);
+    expect($hidden())->toBe(1);
 });
 
 it('refuses appeals allowed with no time and no closing date', function () {

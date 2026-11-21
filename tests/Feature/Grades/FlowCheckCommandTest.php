@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Grades\Domain\Period;
 use App\Modules\Grades\Domain\Section;
 use App\Modules\Grades\Domain\Stage;
 use App\Modules\Grades\Models\GradeAppeal;
@@ -9,7 +10,6 @@ use App\Modules\Grades\Models\Student;
 use App\Modules\Grades\Models\Subject;
 use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
-use App\Modules\Grades\Domain\Period;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Grades\GradesFixtures;
 
@@ -42,7 +42,7 @@ beforeEach(function () {
 });
 
 it('passes every check and leaves the database as it was', function () {
-    $this->artisan('grades:flow-check', ['--report' => storage_path('framework/testing-flow.json')])
+    $this->artisan('grades:flow-check')
         ->expectsOutputToContain('checks passed.')
         ->expectsOutputToContain('Rolled back')
         ->assertExitCode(0);

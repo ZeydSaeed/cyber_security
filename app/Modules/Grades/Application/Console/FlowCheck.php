@@ -17,7 +17,6 @@ use App\Modules\Grades\Application\SectionAccess;
 use App\Modules\Grades\Domain\AppealScope;
 use App\Modules\Grades\Domain\AppealStatus;
 use App\Modules\Grades\Domain\Behaviour;
-use App\Modules\Grades\Domain\EditRequestStatus;
 use App\Modules\Grades\Domain\GradeBands;
 use App\Modules\Grades\Domain\Mark;
 use App\Modules\Grades\Domain\Period;
@@ -42,6 +41,7 @@ use App\Modules\Grades\Models\SubjectTeacher;
 use App\Modules\Grades\Models\Teacher;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -104,7 +104,7 @@ class FlowCheck extends Command
 
         $owner = null;
         foreach (User::query()->orderBy('id')->pluck('id') as $id) {
-            $user = User::query()->findOrFail($id);
+            $user = User::query()->whereKey($id)->firstOrFail();
             if ($user->can('grades.manage')) {
                 $owner = $user;
 
@@ -195,7 +195,7 @@ class FlowCheck extends Command
             }
 
             $teacher = $row->teacher;
-            $byTeacher = $teacher instanceof Teacher && $teacher->is_active;
+            $byTeacher = $teacher->is_active;
             try {
                 app(SaveMarks::class)->handle($byTeacher ? $teacher : $this->owner, $subject, $row->section, Period::Month1, $marks);
             } catch (Throwable) {
@@ -345,7 +345,7 @@ class FlowCheck extends Command
      */
     private function recount(Stage $stage, Section $section): array
     {
-        $settings = DB::table('grade_settings')->where('id', GradeSettings::ROW)->first();
+        $settings = DB::table('grade_settings')->where('id', GradeSettings::ROW)->sole();
         $passPercent = (int) $settings->pass_percent;
         $exemptPercent = $settings->exempt_subject_percent === null ? null : (int) $settings->exempt_subject_percent;
         $exemptAll = $settings->exempt_overall_percent === null ? null : (int) $settings->exempt_overall_percent;
@@ -448,15 +448,16 @@ class FlowCheck extends Command
             $cards[$student->id] = app(ResultSheets::class)->student($student);
         }
         foreach ($cases as $case => $shown) {
+            $current = GradeSettings::current();
             $options = [];
             foreach (array_keys(ResultDisplay::OPTIONS) as $option) {
-                $options[$option] = in_array($option, $shown, true);
+                // As the controller does: the appeal box is the appeals tab's.
+                $options[$option] = $option === 'appeals' ? $current->options()['appeals'] : in_array($option, $shown, true);
             }
-            $current = GradeSettings::current();
             app(ManageResults::class)->studentView($this->owner, $options, $current->appeal_minutes, $current->appeal_until, $current->appeal_scope, $current->teacher_appeal_replies);
             $saved = GradeSettings::current()->options();
             // The appeal box is the appeals tab's, kept as it was.
-            $this->check('student view', "{$case}: saved", [...$options, 'appeals' => $current->options()['appeals']], $saved);
+            $this->check('student view', "{$case}: saved", $options, $saved);
 
             foreach ($sample as $student) {
                 $full = $cards[$student->id]['student'];
@@ -547,7 +548,7 @@ class FlowCheck extends Command
                             }
 
                             $sheet = app(ResultSheets::class)->forTeacher($stage, $section, $own, $saved);
-                            $full = $sheets[$stage->value.$section->value];
+                            $full = $sheets[$stage->value.$section->value] ?? throw new RuntimeException('A sample section was not read.');
                             $names = array_column($sheet['subjects'], 'uuid');
                             $expectedSubjects = $saved['other_subjects'] ? array_column($full['subjects'], 'uuid') : array_values(array_filter(array_column($full['subjects'], 'uuid'), fn (string $uuid): bool => in_array($uuid, $own, true)));
                             $this->check('teacher view', "{$label}: subjects", $expectedSubjects, $names);
@@ -600,17 +601,24 @@ class FlowCheck extends Command
         $modes = TeacherAccess::cases();
         $access = app(ManageAccess::class);
 
+        $deptLimit = GradeSettings::current()->teacher_edit_minutes;
         foreach ($modes as $dept) {
             Carbon::setTestNow($base);
             $this->resetAccess($teacher, $subject, $section);
-            $access->settings($this->owner, $this->accessValues(['teacher_mode' => $dept, 'teacher_edit_minutes' => $dept === TeacherAccess::Timed ? 60 : null, 'teacher_edit_until' => null]));
-            $deptLimit = $dept === TeacherAccess::Timed ? 60 : null;
+            $access->settings($this->owner, $this->teacherAccess($dept, $dept === TeacherAccess::Timed ? 60 : null));
+            // Read-only and no access send no limit: the saved one is kept
+            // for when it is used again (ManageAccess::settings), and it
+            // applies to a teacher or section given Edit or Timed.
+            if (ManageAccess::usesLimit($dept)) {
+                $deptLimit = $dept === TeacherAccess::Timed ? 60 : null;
+            }
+            $this->check('access', "dept {$dept->value}: saved limit", $deptLimit, GradeSettings::current()->teacher_edit_minutes);
 
             foreach ([null, ...$modes] as $own) {
                 Carbon::setTestNow($base);
                 $access->section($this->owner, $subject, $section, null, null, 0);
                 $ok = $this->succeeds(fn () => $access->teacher($this->owner, $teacher, $own, null, null));
-                $this->check('access', "dept {$dept->value}, teacher ".($own?->value ?? 'inherit').': saved', ! ($own === TeacherAccess::Timed && $deptLimit === null), $ok);
+                $this->check('access', "dept {$dept->value}, teacher ".($own === null ? 'inherit' : $own->value).': saved', ! ($own === TeacherAccess::Timed && $deptLimit === null), $ok);
                 if (! $ok) {
                     continue;
                 }
@@ -618,7 +626,7 @@ class FlowCheck extends Command
                 foreach ([null, ...$modes] as $place) {
                     Carbon::setTestNow($base);
                     $ok = $this->succeeds(fn () => $access->section($this->owner, $subject, $section, $place, null, 0));
-                    $label = "dept {$dept->value}, teacher ".($own?->value ?? 'inherit').', section '.($place?->value ?? 'inherit');
+                    $label = "dept {$dept->value}, teacher ".($own === null ? 'inherit' : $own->value).', section '.($place === null ? 'inherit' : $place->value);
                     $this->check('access', "{$label}: saved", ! ($place === TeacherAccess::Timed && $deptLimit === null), $ok);
                     if (! $ok) {
                         continue;
@@ -639,11 +647,11 @@ class FlowCheck extends Command
                                     $grantOn = ! $published && $grant === 'active';
                                     $canWrite = ! $published && ($grantOn || (! $approved && $state === 'open' && in_array($mode, [TeacherAccess::Edit, TeacherAccess::Timed], true)));
                                     $limited = in_array($mode, [TeacherAccess::Edit, TeacherAccess::Timed], true) && $deptLimit !== null;
-                                    $canChange = $canWrite && ($grantOn || ! $limited || $enteredAt->addMinutes($deptLimit ?? 0)->greaterThan($now));
+                                    $canChange = $canWrite && ($grantOn || ! $limited || $enteredAt->addMinutes((int) $deptLimit)->greaterThan($now));
 
                                     $case = "{$label}, {$state}, ".($approved ? 'approved' : 'not approved').", grant {$grant}, +{$minutes}m";
-                                    $freshTeacher = Teacher::query()->findOrFail($teacher->id);
-                                    $freshRow = SubjectTeacher::query()->findOrFail($row->id);
+                                    $freshTeacher = Teacher::query()->whereKey($teacher->id)->firstOrFail();
+                                    $freshRow = SubjectTeacher::query()->whereKey($row->row->id)->firstOrFail();
                                     $settings = GradeSettings::current();
                                     $window = GradePeriod::for(Period::Month1);
                                     $policy = SectionAccess::policy($freshTeacher, $freshRow, $settings, $window, $approved, $window->publishedFor($subject->stage, $section));
@@ -670,7 +678,7 @@ class FlowCheck extends Command
         $this->check('access', 'the owner corrects a published, approved sheet', true, $this->succeeds(fn () => app(SaveMarks::class)->handle($this->owner, $subject, $section, Period::Month1, [$uuid => Mark::absent()])));
         $this->accessState($subject, $section, $teacher, 'closed', false, null);
         $this->resetAccess($teacher, $subject, $section);
-        $access->settings($this->owner, $this->accessValues(['teacher_mode' => TeacherAccess::Edit, 'teacher_edit_minutes' => null, 'teacher_edit_until' => null]));
+        $access->settings($this->owner, $this->teacherAccess(TeacherAccess::Edit, null));
     }
 
     private function resetAccess(Teacher $teacher, Subject $subject, Section $section): void
@@ -697,14 +705,34 @@ class FlowCheck extends Command
     }
 
     /**
-     * @param  array<string, mixed>  $over
-     * @return array<string, mixed>
+     * The access settings as they are, with the teachers' mode and editing
+     * time (no deadline) changed.
+     *
+     * @return array{teacher_attempts_per_minute: int, teacher_attempts_per_hour: int, student_attempts_per_minute: int, student_attempts_per_hour: int, teacher_max_logins: int|null, student_max_logins: int|null, teacher_mode: TeacherAccess, teacher_edit_minutes: int|null, teacher_edit_until: CarbonImmutable|null, student_access: StudentAccess, remember_days: int}
      */
-    private function accessValues(array $over): array
+    private function teacherAccess(TeacherAccess $mode, ?int $minutes): array
+    {
+        return [...$this->accessNow(), 'teacher_mode' => $mode, 'teacher_edit_minutes' => $minutes, 'teacher_edit_until' => null];
+    }
+
+    /**
+     * The access settings as they are, with students' access and cap changed.
+     *
+     * @return array{teacher_attempts_per_minute: int, teacher_attempts_per_hour: int, student_attempts_per_minute: int, student_attempts_per_hour: int, teacher_max_logins: int|null, student_max_logins: int|null, teacher_mode: TeacherAccess, teacher_edit_minutes: int|null, teacher_edit_until: CarbonImmutable|null, student_access: StudentAccess, remember_days: int}
+     */
+    private function studentAccess(StudentAccess $access, ?int $cap): array
+    {
+        return [...$this->accessNow(), 'student_access' => $access, 'student_max_logins' => $cap];
+    }
+
+    /**
+     * @return array{teacher_attempts_per_minute: int, teacher_attempts_per_hour: int, student_attempts_per_minute: int, student_attempts_per_hour: int, teacher_max_logins: int|null, student_max_logins: int|null, teacher_mode: TeacherAccess, teacher_edit_minutes: int|null, teacher_edit_until: CarbonImmutable|null, student_access: StudentAccess, remember_days: int}
+     */
+    private function accessNow(): array
     {
         $s = GradeSettings::current();
 
-        return [...[
+        return [
             'teacher_attempts_per_minute' => $s->teacher_attempts_per_minute,
             'teacher_attempts_per_hour' => $s->teacher_attempts_per_hour,
             'student_attempts_per_minute' => $s->student_attempts_per_minute,
@@ -716,7 +744,7 @@ class FlowCheck extends Command
             'teacher_edit_until' => $s->teacher_edit_until,
             'student_access' => $s->student_access,
             'remember_days' => $s->remember_days,
-        ], ...$over];
+        ];
     }
 
     // ------------------------------------------------------------------
@@ -731,7 +759,7 @@ class FlowCheck extends Command
         foreach (StudentAccess::cases() as $everyone) {
             foreach ([false, true] as $blocked) {
                 foreach (['no cap' => null, 'cap above' => 4, 'cap reached' => 3] as $capName => $cap) {
-                    app(ManageAccess::class)->settings($this->owner, $this->accessValues(['student_access' => $everyone, 'student_max_logins' => $cap]));
+                    app(ManageAccess::class)->settings($this->owner, $this->studentAccess($everyone, $cap));
                     app(ManageAccess::class)->student($this->owner, $student, $blocked);
                     $expected = $everyone === StudentAccess::Allowed && ! $blocked && $cap !== 3;
                     $this->check('student sign-in', "{$everyone->value}, ".($blocked ? 'stopped' : 'not stopped').", {$capName}", $expected, Student::query()->findOrFail($student->id)->maySignIn(GradeSettings::current()));
@@ -739,7 +767,7 @@ class FlowCheck extends Command
             }
         }
         app(ManageAccess::class)->student($this->owner, $student, false);
-        app(ManageAccess::class)->settings($this->owner, $this->accessValues(['student_access' => StudentAccess::Allowed, 'student_max_logins' => null]));
+        app(ManageAccess::class)->settings($this->owner, $this->studentAccess(StudentAccess::Allowed, null));
     }
 
     // ------------------------------------------------------------------
@@ -792,10 +820,15 @@ class FlowCheck extends Command
             }
 
             $window = GradePeriod::for(Period::Month1);
-            $this->check('entry and publication', 'state after the move', [$open, $all], [$window->isOpen(), $window->isPublished()]);
+            $this->check('entry and publication', "{$move}: state after", [$open, $all], [$window->isOpen(), $window->isPublished()]);
             foreach ($places as [$s, $p]) {
-                $this->check('entry and publication', 'what students see', $all || isset($shown["{$s->value}|{$p->value}"]), $window->publishedFor($s, $p));
+                $this->check('entry and publication', "{$move}: what students of {$s->value}{$p->value} see", $all || isset($shown["{$s->value}|{$p->value}"]), $window->publishedFor($s, $p));
             }
+
+            // Each move is judged on its own: the state is read back.
+            $open = $window->isOpen();
+            $all = $window->isPublished();
+            $shown = array_fill_keys(array_keys($window->publishedSections()), true);
         }
 
         app(PublishResults::class)->handle($this->owner, Period::Month1, false);
@@ -835,7 +868,9 @@ class FlowCheck extends Command
                             Carbon::setTestNow($base);
                             app(PublishResults::class)->handle($this->owner, Period::Month1, false);
                             app(ManageAccess::class)->studentAppeal($this->owner, $student, $allowed);
-                            app(ManageResults::class)->appeals($this->owner, $enabled, $minutes, $from === null ? null : $base->addMinutes($from), $until === null ? null : $base->addMinutes($until), $scope, false);
+                            // Minutes after the base moment (null: not set).
+                            $at = fn (?int $offset): ?CarbonImmutable => $offset === null ? null : $base->addMinutes($offset);
+                            app(ManageResults::class)->appeals($this->owner, $enabled, $minutes, $at($from), $at($until), $scope, false);
                             match ($publication) {
                                 'own section' => app(PublishResults::class)->section($this->owner, Period::Month1, $student->stage, $student->section, true),
                                 'other section' => app(PublishResults::class)->section($this->owner, Period::Month1, $student->stage, $other, true),
@@ -848,8 +883,8 @@ class FlowCheck extends Command
                                 $expected = $enabled && ($scope === AppealScope::All || $allowed)
                                     && in_array($publication, ['own section', 'all'], true) && $openByTime;
                                 $label = ($enabled ? 'on' : 'off').", {$scope->value}, ".($allowed ? 'allowed' : 'not allowed').", {$publication}, {$timing}, +{$after}m";
-                                $until = ManageAppeals::openUntil(Student::query()->findOrFail($student->id), GradeSettings::current(), GradePeriod::for(Period::Month1));
-                                $this->check('appeals', "{$label}: open", $expected, $until !== null);
+                                $openUntil = ManageAppeals::openUntil(Student::query()->whereKey($student->id)->firstOrFail(), GradeSettings::current(), GradePeriod::for(Period::Month1));
+                                $this->check('appeals', "{$label}: open", $expected, $openUntil !== null);
 
                                 $sent = $this->succeeds(fn () => app(ManageAppeals::class)->submit($student, $subject, Period::Month1, 'أرجو إعادة تدقيق الورقة الامتحانية.'));
                                 $this->check('appeals', "{$label}: sent", $expected, $sent);
@@ -885,7 +920,7 @@ class FlowCheck extends Command
     {
         $row = $this->sampleRow();
         $student = Student::query()->where('uuid', $this->studentsOf($row->subject->stage, $row->section)[0])->firstOrFail();
-        $stranger = SubjectTeacher::query()->where('teacher_id', '!=', $row->teacher_id)->first()?->teacher;
+        $stranger = SubjectTeacher::query()->where('teacher_id', '!=', $row->teacher->id)->first()?->teacher;
         app(PublishResults::class)->handle($this->owner, Period::Month1, true);
 
         foreach ([true, false] as $replies) {
@@ -893,7 +928,7 @@ class FlowCheck extends Command
                 app(ManageResults::class)->appeals($this->owner, true, 1440, null, null, AppealScope::All, $replies);
                 app(ManageAccess::class)->section($this->owner, $row->subject, $row->section, $place, null, 0);
                 $appeal = app(ManageAppeals::class)->submit($student, $row->subject, Period::Month1, 'أرجو مراجعة الدرجة.');
-                $label = ($replies ? 'teachers answer' : 'the department answers').', section '.($place?->value ?? 'inherit');
+                $label = ($replies ? 'teachers answer' : 'the department answers').', section '.($place === null ? 'inherit' : $place->value);
 
                 if ($stranger !== null) {
                     $this->check('appeal answers', "{$label}: another teacher", false, $this->succeeds(fn () => app(ManageAppeals::class)->answerAsTeacher($stranger, $appeal, true, null)));
@@ -919,7 +954,7 @@ class FlowCheck extends Command
         app(PublishResults::class)->handle($this->owner, Period::Month1, true);
 
         $reasons = ['أعتقد أن هناك خطأ في جمع درجات الأسئلة.', 'أرجو إعادة تدقيق ورقتي الامتحانية.', 'لم يُصحح السؤال الأخير.', 'كنت حاضراً في الامتحان ولست غائباً.'];
-        $students = Student::query()->orderBy('id')->get()->shuffle(mt_rand())->take(18);
+        $students = Student::query()->orderBy('id')->get()->shuffle()->take(18);
         $appeals = [];
         foreach ($students as $student) {
             $subjects = Subject::query()->where('stage', $student->stage->value)->inRandomOrder(mt_rand())->take(mt_rand(1, 2))->get();
@@ -967,7 +1002,7 @@ class FlowCheck extends Command
     private function checkCards(string $when): void
     {
         $board = app(GradesBoard::class)->show();
-        $window = DB::table('grade_periods')->where('period', Period::Month1->value)->first();
+        $window = DB::table('grade_periods')->where('period', Period::Month1->value)->sole();
         $this->check('control panel', "{$when}: entry open, all published", [$window->status === 'open', $window->results_published_at !== null], [$board['window']['open'], $board['window']['published']]);
         $this->check('control panel', "{$when}: active teachers", DB::table('grade_teachers')->where('is_active', true)->count(), $board['teachers']);
 
@@ -1033,13 +1068,18 @@ class FlowCheck extends Command
     /**
      * Rows of who teaches what, in stages that have students.
      *
-     * @return list<SubjectTeacher>
+     * @return list<FlowAssignment>
      */
     private function rows(): array
     {
-        return SubjectTeacher::query()->with(['subject', 'teacher'])->orderBy('subject_id')->orderBy('section')->get()
-            ->filter(fn (SubjectTeacher $row): bool => $row->subject !== null && $row->teacher !== null && $row->subject->stage->hasSection($row->section))
-            ->values()->all();
+        $rows = [];
+        foreach (SubjectTeacher::query()->with(['subject', 'teacher'])->orderBy('subject_id')->orderBy('section')->get() as $row) {
+            if ($row->subject instanceof Subject && $row->teacher instanceof Teacher && $row->subject->stage->hasSection($row->section)) {
+                $rows[] = new FlowAssignment($row, $row->subject, $row->teacher, $row->section);
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -1047,7 +1087,8 @@ class FlowCheck extends Command
      */
     private function studentsOf(Stage $stage, Section $section): array
     {
-        return Student::query()->where('stage', $stage->value)->where('section', $section->value)->orderBy('full_name')->pluck('uuid')->all();
+        return array_values(Student::query()->where('stage', $stage->value)->where('section', $section->value)->orderBy('full_name')->get(['id', 'uuid'])
+            ->map(fn (Student $student): string => $student->uuid)->all());
     }
 
     /**
@@ -1114,7 +1155,7 @@ class FlowCheck extends Command
             if ($this->studentsOf($row->subject->stage, $row->section) === []) {
                 continue;
             }
-            $byTeacher[$row->teacher_id][$row->subject->stage->value.$row->section->value][] = $row;
+            $byTeacher[$row->teacher->id][$row->subject->stage->value.$row->section->value][] = $row;
         }
         // Teachers of the most sections first, so divided stages are covered.
         uasort($byTeacher, fn (array $a, array $b): int => count($b) <=> count($a));
@@ -1125,7 +1166,7 @@ class FlowCheck extends Command
             $teacher = null;
             foreach ($places as $rows) {
                 $teacher = $rows[0]->teacher;
-                $list[] = [$rows[0]->subject->stage, $rows[0]->section, array_map(fn (SubjectTeacher $row): string => $row->subject->uuid, $rows)];
+                $list[] = [$rows[0]->subject->stage, $rows[0]->section, array_map(fn (FlowAssignment $row): string => $row->subject->uuid, $rows)];
             }
             if ($teacher !== null) {
                 $out[] = [$teacher, $list];
@@ -1136,9 +1177,9 @@ class FlowCheck extends Command
     }
 
     /** A section of a divided stage with students, else any. */
-    private function sampleRow(): SubjectTeacher
+    private function sampleRow(): FlowAssignment
     {
-        $rows = array_values(array_filter($this->rows(), fn (SubjectTeacher $row): bool => $this->studentsOf($row->subject->stage, $row->section) !== []));
+        $rows = array_values(array_filter($this->rows(), fn (FlowAssignment $row): bool => $this->studentsOf($row->subject->stage, $row->section) !== []));
         foreach ($rows as $row) {
             if ($row->subject->stage->isDivided()) {
                 return $row;
@@ -1155,7 +1196,7 @@ class FlowCheck extends Command
 
             return true;
         } catch (Throwable $e) {
-            if ($e instanceof \Illuminate\Database\QueryException) {
+            if ($e instanceof QueryException) {
                 throw $e;
             }
 
