@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
-import PasskeyVerify from '@/components/passkey-verify';
 import { useTranslations } from '@/hooks/use-translations';
 
 type Props = {
@@ -22,9 +21,9 @@ export default function Login({ status, canResetPassword }: Props) {
 
     return (
         <>
+            {/* E-mail and password only (owner's request, 2026-11-21): no
+                passkey button on the sign-in page. */}
             <Head title={t('Log in')} />
-
-            <PasskeyVerify />
 
             <Form
                 {...store.form()}
