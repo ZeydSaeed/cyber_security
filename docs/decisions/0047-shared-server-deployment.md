@@ -18,18 +18,18 @@ or setting, the firewall, and existing DNS records.
 
 ## Decision
 
-| Layer       | cyber_security                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------------------ |
-| Hosts       | `teachers.` (→ /teacher), `learn.` (→ /student), `admin.` (→ /admin) `mahani-iq.com`, proxied    |
-| User        | `cyber` (system, no shell, no sudo); `/srv/cyber_security` 750, www-data traverse ACL only        |
-| PHP         | 8.5 beside EXAMIS's 8.4; `php` alternative pinned to 8.4 (manual); pool `cyber_security`, ondemand, 8 children; generic `www` pool disabled |
-| PostgreSQL  | own cluster `16/cyber` on 127.0.0.1:5433; roles `cyber_owner`/`cyber_app`/`cyber_backup` (ADR-0012) |
-| Background  | `cyber_security.target`: queue@fast, queue@long, outbox relay, scheduler timer; `cyber_security.slice` caps 1.5 GB / 200% CPU |
-| Nginx       | `/etc/nginx/sites-available/cyber_security`, no `default_server` (EXAMIS owns it)                |
-| TLS         | Cloudflare Origin certificate from a CSR; key made on the server, `/etc/ssl/cyber_security`, expires 2041-11-17 |
-| Secrets     | `/srv/cyber_security/shared/.env` (cyber, 600); `/root/cyber_security/{db-roles,migrate}.env` (root, 600) |
-| Deploy      | root-owned `/srv/cyber_security/bin/scripts`; `APP=cyber BASE=/srv/cyber_security SMOKE_HOST=admin.mahani-iq.com MIGRATE_ENV=/root/cyber_security/migrate.env deploy.sh <artifact>` |
-| Access      | SSH key `cyber_security_deploy` in root's authorized_keys (owner may remove it)                 |
+| Layer      | cyber_security                                                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hosts      | `teachers.` (→ /teacher), `learn.` (→ /student), `admin.` (→ /admin) `mahani-iq.com`, proxied                                                                                       |
+| User       | `cyber` (system, no shell, no sudo); `/srv/cyber_security` 750, www-data traverse ACL only                                                                                          |
+| PHP        | 8.5 beside EXAMIS's 8.4; `php` alternative pinned to 8.4 (manual); pool `cyber_security`, ondemand, 8 children; generic `www` pool disabled                                         |
+| PostgreSQL | own cluster `16/cyber` on 127.0.0.1:5433; roles `cyber_owner`/`cyber_app`/`cyber_backup` (ADR-0012)                                                                                 |
+| Background | `cyber_security.target`: queue@fast, queue@long, outbox relay, scheduler timer; `cyber_security.slice` caps 1.5 GB / 200% CPU                                                       |
+| Nginx      | `/etc/nginx/sites-available/cyber_security`, no `default_server` (EXAMIS owns it)                                                                                                   |
+| TLS        | Cloudflare Origin certificate from a CSR; key made on the server, `/etc/ssl/cyber_security`, expires 2041-11-17                                                                     |
+| Secrets    | `/srv/cyber_security/shared/.env` (cyber, 600); `/root/cyber_security/{db-roles,migrate}.env` (root, 600)                                                                           |
+| Deploy     | root-owned `/srv/cyber_security/bin/scripts`; `APP=cyber BASE=/srv/cyber_security SMOKE_HOST=admin.mahani-iq.com MIGRATE_ENV=/root/cyber_security/migrate.env deploy.sh <artifact>` |
+| Access     | SSH key `cyber_security_deploy` in root's authorized_keys (owner may remove it)                                                                                                     |
 
 Changes the owner asked for on the same day:
 
