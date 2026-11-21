@@ -10,28 +10,28 @@ Backup taken before any change:
 
 ## Runs
 
-| Run | Mode | Checks | Failed | Result |
-|---|---|---:|---:|---|
-| Dry run | rolled back | 534,385 | 0 | database unchanged |
-| Kept run | `--keep` | 534,385 | 0 | data below saved |
+| Run      | Mode        |  Checks | Failed | Result             |
+| -------- | ----------- | ------: | -----: | ------------------ |
+| Dry run  | rolled back | 534,385 |      0 | database unchanged |
+| Kept run | `--keep`    | 534,385 |      0 | data below saved   |
 
 Checks per area (identical in both runs):
 
-| Area | Checks |
-|---|---:|
-| fill | 2 |
-| control panel | 267 |
-| results | 72,052 |
-| student view | 9,367 |
-| teacher view | 433,049 |
-| access | 16,500 |
-| student sign-in | 12 |
-| entry and publication | 2,100 |
-| appeals | 1,005 |
-| appeal answers | 24 |
-| final state | 5 |
-| reports (`grades:reports-check`) | 1 |
-| untouched (users, roles, teachers, subjects, assignments, students) | 1 |
+| Area                                                                |  Checks |
+| ------------------------------------------------------------------- | ------: |
+| fill                                                                |       2 |
+| control panel                                                       |     267 |
+| results                                                             |  72,052 |
+| student view                                                        |   9,367 |
+| teacher view                                                        | 433,049 |
+| access                                                              |  16,500 |
+| student sign-in                                                     |      12 |
+| entry and publication                                               |   2,100 |
+| appeals                                                             |   1,005 |
+| appeal answers                                                      |      24 |
+| final state                                                         |       5 |
+| reports (`grades:reports-check`)                                    |       1 |
+| untouched (users, roles, teachers, subjects, assignments, students) |       1 |
 
 Machine-readable report of the kept run: `2026-11-21-flow-check-keep.json`.
 

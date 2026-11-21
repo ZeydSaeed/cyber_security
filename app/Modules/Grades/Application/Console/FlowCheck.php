@@ -1056,12 +1056,12 @@ class FlowCheck extends Command
     private function untouchable(): array
     {
         return [
-            'users' => md5((string) json_encode(DB::table('users')->orderBy('id')->get(['id', 'email', 'password', 'two_factor_secret'])->all())),
-            'roles' => md5((string) json_encode(DB::table('role_assignments')->orderBy('id')->get()->all())),
-            'teachers' => md5((string) json_encode(DB::table('grade_teachers')->orderBy('id')->get(['id', 'name', 'code_digest', 'is_active', 'access_mode', 'edit_minutes', 'edit_until'])->all())),
-            'subjects' => md5((string) json_encode(DB::table('grade_subjects')->orderBy('id')->get(['id', 'name', 'stage', 'max_mark', 'pass_mark', 'exempt_mark'])->all())),
-            'assignments' => md5((string) json_encode(DB::table('grade_subject_teachers')->orderBy('id')->get(['id', 'subject_id', 'section', 'teacher_id', 'assistant_id', 'kind', 'access_mode'])->all())),
-            'students' => md5((string) json_encode(DB::table('grade_students')->orderBy('id')->get(['id', 'full_name', 'stage', 'section', 'code_digest', 'access_blocked', 'appeal_allowed'])->all())),
+            'users' => hash('sha256', (string) json_encode(DB::table('users')->orderBy('id')->get(['id', 'email', 'password', 'two_factor_secret'])->all())),
+            'roles' => hash('sha256', (string) json_encode(DB::table('role_assignments')->orderBy('id')->get()->all())),
+            'teachers' => hash('sha256', (string) json_encode(DB::table('grade_teachers')->orderBy('id')->get(['id', 'name', 'code_digest', 'is_active', 'access_mode', 'edit_minutes', 'edit_until'])->all())),
+            'subjects' => hash('sha256', (string) json_encode(DB::table('grade_subjects')->orderBy('id')->get(['id', 'name', 'stage', 'max_mark', 'pass_mark', 'exempt_mark'])->all())),
+            'assignments' => hash('sha256', (string) json_encode(DB::table('grade_subject_teachers')->orderBy('id')->get(['id', 'subject_id', 'section', 'teacher_id', 'assistant_id', 'kind', 'access_mode'])->all())),
+            'students' => hash('sha256', (string) json_encode(DB::table('grade_students')->orderBy('id')->get(['id', 'full_name', 'stage', 'section', 'code_digest', 'access_blocked', 'appeal_allowed'])->all())),
         ];
     }
 

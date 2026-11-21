@@ -409,27 +409,27 @@ See `docs/evidence/grades-flow/2026-11-21-flow-check.md`.
   and after and must be unchanged. `FlowCheckCommandTest` runs it on a
   small department.
 - **Defects found and fixed** (pinned in `FlowAuditFindingsTest`):
-  1. A teacher could answer an appeal of a section blocked for them
-     (`PUT /teacher/appeals/{uuid}` checked only that they teach it).
-     `ManageAppeals::answerAsTeacher` now refuses a blocked section or a
-     stopped teacher, as the sheets do.
-  2. Without "other subjects", a teacher's results page still sent the
-     figures that count every subject (absences, missing marks,
-     complete, passed, the absence flag, the section summary).
-     `ResultSheets::forTeacher` counts them over the subjects shown.
-  3. Publishing everything after a section had been published on its
-     own restarted that section's appeal time. `publishedAtFor` keeps the
-     earlier of the two moments.
-  4. A teacher or a section could be put in the limited-time mode with no
-     editing time anywhere, which then edited without a limit; and the
-     department's time could be cleared while such a teacher or section
-     relied on it. `ManageAccess` refuses all three.
-  5. Appeals could be switched on with neither a time nor a closing
-     date: the page said students may appeal, yet they never could.
-     `ManageResults::appeals` refuses it; the hint says so.
-  6. "Hide the results" (`PUT /admin/publish`, published false) did
-     nothing when only single sections were published, against its own
-     rule that hiding all hides them too. It now hides them.
+    1. A teacher could answer an appeal of a section blocked for them
+       (`PUT /teacher/appeals/{uuid}` checked only that they teach it).
+       `ManageAppeals::answerAsTeacher` now refuses a blocked section or a
+       stopped teacher, as the sheets do.
+    2. Without "other subjects", a teacher's results page still sent the
+       figures that count every subject (absences, missing marks,
+       complete, passed, the absence flag, the section summary).
+       `ResultSheets::forTeacher` counts them over the subjects shown.
+    3. Publishing everything after a section had been published on its
+       own restarted that section's appeal time. `publishedAtFor` keeps the
+       earlier of the two moments.
+    4. A teacher or a section could be put in the limited-time mode with no
+       editing time anywhere, which then edited without a limit; and the
+       department's time could be cleared while such a teacher or section
+       relied on it. `ManageAccess` refuses all three.
+    5. Appeals could be switched on with neither a time nor a closing
+       date: the page said students may appeal, yet they never could.
+       `ManageResults::appeals` refuses it; the hint says so.
+    6. "Hide the results" (`PUT /admin/publish`, published false) did
+       nothing when only single sections were published, against its own
+       rule that hiding all hides them too. It now hides them.
 - **Left as is, for the owner to decide**: a department editing time
   saved under "edit" or "limited time" is kept while the mode is
   read-only or no access (by design, ManageAccess) and then still

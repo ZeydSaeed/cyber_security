@@ -1,19 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Lock, LockOpen } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import GradesAdminController from '@/actions/App/Modules/Grades/Http/GradesAdminController';
 import ResultsController from '@/actions/App/Modules/Grades/Http/ResultsController';
 import PageToolbar from '@/components/page-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import AccessPanel from '../../components/access-panel';
-import AppealsAdminPanel from '../../components/appeals-admin-panel';
 import type { AppealCounts } from '../../components/appeals-admin-panel';
 import type { AccessBoardProps } from '../../components/access-panel';
 import CopyLink from '../../components/copy-link';
-import PublicationPanel from '../../components/publication-panel';
 import type { PublicationStage } from '../../components/publication-panel';
-import ResultSettingsPanel from '../../components/result-settings-panel';
 import type { ResultSettings } from '../../components/result-settings-panel';
 import {
     ProgressOverview,
@@ -22,6 +19,19 @@ import {
 } from '../../components/settings-tabs';
 import type { SettingsTab } from '../../components/settings-tabs';
 import { sectionLabel, stageLabel } from '../../place';
+
+// Each panel opens from its own settings card: loaded then, to keep the
+// page within the bundle budget (ADR-0024).
+const AccessPanel = lazy(() => import('../../components/access-panel'));
+const AppealsAdminPanel = lazy(
+    () => import('../../components/appeals-admin-panel'),
+);
+const PublicationPanel = lazy(
+    () => import('../../components/publication-panel'),
+);
+const ResultSettingsPanel = lazy(
+    () => import('../../components/result-settings-panel'),
+);
 
 type Stage = PublicationStage;
 
@@ -349,11 +359,13 @@ export default function GradesOverview({
                                 ))}
                         </section>
 
-                        <PublicationPanel
-                            window={window}
-                            stages={stages}
-                            canManage={canManage}
-                        />
+                        <Suspense fallback={null}>
+                            <PublicationPanel
+                                window={window}
+                                stages={stages}
+                                canManage={canManage}
+                            />
+                        </Suspense>
                     </div>
                 )}
 
@@ -381,27 +393,33 @@ export default function GradesOverview({
                     (open?.key === 'teachers' ||
                         open?.key === 'students' ||
                         open?.key === 'permissions') && (
-                        <AccessPanel
-                            access={access}
-                            studentView={resultSettings}
-                            part={open.key}
-                        />
+                        <Suspense fallback={null}>
+                            <AccessPanel
+                                access={access}
+                                studentView={resultSettings}
+                                part={open.key}
+                            />
+                        </Suspense>
                     )}
 
                 {resultSettings &&
                     (open?.key === 'card' || open?.key === 'teacher-view') && (
-                        <ResultSettingsPanel
-                            settings={resultSettings}
-                            part={open.key === 'card' ? 'card' : 'teachers'}
-                        />
+                        <Suspense fallback={null}>
+                            <ResultSettingsPanel
+                                settings={resultSettings}
+                                part={open.key === 'card' ? 'card' : 'teachers'}
+                            />
+                        </Suspense>
                     )}
 
                 {resultSettings && appealCounts && open?.key === 'appeals' && (
-                    <AppealsAdminPanel
-                        settings={resultSettings}
-                        counts={appealCounts}
-                        appeals={access?.appeals ?? []}
-                    />
+                    <Suspense fallback={null}>
+                        <AppealsAdminPanel
+                            settings={resultSettings}
+                            counts={appealCounts}
+                            appeals={access?.appeals ?? []}
+                        />
+                    </Suspense>
                 )}
 
                 {open?.key === 'subjects' &&

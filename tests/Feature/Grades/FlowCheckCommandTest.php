@@ -19,7 +19,7 @@ use Tests\Support\Grades\GradesFixtures;
 | without --keep the database is as it was.
 */
 
-uses(RefreshDatabase::class);
+uses(RefreshDatabase::class)->group('flow');
 
 beforeEach(function () {
     GradesFixtures::owner();

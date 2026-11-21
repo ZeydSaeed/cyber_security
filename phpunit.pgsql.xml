@@ -24,6 +24,14 @@
             <directory>tests/Architecture</directory>
         </testsuite>
     </testsuites>
+    <!-- grades:flow-check runs the whole data flow (over 500,000 checks): on
+         PostgreSQL it needs longer than the CI job allows, so it runs only in
+         the SQLite suite; on PostgreSQL the command itself was run (docs/evidence/grades-flow). -->
+    <groups>
+        <exclude>
+            <group>flow</group>
+        </exclude>
+    </groups>
     <source>
         <include>
             <directory>app</directory>
